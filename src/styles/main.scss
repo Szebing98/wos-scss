@@ -1,0 +1,17 @@
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+
+	background: var(--colors-surface-background);
+
+	color: var(--colors-text-primary);
+
+	font-family: var(--typography-fontFamily);
+
+	transition:
+		background 0.2s ease,
+		color 0.2s ease;
+}

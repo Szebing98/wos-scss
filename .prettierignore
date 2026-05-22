@@ -1,0 +1,11 @@
+**/.git
+**/.svn
+**/.hg
+**/node_modules
+
+# General
+worker-configuration.d.ts
+tsconfig.*.ts
+# Markdown
+README.md
+LICENSE.md

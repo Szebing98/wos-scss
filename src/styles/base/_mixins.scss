@@ -1,0 +1,54 @@
+/**
+ * Flexbox mixin for row layout
+ *
+ * @param {string} $align - Align items (e.g., 'center', 'flex-start', 'flex-end')
+ * @param {string} $justify - Justify content (e.g., 'center', 'space-between', 'space-around')
+ * @param {string} $gap - Gap between items (e.g., '10px', '1rem')
+ * @param {string} $wrap - Flex wrap behavior (e.g., 'wrap', 'nowrap')
+ * @param {string} $display - Display type (default: 'flex')
+ */
+@mixin flex-row($align: null, $justify: null, $gap: null, $wrap: null, $display: flex) {
+	display: $display;
+
+	@if $align {
+		align-items: $align;
+	}
+
+	@if $justify {
+		justify-content: $justify;
+	}
+
+	@if $gap {
+		gap: $gap;
+	}
+
+	@if $wrap {
+		flex-wrap: $wrap;
+	}
+}
+
+/**
+ * Flexbox mixin for column layout
+ *
+ * @param {string} $align - Align items (e.g., 'center', 'flex-start', 'flex-end')
+ * @param {string} $justify - Justify content (e.g., 'center', 'space-between', 'space-around')
+ * @param {string} $gap - Gap between items (e.g., '10px', '1rem')
+ * @param {string} $wrap - Flex wrap behavior (e.g., 'wrap', 'nowrap')
+ * @param {string} $display - Display type (default: 'flex')
+ */
+@mixin flex-column($align: null, $justify: null, $gap: null, $display: flex) {
+	display: $display;
+	flex-direction: column;
+
+	@if $align {
+		align-items: $align;
+	}
+
+	@if $justify {
+		justify-content: $justify;
+	}
+
+	@if $gap {
+		gap: $gap;
+	}
+}

@@ -1,0 +1,93 @@
+@use "../base/mixins" as *;
+@use "../base/interactive" as *;
+
+/**
+ * Button component styles.
+ *
+ * This file defines the styles for the button component, including variants, sizes, and states.
+ */
+
+.btn {
+	@include flex-row($align: center, $justify: center);
+	@include pressable;
+
+	border: none;
+	cursor: pointer;
+
+	border-radius: var(--radius-md);
+	padding: 0 var(--spacing-md);
+
+	font-size: var(--typography-fontSize-md);
+	font-weight: var(--typography-fontWeight-medium);
+
+	// Variants
+	&--primary {
+		background: var(--colors-brand-primary);
+
+		color: var(--colors-text-inverse);
+
+		transition: background 0.2s ease;
+
+		&:hover {
+			background: var(--colors-brand-primaryHover);
+		}
+
+		&:active {
+			background: var(--colors-brand-primaryActive);
+		}
+	}
+
+	&--secondary {
+		background: transparent;
+
+		border: 1px solid var(--colors-brand-primary);
+
+		color: var(--colors-brand-primary);
+
+		transition:
+			background 0.2s ease,
+			color 0.2s ease;
+
+		&:hover {
+			background: var(--colors-brand-primary);
+			color: var(--colors-text-inverse);
+		}
+	}
+
+	&--danger {
+		background: var(--colors-state-error);
+
+		color: var(--colors-text-inverse);
+
+		transition: background 0.2s ease;
+
+		&:hover {
+			filter: brightness(1.05);
+		}
+	}
+
+	// Sizes
+	&--sm {
+		height: 36px;
+		font-size: var(--typography-fontSize-sm);
+	}
+
+	&--md {
+		height: 44px;
+	}
+
+	&--lg {
+		height: 52px;
+
+		font-size: var(--typography-fontSize-lg);
+	}
+
+	// Disabled
+	&:disabled {
+		opacity: 0.6;
+
+		cursor: not-allowed;
+
+		transform: none;
+	}
+}
