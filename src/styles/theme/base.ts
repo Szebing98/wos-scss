@@ -1,4 +1,10 @@
 export const baseTheme = {
+	size: {
+		controlSm: "36px",
+		controlMd: "44px",
+		controlLg: "52px",
+	},
+
 	spacing: {
 		xs: "4px",
 		sm: "8px",

@@ -1,0 +1,101 @@
+@use "../base/mixins" as *;
+
+.input-field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-xs);
+
+	width: 100%;
+
+	&__label {
+		font-size: var(--typography-fontSize-sm);
+		font-weight: var(--typography-fontWeight-medium);
+		color: var(--colors-text-secondary);
+	}
+
+	&__hint {
+		font-size: var(--typography-fontSize-xs);
+		color: var(--colors-text-muted);
+	}
+
+	&__error {
+		font-size: var(--typography-fontSize-xs);
+		color: var(--colors-state-error);
+	}
+}
+
+.input {
+	@include flex-row($align: center);
+
+	gap: var(--spacing-sm);
+
+	width: 100%;
+	height: var(--size-control-md);
+
+	padding-inline: var(--spacing-md);
+
+	border: 1px solid var(--colors-surface-border);
+	border-radius: var(--radius-md);
+
+	background: var(--colors-surface-card);
+
+	transition:
+		border-color 0.2s ease,
+		box-shadow 0.2s ease,
+		background-color 0.2s ease;
+
+	&:focus-within {
+		border-color: var(--colors-brand-primary);
+		box-shadow: 0 0 0 3px var(--colors-brand-primarySoft);
+	}
+
+	&--error {
+		border-color: var(--colors-state-error);
+	}
+
+	&--error:focus-within {
+		border-color: var(--colors-state-error);
+		box-shadow: 0 0 0 3px rgb(239 68 68 / 0.15);
+	}
+
+	&--disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	&--disabled:focus-within {
+		border-color: var(--colors-surface-border);
+		box-shadow: none;
+	}
+
+	&__prefix,
+	&__suffix {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+		color: var(--colors-text-muted);
+	}
+
+	&__control {
+		flex: 1;
+		width: 100%;
+
+		border: none;
+		outline: none;
+		background: transparent;
+
+		appearance: none;
+		-webkit-appearance: none;
+
+		font: inherit;
+		color: var(--colors-text-primary);
+
+		&::placeholder {
+			color: var(--colors-text-muted);
+		}
+
+		&:disabled {
+			cursor: not-allowed;
+		}
+	}
+}

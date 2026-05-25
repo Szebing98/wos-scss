@@ -11,22 +11,33 @@
 	@include flex-row($align: center, $justify: center);
 	@include pressable;
 
+	gap: var(--spacing-sm);
+
 	border: none;
+	outline: none;
+
 	cursor: pointer;
 
 	border-radius: var(--radius-md);
-	padding: 0 var(--spacing-md);
+	padding-inline: var(--spacing-md);
 
+	font-family: var(--typography-fontFamily);
 	font-size: var(--typography-fontSize-md);
 	font-weight: var(--typography-fontWeight-medium);
+
+	white-space: nowrap;
+
+	transition:
+		background-color 0.2s ease,
+		color 0.2s ease,
+		border-color 0.2s ease,
+		box-shadow 0.2s ease;
 
 	// Variants
 	&--primary {
 		background: var(--colors-brand-primary);
 
 		color: var(--colors-text-inverse);
-
-		transition: background 0.2s ease;
 
 		&:hover {
 			background: var(--colors-brand-primaryHover);
@@ -44,13 +55,8 @@
 
 		color: var(--colors-brand-primary);
 
-		transition:
-			background 0.2s ease,
-			color 0.2s ease;
-
 		&:hover {
-			background: var(--colors-brand-primary);
-			color: var(--colors-text-inverse);
+			background: var(--colors-brand-primarySoft);
 		}
 	}
 
@@ -59,8 +65,6 @@
 
 		color: var(--colors-text-inverse);
 
-		transition: background 0.2s ease;
-
 		&:hover {
 			filter: brightness(1.05);
 		}
@@ -68,26 +72,25 @@
 
 	// Sizes
 	&--sm {
-		height: 36px;
+		height: var(--size-control-sm);
 		font-size: var(--typography-fontSize-sm);
 	}
 
 	&--md {
-		height: 44px;
+		height: var(--size-control-md);
 	}
 
 	&--lg {
-		height: 52px;
+		height: var(--size-control-lg);
 
 		font-size: var(--typography-fontSize-lg);
 	}
 
 	// Disabled
-	&:disabled {
+	&:disabled,
+	&--loading {
 		opacity: 0.6;
-
+		pointer-events: none;
 		cursor: not-allowed;
-
-		transform: none;
 	}
 }
