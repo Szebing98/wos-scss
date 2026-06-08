@@ -19,13 +19,15 @@
 	cursor: pointer;
 
 	border-radius: var(--radius-md);
-	padding-inline: var(--spacing-md);
+	padding: 0 var(--spacing-lg);
 
 	font-family: var(--typography-fontFamily);
 	font-size: var(--typography-fontSize-md);
 	font-weight: var(--typography-fontWeight-medium);
 
 	white-space: nowrap;
+
+	width: fit-content;
 
 	transition:
 		background-color 0.2s ease,
@@ -36,15 +38,13 @@
 	// Variants
 	&--primary {
 		background: var(--colors-brand-primary);
-
 		color: var(--colors-text-inverse);
 
-		&:hover {
-			background: var(--colors-brand-primaryHover);
-		}
+		box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
 
-		&:active {
-			background: var(--colors-brand-primaryActive);
+		&:hover {
+			transform: translateY(-1px);
+			box-shadow: 0 12px 28px rgba(99, 102, 241, 0.3);
 		}
 	}
 
@@ -92,5 +92,12 @@
 		opacity: 0.6;
 		pointer-events: none;
 		cursor: not-allowed;
+	}
+
+	// Block
+	&--block {
+		height: 40px;
+		width: 100%;
+		display: flex;
 	}
 }

@@ -2,12 +2,14 @@ import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [
 	{
-		path: "/",
-		redirect: "/login",
-	},
-	{
-		path: "/login",
-		component: () => import("@/views/Account/Login.vue"),
+		path: "/account",
+		children: [
+			{
+				path: "login",
+				name: "Login",
+				component: () => import("@/views/Account/Login.vue"),
+			},
+		],
 	},
 ];
 
@@ -21,7 +23,7 @@ router.beforeEach((to, _, next) => {
 	const token = localStorage.getItem("authToken");
 
 	if (to.meta.requiresAuth && !token) {
-		next("/login");
+		next("/account/login");
 	} else {
 		next();
 	}

@@ -5,6 +5,7 @@
 	flex-direction: column;
 	gap: var(--spacing-xs);
 
+	line-height: 20px;
 	width: 100%;
 
 	&__label {
@@ -30,12 +31,14 @@
 	gap: var(--spacing-sm);
 
 	width: 100%;
-	height: var(--size-control-md);
+	height: 40px;
 
-	padding-inline: var(--spacing-md);
+	padding: 0 var(--spacing-md);
 
 	border: 1px solid var(--colors-surface-border);
 	border-radius: var(--radius-md);
+
+	box-sizing: border-box;
 
 	background: var(--colors-surface-card);
 
@@ -45,8 +48,8 @@
 		background-color 0.2s ease;
 
 	&:focus-within {
-		border-color: var(--colors-brand-primary);
-		box-shadow: 0 0 0 3px var(--colors-brand-primarySoft);
+		border-color: rgba(99, 102, 241, 0.6);
+		box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 	}
 
 	&--error {
@@ -89,6 +92,8 @@
 
 		font: inherit;
 		color: var(--colors-text-primary);
+
+		min-width: 0;
 
 		&::placeholder {
 			color: var(--colors-text-muted);

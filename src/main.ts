@@ -5,7 +5,8 @@ import { createPinia } from "pinia";
 
 import { useThemeStore } from "@/stores/theme.store";
 
-import "./styles/main.scss";
+import "@/styles/index.scss";
+import router from "@/router";
 
 const app = createApp(App);
 
@@ -17,4 +18,5 @@ const themeStore = useThemeStore();
 
 themeStore.initializeTheme();
 
+app.use(router);
 app.mount("#app");

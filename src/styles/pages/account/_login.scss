@@ -1,0 +1,28 @@
+.login {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-xl);
+
+	&__header {
+		text-align: center;
+
+		h1 {
+			font-size: 28px;
+			font-weight: 700;
+			letter-spacing: -0.5px;
+			color: var(--colors-text-primary);
+		}
+
+		p {
+			font-size: 14px;
+			color: var(--colors-text-muted);
+			margin-top: 6px;
+		}
+	}
+
+	&__form {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-lg);
+	}
+}
