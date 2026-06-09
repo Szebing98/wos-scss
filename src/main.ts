@@ -6,6 +6,7 @@ import { createPinia } from "pinia";
 import { useThemeStore } from "@/stores/theme.store";
 
 import "@/styles/index.scss";
+import "@mdi/font/css/materialdesignicons.css";
 import router from "@/router";
 
 const app = createApp(App);

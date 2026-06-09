@@ -3,7 +3,9 @@
 @use "./base/layout";
 
 @use "./components/button";
-@use "./components/input";
+@use "./components/checkbox";
+@use "./components/snackbar";
+@use "./components/textbox";
 
 @use "./pages/account";
 

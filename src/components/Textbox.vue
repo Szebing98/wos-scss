@@ -20,16 +20,16 @@ function onInput(e: Event) {
 </script>
 
 <template>
-	<div class="input-field">
-		<label v-if="label" class="input-field__label">
+	<div class="textbox-field">
+		<label v-if="label" class="textbox-field__label">
 			{{ label }}
 		</label>
 
 		<div
-			class="input"
+			class="textbox"
 			:class="{
-				'input--error': error,
-				'input--disabled': disabled,
+				'textbox--error': error,
+				'textbox--disabled': disabled,
 			}"
 		>
 			<slot name="prefix" />
@@ -39,18 +39,19 @@ function onInput(e: Event) {
 				:type="type ?? 'text'"
 				:placeholder="placeholder"
 				:disabled="disabled"
-				class="input__control"
+				class="textbox__control"
 				@input="onInput"
 			/>
 
 			<slot name="suffix" />
 		</div>
 
-		<p v-if="error" class="input-field__error">
+		<p v-if="error" class="textbox-field__error">
+			<span class="material-icons" style="font-size: 14px">error_outline</span>
 			{{ error }}
 		</p>
 
-		<p v-else-if="hint" class="input-field__hint">
+		<p v-else-if="hint" class="textbox-field__hint">
 			{{ hint }}
 		</p>
 	</div>

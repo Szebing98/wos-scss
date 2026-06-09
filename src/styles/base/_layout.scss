@@ -1,3 +1,4 @@
+// Base layout styles for authentication pages (login, register, etc.)
 .auth {
 	min-height: 100vh;
 	position: relative;
@@ -47,6 +48,6 @@
 			0 20px 60px rgba(15, 23, 42, 0.08),
 			0 2px 10px rgba(15, 23, 42, 0.05);
 
-		padding: 40px;
+		padding: var(--spacing-xl);
 	}
 }

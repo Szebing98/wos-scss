@@ -57,6 +57,6 @@ export const baseTheme = {
 	zIndex: {
 		dropdown: 1000,
 		modal: 1300,
-		toast: 1500,
+		snackbar: 1500,
 	},
 } as const;

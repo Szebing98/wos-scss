@@ -1,6 +1,6 @@
 @use "../base/mixins" as *;
 
-.input-field {
+.textbox-field {
 	display: flex;
 	flex-direction: column;
 	gap: var(--spacing-xs);
@@ -25,7 +25,7 @@
 	}
 }
 
-.input {
+.textbox {
 	@include flex-row($align: center);
 
 	gap: var(--spacing-sm);

@@ -1,25 +1,25 @@
 import { defineStore } from "pinia";
-import http from "@/utils/http";
+import { authApi } from "@/api/auth/auth.api";
 
 export const useAuthStore = defineStore("auth", {
 	state: () => ({
-		token: localStorage.getItem("authToken"),
+		token: localStorage.getItem("authToken") as string | null,
 	}),
 
 	actions: {
-		async login(email: string, password: string) {
-			const res = await http.post("/api/auth/login", {
-				email,
-				password,
-			});
+		async login(email: string, password: string, remember: boolean) {
+			const { data, error } = await authApi.login({ email, password, remember });
 
-			this.token = res.data.accessToken;
-			if (this.token) {
-				localStorage.setItem("authToken", this.token);
+			if (error) {
+				throw new Error(error.error.message);
 			}
+
+			this.token = data.token;
+			localStorage.setItem("authToken", this.token);
 		},
 
-		logout() {
+		async logout() {
+			await authApi.logout();
 			this.token = null;
 			localStorage.removeItem("authToken");
 		},

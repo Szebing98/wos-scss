@@ -11,6 +11,12 @@ const routes = [
 			},
 		],
 	},
+	{
+		path: "/dashboard",
+		name: "Dashboard",
+		component: () => import("@/views/Dashboard/index.vue"),
+		meta: { requiresAuth: true },
+	},
 ];
 
 const router = createRouter({
@@ -19,13 +25,14 @@ const router = createRouter({
 });
 
 // auth guard
-router.beforeEach((to, _, next) => {
+
+router.beforeEach((to) => {
 	const token = localStorage.getItem("authToken");
 
 	if (to.meta.requiresAuth && !token) {
-		next("/account/login");
-	} else {
-		next();
+		return "/account/login";
+	} else if (to.meta.guestOnly && token) {
+		return "/dashboard";
 	}
 });
 
