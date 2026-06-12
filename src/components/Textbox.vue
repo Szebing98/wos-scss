@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{
+import { ref, computed } from "vue";
+
+const props = defineProps<{
 	modelValue?: string;
 	label?: string;
 	placeholder?: string;
@@ -13,9 +15,24 @@ const emit = defineEmits<{
 	(e: "update:modelValue", value: string): void;
 }>();
 
+// Control password visibility state
+const isPasswordVisible = ref(false);
+
+// Determine the input type based on props and password visibility
+const inputType = computed(() => {
+	if (props.type === "password") {
+		return isPasswordVisible.value ? "text" : "password";
+	}
+	return props.type ?? "text";
+});
+
 function onInput(e: Event) {
 	const target = e.target as HTMLInputElement;
 	emit("update:modelValue", target.value);
+}
+
+function togglePassword() {
+	isPasswordVisible.value = !isPasswordVisible.value;
 }
 </script>
 
@@ -36,23 +53,30 @@ function onInput(e: Event) {
 
 			<input
 				:value="modelValue"
-				:type="type ?? 'text'"
+				:type="inputType"
 				:placeholder="placeholder"
 				:disabled="disabled"
 				class="textbox__control"
 				@input="onInput"
 			/>
 
+			<div v-if="type === 'password'" class="textbox__toggle" @click="togglePassword">
+				<i class="mdi" :class="isPasswordVisible ? 'mdi-eye-off' : 'mdi-eye'"></i>
+			</div>
+
 			<slot name="suffix" />
 		</div>
 
-		<p v-if="error" class="textbox-field__error">
-			<span class="material-icons" style="font-size: 14px">error_outline</span>
-			{{ error }}
-		</p>
-
-		<p v-else-if="hint" class="textbox-field__hint">
-			{{ hint }}
-		</p>
+		<div class="textbox-field__footer">
+			<Transition name="fade-slide">
+				<p v-if="error" class="textbox-field__error">
+					<i class="mdi mdi-alert-circle-outline textbox-field__error-icon"></i>
+					<span class="textbox-field__error-text">{{ error }}</span>
+				</p>
+				<p v-else-if="hint" class="textbox-field__hint">
+					{{ hint }}
+				</p>
+			</Transition>
+		</div>
 	</div>
 </template>

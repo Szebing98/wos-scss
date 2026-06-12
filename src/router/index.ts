@@ -1,3 +1,4 @@
+import MainLayout from "@/layouts/MainLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [
@@ -9,13 +10,36 @@ const routes = [
 				name: "Login",
 				component: () => import("@/views/Account/Login.vue"),
 			},
+			{
+				path: "forgot-password",
+				name: "Forgot Password",
+				component: () => import("@/views/Account/ForgotPassword.vue"),
+			},
+			{
+				path: "reset-password",
+				name: "reset-password",
+				component: () => import("@/views/Account/ResetPassword.vue"),
+				meta: { requiresAuth: false },
+			},
+			{
+				path: "activate",
+				name: "activate",
+				component: () => import("@/views/Account/ActivateAccount.vue"),
+				meta: { requiresAuth: false },
+			},
 		],
 	},
 	{
-		path: "/dashboard",
-		name: "Dashboard",
-		component: () => import("@/views/Dashboard/index.vue"),
-		meta: { requiresAuth: true },
+		path: "/",
+		component: MainLayout,
+		children: [
+			{
+				path: "/dashboard",
+				name: "Dashboard",
+				component: () => import("@/views/Dashboard/index.vue"),
+				meta: { requiresAuth: true },
+			},
+		],
 	},
 ];
 

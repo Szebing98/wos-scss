@@ -1,38 +1,3 @@
-<template>
-	<AuthLayout>
-		<div class="login">
-			<div class="login__header">
-				<h1>Login</h1>
-				<p>Sign in with your credentials to continue</p>
-			</div>
-
-			<div class="login__form">
-				<Textbox
-					v-model="form.email"
-					label="Email"
-					type="email"
-					placeholder="Email"
-					:error="emailError"
-				/>
-
-				<Textbox
-					v-model="form.password"
-					label="Password"
-					type="password"
-					placeholder="Password"
-					:error="passwordError"
-				/>
-
-				<div class="login__options">
-					<Checkbox v-model="form.remember"> Remember me </Checkbox>
-				</div>
-
-				<Button block @click="login"> Sign In </Button>
-			</div>
-		</div>
-	</AuthLayout>
-</template>
-
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useAuthStore } from "@/stores/auth.store";
@@ -86,3 +51,44 @@ const login = async () => {
 	}
 };
 </script>
+
+<template>
+	<AuthLayout>
+		<div class="login">
+			<div class="login__header">
+				<h1>Login</h1>
+				<p>Sign in with your credentials to continue</p>
+			</div>
+
+			<div class="login__form">
+				<Textbox
+					v-model="form.email"
+					label="Email"
+					type="email"
+					placeholder="Email"
+					:error="emailError"
+				/>
+
+				<Textbox
+					v-model="form.password"
+					label="Password"
+					type="password"
+					placeholder="Password"
+					:error="passwordError"
+				/>
+
+				<div class="login__options">
+					<Checkbox v-model="form.remember"> Remember me </Checkbox>
+				</div>
+
+				<Button block @click="login"> Sign In </Button>
+
+				<div class="login__forgot">
+					<router-link to="/account/forgot-password" class="login__forgot-link">
+						Forgot password?
+					</router-link>
+				</div>
+			</div>
+		</div>
+	</AuthLayout>
+</template>

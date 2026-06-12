@@ -4,7 +4,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--spacing-xs);
-
 	line-height: 20px;
 	width: 100%;
 
@@ -14,34 +13,48 @@
 		color: var(--colors-text-secondary);
 	}
 
+	&__footer {
+		min-height: 20px;
+		position: relative;
+	}
+
 	&__hint {
 		font-size: var(--typography-fontSize-xs);
 		color: var(--colors-text-muted);
+		margin: 0;
 	}
 
 	&__error {
+		display: flex;
+		align-items: center;
+		gap: 6px;
 		font-size: var(--typography-fontSize-xs);
 		color: var(--colors-state-error);
+		margin: 0;
+		font-weight: 500;
+
+		&-icon {
+			font-size: 16px !important;
+			display: inline-block;
+		}
+
+		&-text {
+			letter-spacing: 0.01em;
+			line-height: 1;
+		}
 	}
 }
 
 .textbox {
 	@include flex-row($align: center);
-
 	gap: var(--spacing-sm);
-
 	width: 100%;
 	height: 40px;
-
 	padding: 0 var(--spacing-md);
-
 	border: 1px solid var(--colors-surface-border);
 	border-radius: var(--radius-md);
-
 	box-sizing: border-box;
-
 	background: var(--colors-surface-card);
-
 	transition:
 		border-color 0.2s ease,
 		box-shadow 0.2s ease,
@@ -64,11 +77,30 @@
 	&--disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
+		&:focus-within {
+			border-color: var(--colors-surface-border);
+			box-shadow: none;
+		}
 	}
 
-	&--disabled:focus-within {
-		border-color: var(--colors-surface-border);
-		box-shadow: none;
+	&__toggle {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--colors-text-muted);
+		cursor: pointer;
+		user-select: none;
+		transition: color 0.2s;
+		padding: 4px;
+		margin-right: -4px;
+
+		&:hover {
+			color: var(--colors-text-secondary);
+		}
+
+		.mdi {
+			font-size: 20px;
+		}
 	}
 
 	&__prefix,
@@ -82,17 +114,13 @@
 	&__control {
 		flex: 1;
 		width: 100%;
-
 		border: none;
 		outline: none;
 		background: transparent;
-
 		appearance: none;
 		-webkit-appearance: none;
-
 		font: inherit;
 		color: var(--colors-text-primary);
-
 		min-width: 0;
 
 		&::placeholder {
@@ -103,4 +131,15 @@
 			cursor: not-allowed;
 		}
 	}
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+	transition: all 0.2s ease-out;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+	opacity: 0;
+	transform: translateY(-4px);
 }
