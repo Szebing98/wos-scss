@@ -1,33 +1,45 @@
 export const darkTheme = {
 	colors: {
 		brand: {
-			primary: "#6366F1",
-			primaryHover: "#818CF8",
-			primaryActive: "#4F46E5",
-			primarySoft: "#1E1B4B",
+			primary: "#6366F1",       // 暗色模式下稍微提高亮度提升可读性
+			primaryHover: "#4F46E5",
+			primaryActive: "#4338CA",
+			primarySoft: "rgba(99, 102, 241, 0.15)",
 		},
-
 		surface: {
-			background: "#0F172A",
-			card: "#1E293B",
-			elevated: "#334155",
-			border: "#334155",
-			hover: "#1E293B",
+			background: "#090D16",    // 极其深邃的科技感黑蓝底色
+			card: "#111827",          // 卡片层级
+			sidebar: "#111827",       // 侧边栏与卡片同级
+			border: "#1F2937",        // 深色边框
+			hover: "#1F2937",         // 悬浮态
 		},
-
 		text: {
-			primary: "#F8FAFC",
-			secondary: "#CBD5E1",
-			muted: "#94A3B8",
+			primary: "#F8FAFC",       // 白字
+			secondary: "#94A3B8",     // 浅灰字
+			muted: "#64748B",         // 暗灰字
 			inverse: "#0F172A",
-			disabled: "#64748B",
+			disabled: "#334155",
 		},
-
 		state: {
 			success: "#4ADE80",
+			successSoft: "rgba(74, 222, 128, 0.1)",
 			warning: "#FBBF24",
+			warningSoft: "rgba(251, 191, 36, 0.1)",
 			error: "#F87171",
+			errorSoft: "rgba(248, 113, 113, 0.1)",
 			info: "#60A5FA",
+			infoSoft: "rgba(96, 165, 250, 0.1)",
 		},
+		status: {
+			new: "#60A5FA",
+			pending: "#FBBF24",
+			progress: "#818CF8",
+			done: "#22D3EE",
+			completed: "#34D399",
+			claimed: "#2DD4BF",
+			closed: "#94A3B8",
+			cancelled: "#F87171",
+			draft: "#64748B"
+		}
 	},
 } as const;

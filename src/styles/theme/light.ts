@@ -29,5 +29,17 @@ export const lightTheme = {
 			error: "#EF4444",
 			info: "#3B82F6",
 		},
+
+		status: {
+			new: "#3B82F6",
+			pending: "#F59E0B",
+			progress: "#6366F1",
+			done: "#06B6D4",
+			completed: "#10B981",
+			claimed: "#14B8A6",
+			closed: "#64748B",
+			cancelled: "#EF4444",
+			draft: "#475569"
+		}
 	},
 } as const;
