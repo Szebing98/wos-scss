@@ -105,24 +105,26 @@
 :root {
 	--sidebar-w: 260px;
 	--rail-w: 76px;
-	--topbar-h: 60px; // 稍微收紧顶栏高度，更精炼
+	--topbar-h: 60px;
 
-	// 你的专属工业配色
 	--colors-secondary-darkblue: #202359;
-	--colors-secondary-darkblueLight: #3D4170;
+	--colors-secondary-darkblueLight: #3d4170;
 	--colors-secondary-darkblueDarker: #101235;
 	--colors-tertiary-richblack: #010326;
-	--colors-primary-deepblue: #5058F2; // 👈 你的品牌主色
-	--colors-background-border: #B2B2B2;
-	--colors-background-surface: #FFFFFF;
-	--colors-background-primary: #F2F2F2;
+	--colors-primary-deepblue: #5058f2;
+	--colors-background-border: #b2b2b2;
+	--colors-background-surface: #ffffff;
+	--colors-background-primary: #f2f2f2;
 
-	// 间距弹性阀
 	--spacing-xs: 4px;
 	--spacing-sm: 8px;
 	--spacing-md: 16px;
 	--spacing-lg: 24px;
 	--spacing-xl: 32px;
+
+	--app-bg: #f4f6f9;
+	--text-main: #1e293b;
+	--border-color: #e2e8f0;
 }
 
 .app-layout {
@@ -133,13 +135,10 @@
 	background-color: #f4f6f9;
 }
 
-// ==========================================
-// 💡 1. 顶部 Header：改用品牌色（Primary Color）
-// ==========================================
 .header {
 	height: var(--topbar-h);
-	background-color: var(--colors-background-surface); // 🌟 全面染上深蓝品牌色
-	border-bottom: 1px solid #e2e8f0; // 规整的淡灰色下边框
+	background-color: var(--colors-background-surface);
+	border-bottom: 1px solid var(--border-color);
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -147,14 +146,20 @@
 	flex-shrink: 0;
 	z-index: 50;
 	box-sizing: border-box;
+	transition:
+		background-color 0.25s,
+		border-color 0.25s;
 
 	&-left {
 		@include flex-row($align: center, $gap: 12px);
+		height: 100%;
+		transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
 	&__logo {
 		height: 32px;
 		width: auto;
+		transition: opacity 0.2s;
 	}
 
 	@media (max-width: 767px) {
@@ -163,12 +168,9 @@
 		&__logo {
 			height: 28px;
 		}
-
-		// 手机端等比缩小 Logo
 	}
 }
 
-// 顶栏里的按钮自动反色为白色，极其精致
 .icon-btn {
 	background: transparent;
 	border: none;
@@ -176,22 +178,22 @@
 	cursor: pointer;
 	display: inline-flex;
 	align-items: center;
+	justify-content: center;
 	color: #475569;
-	padding: 6px;
-	border-radius: 6px;
-	transition: background-color 0.2s;
+	width: 40px;
+	height: 40px;
+	border-radius: 8px;
+	transition: all 0.2s;
 
 	&:hover {
-		background-color: #f1f5f9;
-		color: var(--colors-primary-deepblue); // 悬浮时主色点亮
+		background-color: rgba(0, 0, 0, 0.05);
+		color: var(--colors-primary-deepblue);
 	}
 
-	&--inverse {
-		color: var(--colors-background-surface) !important; // 在主色调下按钮必须是纯白
-
+	:global([data-theme="dark"]) & {
+		color: #94a3b8;
 		&:hover {
-			background-color: #f1f5f9;
-			color: var(--colors-primary-deepblue); // 悬浮时主色点亮
+			background-color: rgba(255, 255, 255, 0.05);
 		}
 	}
 }
@@ -204,9 +206,6 @@
 	overflow: hidden;
 }
 
-// ==========================================
-// 2. 核心侧边栏：两合一响应式
-// ==========================================
 .side-menu {
 	font-size: 13px;
 	position: absolute;
@@ -218,9 +217,10 @@
 	color: var(--colors-background-border);
 	display: grid;
 	grid-template-rows: 1fr;
-	transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+	transition:
+		width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+		transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
-	// 🌟 状态 A：当你关闭侧边栏，或者在【平板电脑】尺寸下 -> 触发大厂 Dock 状态
 	&.is-rail {
 		width: var(--rail-w);
 
@@ -254,21 +254,20 @@
 				padding: 0 !important;
 				font-weight: 500;
 			}
-		}
 
-		.nav__tail,
-		.nav__children {
-			display: none !important;
-		}
+			.nav__tail,
+			.nav__children {
+				display: none !important;
+			}
 
-		.nav__item--active {
-			background-color: var(--colors-primary-deepblue) !important;
-			box-shadow: 0 4px 12px rgba(80, 88, 242, 0.2);
-			color: var(--colors-background-surface) !important;
+			.nav__item--active {
+				background-color: var(--colors-primary-deepblue) !important;
+				box-shadow: 0 4px 12px rgba(80, 88, 242, 0.3);
+				color: var(--colors-background-surface) !important;
+			}
 		}
 	}
 
-	// 🌟 尺寸优化：【手机端】直接蜕变成流畅的滑动抽屉
 	&.is-mobile {
 		position: fixed;
 		transform: translateX(-100%);
@@ -293,7 +292,6 @@
 		}
 	}
 
-	// 🌟 状态 B：正常的展开大列表状态下的三栏布局
 	.nav {
 		overflow-y: auto;
 		padding: var(--spacing-sm) 0;
@@ -347,7 +345,7 @@
 			}
 
 			&--active {
-				border-right: 3px solid var(--colors-background-primary);
+				border-right: 4px solid var(--colors-background-primary);
 				background: var(--colors-primary-deepblue);
 				color: var(--colors-background-surface);
 
@@ -398,14 +396,11 @@
 }
 
 @media (min-width: 1025px) {
-	.side-menu:not(.is-rail) .nav__group>.nav__item.nav__item--active {
+	.side-menu:not(.is-rail) .nav__group > .nav__item.nav__item--active {
 		border-right: none;
 	}
 }
 
-// ==========================================
-// 3. 右侧主内容视口：多尺寸响应式间距调优
-// ==========================================
 .app-main {
 	flex-grow: 1;
 	display: flex;
@@ -414,17 +409,25 @@
 	overflow-y: auto;
 	box-sizing: border-box;
 
-	// 默认电脑宽屏布局占位
 	padding-left: var(--sidebar-w);
 	transition: padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
 	&--rail {
 		padding-left: var(--rail-w);
+
+		:global(.header-left) {
+			width: calc(var(--rail-w) - var(--spacing-md)) !important;
+			justify-content: center !important;
+			gap: 0 !important;
+
+			:global(.header__logo) {
+				display: none !important;
+			}
+		}
 	}
 
-	// 【手机和平板终端尺寸优化】
 	@media (max-width: 1024px) {
-		padding-left: 0 !important; // 占满屏幕，由侧边栏绝对定位悬浮其上
+		padding-left: 0 !important;
 	}
 }
 
@@ -434,11 +437,9 @@
 	width: 100%;
 	box-sizing: border-box;
 
-	// 🌟 超宽屏显示屏优化：防止内容无止境拉伸导致仪表盘变形
 	max-width: 1600px;
 	margin: 0 auto;
 
-	// 🌟 移动端小屏幕优化：适当收窄内边距，留出更多显示空间
 	@media (max-width: 767px) {
 		padding: var(--spacing-md);
 	}
@@ -464,7 +465,7 @@
 .overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(15, 23, 42, 0.4); // 升级为带有遮罩滤镜的质感
+	background: rgba(15, 23, 42, 0.4);
 	backdrop-filter: blur(2px);
 	z-index: 55;
 }

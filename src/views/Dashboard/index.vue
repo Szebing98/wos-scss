@@ -235,7 +235,6 @@ const isDarkMode = ref(false);
 
 const lastUpdatedTime = ref("12 Jun 2026, 04:26 PM");
 
-// 数据集转换
 const chartData = [25, 35, 15, 25];
 const chartLabels = ["Plumbing", "Electrical", "HVAC", "General"];
 const chartColors = ["#3B82F6", "#F59E0B", "#6366F1", "#06B6D4"];
@@ -340,328 +339,327 @@ function refreshData() {
 
 <style lang="scss" scoped>
 .dashboard {
-    padding: var(--spacing-xl);
-    background-color: var(--colors-surface-background);
-    min-height: 100vh;
-    color: var(--colors-text-primary);
+	padding: var(--spacing-xl);
+	background-color: var(--colors-surface-background);
+	min-height: 100vh;
+	color: var(--colors-text-primary);
 
-    // 1. 标题区
-    &__header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--spacing-xl);
+	&__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: var(--spacing-xl);
 
-        h1 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0 0 4px 0;
-        }
-    }
+		h1 {
+			font-size: 24px;
+			font-weight: 700;
+			margin: 0 0 4px 0;
+		}
+	}
 
-    &__updated-time {
-        font-size: var(--typography-fontSize-xs);
-        color: var(--colors-text-muted);
-        margin: 0;
-    }
+	&__updated-time {
+		font-size: var(--typography-fontSize-xs);
+		color: var(--colors-text-muted);
+		margin: 0;
+	}
 
-    &__refresh-btn {
-        background: transparent;
-        border: none;
-        color: var(--colors-brand-primary);
-        font-size: 22px;
-        cursor: pointer;
-        padding: 8px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
+	&__refresh-btn {
+		background: transparent;
+		border: none;
+		color: var(--colors-brand-primary);
+		font-size: 22px;
+		cursor: pointer;
+		padding: 8px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: background 0.2s;
 
-        &:hover {
-            background: rgba(99, 102, 241, 0.08);
-        }
-    }
+		&:hover {
+			background: rgba(99, 102, 241, 0.08);
+		}
+	}
 
-    // 2. 网格配置 (自动取代 MudGrid xs=12, sm=6, md=4, lg=3)
-    &__cards-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); // 💡 完美自适应弹性缩放
-        gap: var(--spacing-md);
-        margin-bottom: var(--spacing-xl);
-    }
+	&__cards-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		gap: var(--spacing-md);
+		margin-bottom: var(--spacing-xl);
+	}
 
-    &__main-layout {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-md);
-    }
+	&__main-layout {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-md);
+	}
 
-    // 两个大卡片的下属布局 (替代原版 md=5 和 md=7)
-    &__content-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: var(--spacing-lg);
+	&__content-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: var(--spacing-lg);
 
-        @media (max-width: 1024px) {
-            grid-template-columns: 1fr; // 平板和手机下退化为单列
-        }
-    }
+		@media (max-width: 1024px) {
+			grid-template-columns: 1fr;
+		}
+	}
 
-    // 统一的面板底座
-    &__panel {
-        background: white;
-        border: 1px solid var(--colors-surface-border);
-        border-radius: 12px;
-        padding: var(--spacing-xl);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-        display: flex;
-        flex-direction: column;
+	&__panel {
+		background: white;
+		border: 1px solid var(--colors-surface-border);
+		border-radius: 12px;
+		padding: var(--spacing-xl);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+		display: flex;
+		flex-direction: column;
 
-        &-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--spacing-lg);
-        }
-    }
+		&-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: var(--spacing-lg);
+		}
+	}
 
-    &__panel-title {
-        font-size: 16px;
-        font-weight: 600;
-        margin: 0;
-    }
+	&__panel-title {
+		font-size: 16px;
+		font-weight: 600;
+		margin: 0;
+	}
 }
 
-// 3. 各种原子级手写组件样式
-
-// 统计卡片
 .status-card {
-    height: 110px;
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-radius: 12px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    box-sizing: border-box;
+	height: 110px;
+	padding: var(--spacing-md) var(--spacing-lg);
+	border-radius: 12px;
+	position: relative;
+	overflow: hidden;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+	box-sizing: border-box;
 
-    &__body {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        height: 100%;
-    }
+	&__body {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		height: 100%;
+	}
 
-    &__icon {
-        position: absolute;
-        left: -10px;
-        bottom: -20px;
-        font-size: 6rem;
-        pointer-events: none;
-    }
+	&__icon {
+		position: absolute;
+		left: -10px;
+		bottom: -20px;
+		font-size: 6rem;
+		pointer-events: none;
+	}
 
-    &__content {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        width: 100%;
-        z-index: 1;
-    }
+	&__content {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		width: 100%;
+		z-index: 1;
+	}
 
-    &__number {
-        font-size: 32px;
-        font-weight: 800;
-        line-height: 1;
-    }
+	&__number {
+		font-size: 32px;
+		font-weight: 800;
+		line-height: 1;
+	}
 
-    &__title {
-        font-size: 13px;
-        font-weight: 600;
-        margin-top: 6px;
-        opacity: 0.9;
-    }
+	&__title {
+		font-size: 13px;
+		font-weight: 600;
+		margin-top: 6px;
+		opacity: 0.9;
+	}
 }
 
-// 警告条
 .alert-box {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-radius: 8px;
-    font-size: var(--typography-fontSize-sm);
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	padding: var(--spacing-md) var(--spacing-lg);
+	border-radius: 8px;
+	font-size: var(--typography-fontSize-sm);
 
-    &--error {
-        background-color: #FEF2F2;
-        border: 1px solid #FCA5A5;
-        color: #991B1B;
-    }
+	&--error {
+		background-color: #fef2f2;
+		border: 1px solid #fca5a5;
+		color: #991b1b;
+	}
 
-    &__icon {
-        font-size: 18px;
-    }
+	&__icon {
+		font-size: 18px;
+	}
 }
 
-// 原生 SVG 环形图排版
 .chart-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    gap: var(--spacing-md);
-    padding: var(--spacing-md) 0;
-    flex-grow: 1;
+	display: flex;
+	align-items: center;
+	justify-content: space-around;
+	gap: var(--spacing-md);
+	padding: var(--spacing-md) 0;
+	flex-grow: 1;
 
-    .donut-chart {
-        width: 150px;
-        height: 150px;
-        transform: rotate(-90deg); // 旋转让图表从12点钟方向开始
-    }
+	.donut-chart {
+		width: 150px;
+		height: 150px;
+		transform: rotate(-90deg);
+	}
 
-    .chart-legends {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
+	.chart-legends {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
 
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
+	.legend-item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 13px;
 
-        &__color {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-    }
+		&__color {
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+		}
+	}
 }
 
-// 时间线 (Timeline)
 .timeline {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    padding-left: var(--spacing-lg);
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	padding-left: var(--spacing-lg);
 
-    &::before {
-        content: '';
-        position: absolute;
-        left: 5px;
-        top: 8px;
-        bottom: 8px;
-        width: 2px;
-        background-color: var(--colors-surface-border);
-    }
+	&::before {
+		content: "";
+		position: absolute;
+		left: 5px;
+		top: 8px;
+		bottom: 8px;
+		width: 2px;
+		background-color: var(--colors-surface-border);
+	}
 
-    &-item {
-        display: flex;
-        position: relative;
-        margin-bottom: var(--spacing-md);
+	&-item {
+		display: flex;
+		position: relative;
+		margin-bottom: var(--spacing-md);
 
-        &:last-child { margin-bottom: 0; }
+		&:last-child {
+			margin-bottom: 0;
+		}
 
-        &__badge {
-            position: absolute;
-            left: -19px;
-            top: 6px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid white;
-            z-index: 2;
-        }
+		&__badge {
+			position: absolute;
+			left: -19px;
+			top: 6px;
+			width: 12px;
+			height: 12px;
+			border-radius: 50%;
+			border: 2px solid white;
+			z-index: 2;
+		}
 
-        &__card {
-            background-color: #F8FAFC;
-            border-radius: 8px;
-            padding: var(--spacing-md);
-            width: 100%;
-        }
+		&__card {
+			background-color: #f8fafc;
+			border-radius: 8px;
+			padding: var(--spacing-md);
+			width: 100%;
+		}
 
-        &__header {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            margin-bottom: 4px;
-        }
+		&__header {
+			display: flex;
+			justify-content: space-between;
+			font-size: 13px;
+			margin-bottom: 4px;
+		}
 
-        &__time {
-            color: var(--colors-text-muted);
-            font-size: 12px;
-        }
+		&__time {
+			color: var(--colors-text-muted);
+			font-size: 12px;
+		}
 
-        &__desc {
-            margin: 0;
-            font-size: 13px;
-            color: var(--colors-text-secondary);
-        }
-    }
+		&__desc {
+			margin: 0;
+			font-size: 13px;
+			color: var(--colors-text-secondary);
+		}
+	}
 }
 
-// 纯手写精美表格
 .data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
 
-    th, td {
-        padding: var(--spacing-sm) var(--spacing-md);
-        text-align: left;
-    }
+	th,
+	td {
+		padding: var(--spacing-sm) var(--spacing-md);
+		text-align: left;
+	}
 
-    th {
-        color: var(--colors-text-muted);
-        border-bottom: 1px solid var(--colors-surface-border);
-        font-weight: 600;
-    }
+	th {
+		color: var(--colors-text-muted);
+		border-bottom: 1px solid var(--colors-surface-border);
+		font-weight: 600;
+	}
 
-    tr {
-        border-bottom: 1px solid #F1F5F9;
-        &:last-child { border-bottom: none; }
-        &:hover { background-color: #F8FAFC; }
-    }
+	tr {
+		border-bottom: 1px solid #f1f5f9;
+		&:last-child {
+			border-bottom: none;
+		}
+		&:hover {
+			background-color: #f8fafc;
+		}
+	}
 }
 
-// 公用原子样式
 .text-btn {
-    background: transparent;
-    border: none;
-    color: var(--colors-brand-primary);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+	background: transparent;
+	border: none;
+	color: var(--colors-brand-primary);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .icon-btn {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: 16px;
-    padding: 4px;
-    border-radius: 4px;
-    
-    &--info { color: #0284C7; }
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	font-size: 16px;
+	padding: 4px;
+	border-radius: 4px;
+
+	&--info {
+		color: #0284c7;
+	}
 }
 
 .action-btn {
-    background: transparent;
-    padding: 2px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
+	background: transparent;
+	padding: 2px 10px;
+	border-radius: 6px;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
 }
 
 .badge {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 600;
 }
 
-.u-text-right { text-align: right !important; }
+.u-text-right {
+	text-align: right !important;
+}
 </style>

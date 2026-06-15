@@ -34,9 +34,21 @@ const routes = [
 		component: MainLayout,
 		children: [
 			{
-				path: "/dashboard",
+				path: "dashboard",
 				name: "Dashboard",
 				component: () => import("@/views/Dashboard/index.vue"),
+				meta: { requiresAuth: true },
+			},
+		],
+	},
+	{
+		path: "/maintenance",
+		component: MainLayout,
+		children: [
+			{
+				path: "work-types",
+				name: "Work Types",
+				component: () => import("@/views/Maintenance/WorkType.vue"),
 				meta: { requiresAuth: true },
 			},
 		],
