@@ -14,7 +14,7 @@
 		width: var(--spacing-md);
 		height: var(--spacing-md);
 
-		border: 1px solid var(--colors-surface-border);
+		border: 2px solid var(--colors-text-muted);
 		border-radius: var(--spacing-xs);
 
 		background: var(--colors-surface-card);
@@ -25,12 +25,12 @@
 	}
 
 	/* checked state */
-	&__input:checked + .checkbox__box {
+	&__input:checked+.checkbox__box {
 		background: var(--colors-brand-primary);
 		border-color: var(--colors-brand-primary);
 	}
 
-	&__input:checked + .checkbox__box::after {
+	&__input:checked+.checkbox__box::after {
 		content: "";
 		position: absolute;
 

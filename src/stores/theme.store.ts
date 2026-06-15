@@ -11,6 +11,7 @@ export const useThemeStore = defineStore("theme", {
 	actions: {
 		initializeTheme() {
 			applyTheme(this.dark ? themes.dark : themes.light);
+			document.documentElement.setAttribute("data-theme", this.dark ? "dark" : "light");
 		},
 
 		toggleTheme() {
@@ -19,6 +20,7 @@ export const useThemeStore = defineStore("theme", {
 			localStorage.setItem("theme", this.dark ? "dark" : "light");
 
 			applyTheme(this.dark ? themes.dark : themes.light);
+			document.documentElement.setAttribute("data-theme", this.dark ? "dark" : "light");
 		},
 	},
 });

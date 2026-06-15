@@ -38,13 +38,21 @@
 	// Variants
 	&--primary {
 		background: var(--colors-brand-primary);
-		color: var(--colors-text-inverse);
+		color: #ffffff;
 
 		box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
 
 		&:hover {
 			transform: translateY(-1px);
 			box-shadow: 0 12px 28px rgba(99, 102, 241, 0.3);
+		}
+
+		[data-theme="dark"] & {
+			box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+
+			&:hover {
+				box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+			}
 		}
 	}
 
@@ -63,7 +71,7 @@
 	&--danger {
 		background: var(--colors-state-error);
 
-		color: var(--colors-text-inverse);
+		color: #ffffff;
 
 		&:hover {
 			filter: brightness(1.05);

@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import Card from "@/components/Card.vue";
+import Chip from "@/components/Chip.vue";
+import Dialog from "@/components/Dialog.vue";
+import Select from "@/components/Select.vue";
+import FilterPanel from "@/components/FilterPanel.vue";
+import Table from "@/components/Table.vue";
+import type { TableHeader } from "@/components/Table.vue";
 
 interface WorkType {
 	id: number;
@@ -21,7 +28,20 @@ interface WorkTypeItem {
 
 const searchType = ref("");
 const selectedType = ref<WorkType | null>(null);
+const isEditing = ref(false);
 const isItemDialogOpen = ref(false);
+const filterActive = ref('all');
+const filterForm = ref('all');
+
+const itemHeaders: TableHeader[] = [
+	{ key: "code", label: "Code" },
+	{ key: "name", label: "Item Name" },
+	{ key: "status", label: "Status" },
+	{ key: "actions", label: "Actions", align: "right", width: "100px" },
+];
+
+const searchItem = ref("");
+const filterItemStatus = ref('all');
 const editingItem = ref<WorkTypeItem>({
 	id: 0,
 	workTypeCode: "",
@@ -78,21 +98,62 @@ const items = ref<WorkTypeItem[]>([
 ]);
 
 const filteredWorkTypes = computed(() => {
-	if (!searchType.value) return workTypes.value;
-	return workTypes.value.filter(
-		(t) =>
-			t.name.toLowerCase().includes(searchType.value.toLowerCase()) ||
-			t.code.toLowerCase().includes(searchType.value.toLowerCase()),
-	);
+	let result = workTypes.value;
+
+	if (searchType.value) {
+		const q = searchType.value.toLowerCase();
+		result = result.filter(
+			(t) => t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)
+		);
+	}
+
+	if (filterActive.value !== "all") {
+		const isActive = filterActive.value === "active";
+		result = result.filter((t) => t.isActive === isActive);
+	}
+
+	if (filterForm.value !== "all") {
+		const isRequired = filterForm.value === "required";
+		result = result.filter((t) => t.withEquipmentForm === isRequired);
+	}
+
+	return result;
 });
 
 const filteredItems = computed(() => {
 	if (!selectedType.value) return [];
-	return items.value.filter((i) => i.workTypeCode === selectedType.value?.code);
+	
+	let result = items.value.filter((i) => i.workTypeCode === selectedType.value?.code);
+	
+	if (searchItem.value) {
+		const q = searchItem.value.toLowerCase();
+		result = result.filter(
+			(i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)
+		);
+	}
+	
+	if (filterItemStatus.value !== "all") {
+		const isActive = filterItemStatus.value === "active";
+		result = result.filter((i) => i.isActive === isActive);
+	}
+	
+	return result;
 });
+
+function resetTypeFilter() {
+	searchType.value = "";
+	filterActive.value = "all";
+	filterForm.value = "all";
+}
+
+function resetItemFilter() {
+	searchItem.value = "";
+	filterItemStatus.value = "all";
+}
 
 function selectType(type: WorkType) {
 	selectedType.value = type;
+	isEditing.value = false;
 }
 
 function createNewType() {
@@ -101,6 +162,7 @@ function createNewType() {
 
 function saveType() {
 	console.log("Type details updated local-store successfully", selectedType.value);
+	isEditing.value = false;
 }
 
 function addNewItem() {
@@ -153,14 +215,36 @@ function deleteItem(item: WorkTypeItem) {
 
 		<div class="maintenance-grid">
 			<div class="maintenance-grid__left-panel">
-				<div class="search-box">
-					<i class="mdi mdi-magnify search-box__icon"></i>
-					<input
-						v-model="searchType"
-						type="text"
-						placeholder="Search types..."
-						class="search-box__input"
-					/>
+				<div class="list-controls">
+					<div class="search-box">
+						<i class="mdi mdi-magnify search-box__icon"></i>
+						<input
+							v-model="searchType"
+							type="text"
+							placeholder="Search types..."
+							class="search-box__input"
+						/>
+					</div>
+					
+					<FilterPanel show-reset align="right" @reset="resetTypeFilter">
+						<template #trigger="{ isActive }">
+							<button class="icon-action-btn" :class="{ 'icon-action-btn--active': isActive }" title="Filter">
+								<i class="mdi mdi-filter-variant"></i>
+							</button>
+						</template>
+						
+						<Select v-model="filterActive" label="Status">
+							<option value="all">All</option>
+							<option value="active">Active</option>
+							<option value="inactive">Inactive</option>
+						</Select>
+						
+						<Select v-model="filterForm" label="Equipment Form">
+							<option value="all">All</option>
+							<option value="required">Required</option>
+							<option value="none">Not Required</option>
+						</Select>
+					</FilterPanel>
 				</div>
 
 				<div class="type-list">
@@ -172,20 +256,18 @@ function deleteItem(item: WorkTypeItem) {
 						@click="selectType(type)"
 					>
 						<div class="type-item__content">
-							<span
-								class="type-item__name"
-								:class="{ 'type-item__name--disabled': !type.isActive }"
-							>
+							<span class="type-item__name">
 								{{ type.name }}
+								<span class="type-item__code">({{ type.code }})</span>
 							</span>
-							<span class="type-item__code">Code: {{ type.code }}</span>
-						</div>
-						<div
-							v-if="type.withEquipmentForm"
-							class="type-item__badge"
-							title="Equipment Form Required"
-						>
-							<i class="mdi mdi-assignment"></i>
+							<div class="type-item__chips">
+								<Chip :type="type.isActive ? 'success' : 'default'">
+									{{ type.isActive ? 'Active' : 'Inactive' }}
+								</Chip>
+								<Chip v-if="type.withEquipmentForm" type="info" icon="mdi-assignment">
+									Form
+								</Chip>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -193,19 +275,45 @@ function deleteItem(item: WorkTypeItem) {
 
 			<div class="maintenance-grid__right-panel">
 				<div v-if="selectedType" class="detail-container">
-					<div class="panel-card panel-card--bordered">
-						<div class="panel-card__header">
+					<Card bordered>
+						<template #header>
 							<h2>
 								Work Type Details: <strong>{{ selectedType.code }}</strong>
 							</h2>
-							<label class="switch-toggle">
+							<button v-if="!isEditing" class="action-btn action-btn--sm action-btn--outlined" @click="isEditing = true">
+								<i class="mdi mdi-pencil"></i> Edit
+							</button>
+							<label v-else class="switch-toggle">
 								<input type="checkbox" v-model="selectedType.isActive" />
 								<span class="switch-toggle__slider"></span>
 								<span class="switch-toggle__label">Active</span>
 							</label>
+						</template>
+
+						<div v-if="!isEditing" class="detail-view">
+							<div class="detail-view__group">
+								<label>Work Type Name</label>
+								<p>{{ selectedType.name }}</p>
+							</div>
+							<div class="detail-view__group">
+								<label>Status</label>
+								<p>
+									<Chip :type="selectedType.isActive ? 'success' : 'default'">
+										{{ selectedType.isActive ? 'Active' : 'Inactive' }}
+									</Chip>
+								</p>
+							</div>
+							<div class="detail-view__group">
+								<label>Equipment Form</label>
+								<p>{{ selectedType.withEquipmentForm ? 'Required' : 'Not Required' }}</p>
+							</div>
+							<div class="detail-view__group detail-view__group--full">
+								<label>Description</label>
+								<p>{{ selectedType.description || 'No description provided.' }}</p>
+							</div>
 						</div>
 
-						<div class="form-grid">
+						<div v-else class="form-grid">
 							<div class="form-group">
 								<label class="form-group__label">Work Type Name</label>
 								<input
@@ -234,18 +342,21 @@ function deleteItem(item: WorkTypeItem) {
 							</div>
 						</div>
 
-						<div class="panel-card__actions">
+						<template #actions v-if="isEditing">
+							<button class="action-btn action-btn--text action-btn--sm" @click="isEditing = false">
+								Cancel
+							</button>
 							<button
 								class="action-btn action-btn--primary action-btn--sm"
 								@click="saveType"
 							>
-								Update Work Type
+								Save Changes
 							</button>
-						</div>
-					</div>
+						</template>
+					</Card>
 
-					<div class="panel-card mt-lg">
-						<div class="panel-card__header">
+					<Card class="mt-lg">
+						<template #header>
 							<h2>Work Type Items</h2>
 							<button
 								class="action-btn action-btn--outlined action-btn--sm"
@@ -253,56 +364,68 @@ function deleteItem(item: WorkTypeItem) {
 							>
 								<i class="mdi mdi-plus"></i> Add Item
 							</button>
+						</template>
+
+						<div class="list-controls" style="margin-bottom: 16px;">
+							<div class="search-box">
+								<i class="mdi mdi-magnify search-box__icon"></i>
+								<input
+									v-model="searchItem"
+									type="text"
+									placeholder="Search items..."
+									class="search-box__input"
+								/>
+							</div>
+							
+							<FilterPanel show-reset align="right" @reset="resetItemFilter">
+								<template #trigger="{ isActive }">
+									<button class="icon-action-btn" :class="{ 'icon-action-btn--active': isActive }" title="Filter">
+										<i class="mdi mdi-filter-variant"></i>
+									</button>
+								</template>
+								
+								<Select v-model="filterItemStatus" label="Status">
+									<option value="all">All</option>
+									<option value="active">Active</option>
+									<option value="inactive">Inactive</option>
+								</Select>
+							</FilterPanel>
 						</div>
 
-						<table class="data-table">
-							<thead>
-								<tr>
-									<th>Code</th>
-									<th>Item Name</th>
-									<th>Status</th>
-									<th class="u-text-right" style="width: 100px">Actions</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr v-for="item in filteredItems" :key="item.code">
-									<td class="u-font-mono">{{ item.code }}</td>
-									<td>{{ item.name }}</td>
-									<td>
-										<span
-											class="badge"
-											:class="
-												item.isActive ? 'badge--success' : 'badge--disabled'
-											"
-										>
-											{{ item.isActive ? "Active" : "Disabled" }}
-										</span>
-									</td>
-									<td class="u-text-right">
-										<button
-											class="icon-action-btn"
-											@click="editItem(item)"
-											title="Edit"
-										>
-											<i class="mdi mdi-pencil"></i>
-										</button>
-										<button
-											class="icon-action-btn icon-action-btn--danger"
-											@click="deleteItem(item)"
-											title="Delete"
-										>
-											<i class="mdi mdi-delete"></i>
-										</button>
-									</td>
-								</tr>
-								<tr v-if="filteredItems.length === 0">
-									<td colspan="4" class="data-table__empty">
-										No work items found under this category.
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
+						<Table 
+							:headers="itemHeaders" 
+							:items="filteredItems" 
+							emptyMessage="No work items found under this category."
+						>
+							<template #item-code="{ item }">
+								<span class="u-font-mono">{{ item.code }}</span>
+							</template>
+							<template #item-status="{ item }">
+								<span
+									class="badge"
+									:class="item.isActive ? 'badge--success' : 'badge--disabled'"
+								>
+									{{ item.isActive ? 'Active' : 'Disabled' }}
+								</span>
+							</template>
+							<template #item-actions="{ item }">
+								<button
+									class="icon-action-btn"
+									@click="editItem(item)"
+									title="Edit"
+								>
+									<i class="mdi mdi-pencil"></i>
+								</button>
+								<button
+									class="icon-action-btn icon-action-btn--danger"
+									@click="deleteItem(item)"
+									title="Delete"
+								>
+									<i class="mdi mdi-delete"></i>
+								</button>
+							</template>
+						</Table>
+					</Card>
 				</div>
 
 				<div v-else class="empty-state">
@@ -312,51 +435,49 @@ function deleteItem(item: WorkTypeItem) {
 			</div>
 		</div>
 
-		<div class="modal-mask" v-if="isItemDialogOpen">
-			<div class="modal-box">
-				<div class="modal-box__header">
-					<h3>{{ editingItem.id === 0 ? "New" : "Edit" }} Work Item</h3>
-				</div>
-				<div class="modal-box__body">
-					<div class="form-group">
-						<label class="form-group__label">Item Code</label>
-						<input
-							v-model="editingItem.code"
-							type="text"
-							class="form-group__input"
-							:disabled="editingItem.id !== 0"
-						/>
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Item Name</label>
-						<input v-model="editingItem.name" type="text" class="form-group__input" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Description</label>
-						<textarea
-							v-model="editingItem.description"
-							rows="2"
-							class="form-group__textarea"
-						></textarea>
-					</div>
-					<div class="form-group">
-						<label class="switch-toggle">
-							<input type="checkbox" v-model="editingItem.isActive" />
-							<span class="switch-toggle__slider"></span>
-							<span class="switch-toggle__label">Active</span>
-						</label>
-					</div>
-				</div>
-				<div class="modal-box__footer">
-					<button class="action-btn action-btn--text" @click="isItemDialogOpen = false">
-						Cancel
-					</button>
-					<button class="action-btn action-btn--primary" @click="saveItem">
-						Save Item
-					</button>
-				</div>
+		<Dialog v-model="isItemDialogOpen">
+			<template #header>
+				<h3>{{ editingItem.id === 0 ? "New" : "Edit" }} Work Item</h3>
+			</template>
+			
+			<div class="form-group">
+				<label class="form-group__label">Item Code</label>
+				<input
+					v-model="editingItem.code"
+					type="text"
+					class="form-group__input"
+					:disabled="editingItem.id !== 0"
+				/>
 			</div>
-		</div>
+			<div class="form-group">
+				<label class="form-group__label">Item Name</label>
+				<input v-model="editingItem.name" type="text" class="form-group__input" />
+			</div>
+			<div class="form-group">
+				<label class="form-group__label">Description</label>
+				<textarea
+					v-model="editingItem.description"
+					rows="2"
+					class="form-group__textarea"
+				></textarea>
+			</div>
+			<div class="form-group">
+				<label class="switch-toggle">
+					<input type="checkbox" v-model="editingItem.isActive" />
+					<span class="switch-toggle__slider"></span>
+					<span class="switch-toggle__label">Active</span>
+				</label>
+			</div>
+			
+			<template #footer>
+				<button class="action-btn action-btn--text" @click="isItemDialogOpen = false">
+					Cancel
+				</button>
+				<button class="action-btn action-btn--primary" @click="saveItem">
+					Save Item
+				</button>
+			</template>
+		</Dialog>
 	</div>
 </template>
 
@@ -400,8 +521,8 @@ function deleteItem(item: WorkTypeItem) {
 	}
 
 	&__left-panel {
-		background: white;
-		border: 1px solid var(--border-color);
+		background: var(--colors-surface-card);
+		border: 1px solid var(--colors-surface-border);
 		border-radius: var(--radius-xxs, 12px);
 		padding: var(--spacing-md);
 		height: 650px;
@@ -409,13 +530,54 @@ function deleteItem(item: WorkTypeItem) {
 		flex-direction: column;
 		gap: var(--spacing-md);
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+
+		@media (max-width: 960px) {
+			height: auto;
+			max-height: 400px;
+		}
 	}
 
 	&__right-panel {
 		min-height: 650px;
 		height: 100%;
+
+		@media (max-width: 960px) {
+			min-height: auto;
+		}
 	}
 }
+
+
+
+.list-controls {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+
+	.search-box {
+		flex: 1;
+	}
+	
+	.icon-action-btn {
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--colors-surface-background);
+		border: 1px solid var(--colors-surface-border);
+		border-radius: 6px;
+		color: var(--colors-text-secondary);
+		cursor: pointer;
+		
+		&:hover, &--active {
+			background: var(--colors-surface-hover);
+			color: var(--colors-brand-primary);
+		}
+	}
+}
+
+
 
 // 搜索栏
 .search-box {
@@ -460,19 +622,19 @@ function deleteItem(item: WorkTypeItem) {
 	justify-content: space-between;
 	padding: var(--spacing-sm) var(--spacing-md);
 	border-radius: 8px;
+	border: 1px solid transparent;
 	cursor: pointer;
 	transition: all 0.2s;
 
 	&:hover {
-		background-color: #f1f5f9;
+		background-color: var(--colors-surface-hover);
 	}
 
 	&--selected {
-		background-color: #eff6ff !important;
-		border-left: 4px solid var(--colors-primary-deepblue);
+		background-color: var(--colors-surface-hover) !important;
+		border-color: var(--colors-brand-primary) !important;
 		.type-item__name {
-			color: var(--colors-primary-deepblue);
-			font-weight: 600;
+			color: var(--colors-brand-primary);
 		}
 	}
 
@@ -480,39 +642,86 @@ function deleteItem(item: WorkTypeItem) {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
+		width: 100%;
 	}
 
 	&__name {
 		font-size: 14px;
-		color: #1e293b;
+		color: var(--colors-text-primary);
 		font-weight: 500;
+		display: flex;
+		align-items: baseline;
+		gap: 4px;
+
+		.type-item--selected & {
+			color: #ffffff;
+		}
 
 		&--disabled {
-			color: #94a3b8 !important;
+			color: var(--colors-text-muted) !important;
 			text-decoration: line-through;
 		}
 	}
 
 	&__code {
-		font-size: 11px;
-		color: #64748b;
+		font-size: 12px;
+		color: var(--colors-text-secondary);
+		font-weight: normal;
+		.type-item--selected & {
+			color: rgba(255, 255, 255, 0.8);
+		}
 	}
-	&__badge {
-		color: var(--colors-primary-deepblue);
-		font-size: 16px;
+
+	&__chips {
+		display: flex;
+		gap: 6px;
+		margin-top: 4px;
+		flex-wrap: wrap;
+	}
+}
+
+.detail-view {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--spacing-lg);
+
+	&__group {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+
+		label {
+			font-size: 12px;
+			font-weight: 600;
+			color: var(--colors-text-secondary);
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		p {
+			font-size: 14px;
+			color: var(--colors-text-primary);
+			margin: 0;
+			display: flex;
+			align-items: center;
+		}
+
+		&--full {
+			grid-column: 1 / -1;
+		}
 	}
 }
 
 // 详情控制板
 .panel-card {
-	background: white;
-	border: 1px solid var(--border-color);
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
 	border-radius: var(--radius-xxs, 12px);
 	padding: var(--spacing-lg);
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 
 	&--bordered {
-		border-left: 6px solid var(--colors-primary-deepblue); // 复刻原版 Primary Accent
+		border-left: 6px solid var(--colors-brand-primary); // 复刻原版 Primary Accent
 	}
 
 	&__header {
@@ -524,7 +733,7 @@ function deleteItem(item: WorkTypeItem) {
 			font-size: 16px;
 			font-weight: 600;
 			margin: 0;
-			color: #1e293b;
+			color: var(--colors-text-primary);
 		}
 	}
 
@@ -657,33 +866,7 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-// 数据表格排版
-.data-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 13px;
-	th,
-	td {
-		padding: 10px 12px;
-		text-align: left;
-	}
-	th {
-		color: #64748b;
-		border-bottom: 1px solid var(--border-color);
-		font-weight: 600;
-	}
-	tr {
-		border-bottom: 1px solid #f1f5f9;
-		&:hover {
-			background-color: #f8fafc;
-		}
-	}
-	&__empty {
-		text-align: center !important;
-		color: #94a3b8;
-		padding: 32px !important;
-	}
-}
+
 
 // 动作功能小按钮
 .action-btn {
@@ -696,28 +879,28 @@ function deleteItem(item: WorkTypeItem) {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	transition: background-color 0.15s;
+	transition: background-color 0.15s, filter 0.15s;
 
 	&--primary {
-		background-color: var(--colors-primary-deepblue);
+		background-color: var(--colors-brand-primary);
 		color: white;
 		&:hover {
-			background-color: #444acf;
+			filter: brightness(1.1);
 		}
 	}
 	&--outlined {
 		background-color: transparent;
-		border: 1px solid #3b82f6;
-		color: #3b82f6;
+		border: 1px solid var(--colors-brand-primary);
+		color: var(--colors-brand-primary);
 		&:hover {
-			background-color: #eff6ff;
+			background-color: var(--colors-brand-primarySoft);
 		}
 	}
 	&--text {
 		background: transparent;
-		color: #64748b;
+		color: var(--colors-text-secondary);
 		&:hover {
-			background: #f1f5f9;
+			background: var(--colors-surface-hover);
 		}
 	}
 	&--sm {
@@ -755,10 +938,10 @@ function deleteItem(item: WorkTypeItem) {
 	align-items: center;
 	justify-content: center;
 	gap: var(--spacing-md);
-	background: white;
-	border: 1px solid var(--border-color);
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
 	border-radius: 12px;
-	color: #94a3b8;
+	color: var(--colors-text-muted);
 	&__icon {
 		font-size: 5rem;
 		opacity: 0.15;
@@ -785,49 +968,7 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-// 🌟 手搓 Modal 弹窗阴影背板与卡片
-.modal-mask {
-	position: fixed;
-	inset: 0;
-	background: rgba(15, 23, 42, 0.4);
-	backdrop-filter: blur(2px);
-	z-index: 1000;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-.modal-box {
-	background: white;
-	border-radius: 12px;
-	width: 100%;
-	max-width: 460px;
-	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-	display: flex;
-	flex-direction: column;
 
-	&__header {
-		padding: var(--spacing-md) var(--spacing-lg);
-		border-bottom: 1px solid #e2e8f0;
-		h3 {
-			font-size: 16px;
-			font-weight: 600;
-			margin: 0;
-		}
-	}
-	&__body {
-		padding: var(--spacing-lg);
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-md);
-	}
-	&__footer {
-		padding: var(--spacing-md) var(--spacing-lg);
-		border-top: 1px solid #e2e8f0;
-		display: flex;
-		justify-content: flex-end;
-		gap: var(--spacing-sm);
-	}
-}
 
 .mt-lg {
 	margin-top: var(--spacing-lg);

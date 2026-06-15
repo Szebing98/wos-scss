@@ -51,6 +51,42 @@ const routes = [
 				component: () => import("@/views/Maintenance/WorkType.vue"),
 				meta: { requiresAuth: true },
 			},
+			{
+				path: "location",
+				name: "Location",
+				component: () => import("@/views/Maintenance/Location.vue"),
+				meta: { requiresAuth: true },
+			},
+			{
+				path: "parts",
+				name: "Part Replaced",
+				component: () => import("@/views/Maintenance/PartReplaced.vue"),
+				meta: { requiresAuth: true },
+			},
+			{
+				path: "services",
+				name: "Service Provided",
+				component: () => import("@/views/Maintenance/ServiceProvided.vue"),
+				meta: { requiresAuth: true },
+			},
+			{
+				path: "doc-no-format",
+				name: "Document No. Format",
+				component: () => import("@/views/Maintenance/DocNoFormat.vue"),
+				meta: { requiresAuth: true },
+			},
+			{
+				path: "role-permission",
+				name: "Role Permission",
+				component: () => import("@/views/Maintenance/RolePermission.vue"),
+				meta: { requiresAuth: true },
+			},
+			{
+				path: "user-permission",
+				name: "User Permission",
+				component: () => import("@/views/Maintenance/UserPermission.vue"),
+				meta: { requiresAuth: true },
+			},
 		],
 	},
 ];

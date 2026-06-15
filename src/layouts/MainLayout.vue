@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
+import { useRoute } from "vue-router";
+import { useThemeStore } from "@/stores/theme.store";
+
+const themeStore = useThemeStore();
 
 const isDocked = ref(false);
 const isMobile = ref(false);
 const isTablet = ref(false);
 const isDesktop = ref(true);
 const isMenuOpen = ref(false);
-const isDarkMode = ref(false);
 
 const groups = reactive({
 	workOrders: true,
@@ -39,9 +42,19 @@ function toggleGroup(key: "workOrders" | "maintenance") {
 }
 
 function toggleTheme() {
-	isDarkMode.value = !isDarkMode.value;
-	document.documentElement.setAttribute("data-theme", isDarkMode.value ? "dark" : "light");
+	themeStore.toggleTheme();
 }
+
+const route = useRoute();
+
+watch(
+	() => route.path,
+	() => {
+		if (isMobile.value) {
+			isMenuOpen.value = false;
+		}
+	}
+);
 
 function handleResize() {
 	const width = window.innerWidth;
@@ -66,7 +79,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="app-layout" :class="{ 'app-layout--dark': isDarkMode }">
+	<div class="app-layout" :class="{ 'app-layout--dark': themeStore.dark }">
 		<div v-if="isMobile && isMenuOpen" class="overlay" @click="isMenuOpen = false"></div>
 
 		<header class="header">
@@ -81,7 +94,7 @@ onUnmounted(() => {
 				<button class="icon-btn" @click="toggleTheme">
 					<i
 						class="mdi"
-						:class="isDarkMode ? 'mdi-brightness-4' : 'mdi-brightness-7'"
+						:class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'"
 					></i>
 				</button>
 			</div>
@@ -279,6 +292,22 @@ onUnmounted(() => {
 									class="nav__child"
 									active-class="nav__child-active"
 									><span>Doc No Format</span></router-link
+								>
+							</li>
+							<li>
+								<router-link
+									to="/maintenance/role-permission"
+									class="nav__child"
+									active-class="nav__child-active"
+									><span>Role Permission</span></router-link
+								>
+							</li>
+							<li>
+								<router-link
+									to="/maintenance/user-permission"
+									class="nav__child"
+									active-class="nav__child-active"
+									><span>User Permission</span></router-link
 								>
 							</li>
 						</ul>

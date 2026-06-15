@@ -15,7 +15,7 @@
 				v-for="item in statusCards"
 				:key="item.title"
 				class="status-card"
-				:class="{ 'status-card--dark': isDarkMode }"
+				:class="{ 'status-card--dark': themeStore.dark }"
 				:style="getCardStyle(item)"
 			>
 				<div class="status-card__body">
@@ -25,9 +25,7 @@
 						:style="getIconStyle(item)"
 					></i>
 					<div class="status-card__content">
-						<span class="status-card__number" :style="getNumberStyle(item)">{{
-							item.count
-						}}</span>
+						<span class="status-card__number" :style="getNumberStyle(item)">{{ item.count }}</span>
 						<span class="status-card__title">{{ item.title }}</span>
 					</div>
 				</div>
@@ -168,26 +166,13 @@
 						<h2 class="dashboard__panel-title">My Recent Drafts</h2>
 						<button class="text-btn">View All</button>
 					</div>
-					<table class="data-table">
-						<thead>
-							<tr>
-								<th>WO #</th>
-								<th>Title</th>
-								<th class="u-text-right">Action</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr v-for="draft in drafts" :key="draft.woNumber">
-								<td>{{ draft.woNumber }}</td>
-								<td>{{ draft.title }}</td>
-								<td class="u-text-right">
-									<button class="icon-btn icon-btn--info">
-										<i class="mdi mdi-pencil"></i>
-									</button>
-								</td>
-							</tr>
-						</tbody>
-					</table>
+					<Table :headers="draftHeaders" :items="drafts" emptyMessage="No recent drafts.">
+						<template #item-action="{ item }">
+							<button class="icon-btn icon-btn--info">
+								<i class="mdi mdi-pencil"></i>
+							</button>
+						</template>
+					</Table>
 				</div>
 
 				<div class="dashboard__panel">
@@ -195,33 +180,21 @@
 						<h2 class="dashboard__panel-title">Requires Attention</h2>
 						<button class="text-btn">View All</button>
 					</div>
-					<table class="data-table">
-						<thead>
-							<tr>
-								<th>WO #</th>
-								<th>Status</th>
-								<th class="u-text-right">Action</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr v-for="item in pendingActionItems" :key="item.woNumber">
-								<td>{{ item.woNumber }}</td>
-								<td>
-									<span class="badge" :style="getBadgeStyle(item.statusColor)">{{
-										item.status
-									}}</span>
-								</td>
-								<td class="u-text-right">
-									<button
-										class="action-btn"
-										:style="getBtnActionStyle(item.actionBtnColor)"
-									>
-										{{ item.actionText }}
-									</button>
-								</td>
-							</tr>
-						</tbody>
-					</table>
+					<Table :headers="attentionHeaders" :items="pendingActionItems" emptyMessage="No items require attention.">
+						<template #item-status="{ item }">
+							<span class="badge" :style="getBadgeStyle(item.statusColor)">{{
+								item.status
+							}}</span>
+						</template>
+						<template #item-action="{ item }">
+							<button
+								class="action-btn"
+								:style="getBtnActionStyle(item.actionBtnColor)"
+							>
+								{{ item.actionText }}
+							</button>
+						</template>
+					</Table>
 				</div>
 			</div>
 		</div>
@@ -230,8 +203,23 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useThemeStore } from "@/stores/theme.store";
+import Table from "@/components/Table.vue";
+import type { TableHeader } from "@/components/Table.vue";
 
-const isDarkMode = ref(false);
+const themeStore = useThemeStore();
+
+const draftHeaders: TableHeader[] = [
+	{ key: "woNumber", label: "WO #" },
+	{ key: "title", label: "Title" },
+	{ key: "action", label: "Action", align: "right" },
+];
+
+const attentionHeaders: TableHeader[] = [
+	{ key: "woNumber", label: "WO #" },
+	{ key: "status", label: "Status" },
+	{ key: "action", label: "Action", align: "right" },
+];
 
 const lastUpdatedTime = ref("12 Jun 2026, 04:26 PM");
 
@@ -297,7 +285,7 @@ const activities = ref([
 ]);
 
 function getCardStyle(item: any) {
-	if (isDarkMode.value) {
+	if (themeStore.dark) {
 		return {
 			background: "linear-gradient(135deg, #1e1e2d 0%, #151521 100%)",
 			borderLeft: `5px solid ${item.baseColor}`,
@@ -307,7 +295,7 @@ function getCardStyle(item: any) {
 }
 
 function getIconStyle(item: any) {
-	if (isDarkMode.value) {
+	if (themeStore.dark) {
 		return {
 			color: item.baseColor,
 			opacity: 0.25,
@@ -318,7 +306,7 @@ function getIconStyle(item: any) {
 }
 
 function getNumberStyle(item: any) {
-	if (isDarkMode.value) {
+	if (themeStore.dark) {
 		return { color: item.baseColor, textShadow: `0 0 10px ${item.baseColor}50` };
 	}
 	return { color: "white" };
@@ -383,9 +371,17 @@ function refreshData() {
 
 	&__cards-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		grid-template-columns: repeat(4, 1fr);
 		gap: var(--spacing-md);
 		margin-bottom: var(--spacing-xl);
+
+		@media (max-width: 1024px) {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		@media (max-width: 640px) {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	&__main-layout {
@@ -405,7 +401,7 @@ function refreshData() {
 	}
 
 	&__panel {
-		background: white;
+		background: var(--colors-surface-card);
 		border: 1px solid var(--colors-surface-border);
 		border-radius: 12px;
 		padding: var(--spacing-xl);
@@ -483,9 +479,9 @@ function refreshData() {
 	font-size: var(--typography-fontSize-sm);
 
 	&--error {
-		background-color: #fef2f2;
-		border: 1px solid #fca5a5;
-		color: #991b1b;
+		background-color: color-mix(in srgb, #ef4444 15%, transparent);
+		border: 1px solid color-mix(in srgb, #ef4444 40%, transparent);
+		color: #ef4444;
 	}
 
 	&__icon {
@@ -564,7 +560,7 @@ function refreshData() {
 		}
 
 		&__card {
-			background-color: #f8fafc;
+			background-color: var(--colors-surface-hover);
 			border-radius: 8px;
 			padding: var(--spacing-md);
 			width: 100%;
@@ -590,33 +586,7 @@ function refreshData() {
 	}
 }
 
-.data-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 13px;
 
-	th,
-	td {
-		padding: var(--spacing-sm) var(--spacing-md);
-		text-align: left;
-	}
-
-	th {
-		color: var(--colors-text-muted);
-		border-bottom: 1px solid var(--colors-surface-border);
-		font-weight: 600;
-	}
-
-	tr {
-		border-bottom: 1px solid #f1f5f9;
-		&:last-child {
-			border-bottom: none;
-		}
-		&:hover {
-			background-color: #f8fafc;
-		}
-	}
-}
 
 .text-btn {
 	background: transparent;
