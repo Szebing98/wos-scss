@@ -30,8 +30,8 @@ const searchType = ref("");
 const selectedType = ref<WorkType | null>(null);
 const isEditing = ref(false);
 const isItemDialogOpen = ref(false);
-const filterActive = ref('all');
-const filterForm = ref('all');
+const filterActive = ref("all");
+const filterForm = ref("all");
 
 const itemHeaders: TableHeader[] = [
 	{ key: "code", label: "Code" },
@@ -41,7 +41,7 @@ const itemHeaders: TableHeader[] = [
 ];
 
 const searchItem = ref("");
-const filterItemStatus = ref('all');
+const filterItemStatus = ref("all");
 const editingItem = ref<WorkTypeItem>({
 	id: 0,
 	workTypeCode: "",
@@ -103,7 +103,7 @@ const filteredWorkTypes = computed(() => {
 	if (searchType.value) {
 		const q = searchType.value.toLowerCase();
 		result = result.filter(
-			(t) => t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)
+			(t) => t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q),
 		);
 	}
 
@@ -122,21 +122,21 @@ const filteredWorkTypes = computed(() => {
 
 const filteredItems = computed(() => {
 	if (!selectedType.value) return [];
-	
+
 	let result = items.value.filter((i) => i.workTypeCode === selectedType.value?.code);
-	
+
 	if (searchItem.value) {
 		const q = searchItem.value.toLowerCase();
 		result = result.filter(
-			(i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)
+			(i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q),
 		);
 	}
-	
+
 	if (filterItemStatus.value !== "all") {
 		const isActive = filterItemStatus.value === "active";
 		result = result.filter((i) => i.isActive === isActive);
 	}
-	
+
 	return result;
 });
 
@@ -225,20 +225,24 @@ function deleteItem(item: WorkTypeItem) {
 							class="search-box__input"
 						/>
 					</div>
-					
+
 					<FilterPanel show-reset align="right" @reset="resetTypeFilter">
 						<template #trigger="{ isActive }">
-							<button class="icon-action-btn" :class="{ 'icon-action-btn--active': isActive }" title="Filter">
+							<button
+								class="icon-action-btn"
+								:class="{ 'icon-action-btn--active': isActive }"
+								title="Filter"
+							>
 								<i class="mdi mdi-filter-variant"></i>
 							</button>
 						</template>
-						
+
 						<Select v-model="filterActive" label="Status">
 							<option value="all">All</option>
 							<option value="active">Active</option>
 							<option value="inactive">Inactive</option>
 						</Select>
-						
+
 						<Select v-model="filterForm" label="Equipment Form">
 							<option value="all">All</option>
 							<option value="required">Required</option>
@@ -251,21 +255,25 @@ function deleteItem(item: WorkTypeItem) {
 					<div
 						v-for="type in filteredWorkTypes"
 						:key="type.code"
-						class="type-item"
-						:class="{ 'type-item--selected': selectedType?.code === type.code }"
+						class="type-card"
+						:class="{ 'type-card--selected': selectedType?.code === type.code }"
 						@click="selectType(type)"
 					>
-						<div class="type-item__content">
-							<span class="type-item__name">
+						<div class="type-card__content">
+							<span class="type-card__name">
 								{{ type.name }}
-								<span class="type-item__code">({{ type.code }})</span>
+								<span class="type-card__code">({{ type.code }})</span>
 							</span>
-							<div class="type-item__chips">
+							<div class="type-card__chips">
 								<Chip :type="type.isActive ? 'success' : 'default'">
-									{{ type.isActive ? 'Active' : 'Inactive' }}
+									{{ type.isActive ? "Active" : "Inactive" }}
 								</Chip>
-								<Chip v-if="type.withEquipmentForm" type="info" icon="mdi-assignment">
-									Form
+								<Chip
+									v-if="type.withEquipmentForm"
+									type="warning"
+									icon="mdi-assignment"
+								>
+									With Equipment Form
 								</Chip>
 							</div>
 						</div>
@@ -275,12 +283,16 @@ function deleteItem(item: WorkTypeItem) {
 
 			<div class="maintenance-grid__right-panel">
 				<div v-if="selectedType" class="detail-container">
-					<Card bordered>
+					<Card>
 						<template #header>
 							<h2>
 								Work Type Details: <strong>{{ selectedType.code }}</strong>
 							</h2>
-							<button v-if="!isEditing" class="action-btn action-btn--sm action-btn--outlined" @click="isEditing = true">
+							<button
+								v-if="!isEditing"
+								class="action-btn action-btn--sm action-btn--outlined"
+								@click="isEditing = true"
+							>
 								<i class="mdi mdi-pencil"></i> Edit
 							</button>
 							<label v-else class="switch-toggle">
@@ -299,17 +311,21 @@ function deleteItem(item: WorkTypeItem) {
 								<label>Status</label>
 								<p>
 									<Chip :type="selectedType.isActive ? 'success' : 'default'">
-										{{ selectedType.isActive ? 'Active' : 'Inactive' }}
+										{{ selectedType.isActive ? "Active" : "Inactive" }}
 									</Chip>
 								</p>
 							</div>
 							<div class="detail-view__group">
 								<label>Equipment Form</label>
-								<p>{{ selectedType.withEquipmentForm ? 'Required' : 'Not Required' }}</p>
+								<p>
+									{{
+										selectedType.withEquipmentForm ? "Required" : "Not Required"
+									}}
+								</p>
 							</div>
 							<div class="detail-view__group detail-view__group--full">
 								<label>Description</label>
-								<p>{{ selectedType.description || 'No description provided.' }}</p>
+								<p>{{ selectedType.description || "No description provided." }}</p>
 							</div>
 						</div>
 
@@ -343,7 +359,10 @@ function deleteItem(item: WorkTypeItem) {
 						</div>
 
 						<template #actions v-if="isEditing">
-							<button class="action-btn action-btn--text action-btn--sm" @click="isEditing = false">
+							<button
+								class="action-btn action-btn--text action-btn--sm"
+								@click="isEditing = false"
+							>
 								Cancel
 							</button>
 							<button
@@ -366,7 +385,7 @@ function deleteItem(item: WorkTypeItem) {
 							</button>
 						</template>
 
-						<div class="list-controls" style="margin-bottom: 16px;">
+						<div class="list-controls" style="margin-bottom: 16px">
 							<div class="search-box">
 								<i class="mdi mdi-magnify search-box__icon"></i>
 								<input
@@ -376,14 +395,18 @@ function deleteItem(item: WorkTypeItem) {
 									class="search-box__input"
 								/>
 							</div>
-							
+
 							<FilterPanel show-reset align="right" @reset="resetItemFilter">
 								<template #trigger="{ isActive }">
-									<button class="icon-action-btn" :class="{ 'icon-action-btn--active': isActive }" title="Filter">
+									<button
+										class="icon-action-btn"
+										:class="{ 'icon-action-btn--active': isActive }"
+										title="Filter"
+									>
 										<i class="mdi mdi-filter-variant"></i>
 									</button>
 								</template>
-								
+
 								<Select v-model="filterItemStatus" label="Status">
 									<option value="all">All</option>
 									<option value="active">Active</option>
@@ -392,9 +415,9 @@ function deleteItem(item: WorkTypeItem) {
 							</FilterPanel>
 						</div>
 
-						<Table 
-							:headers="itemHeaders" 
-							:items="filteredItems" 
+						<Table
+							:headers="itemHeaders"
+							:items="filteredItems"
 							emptyMessage="No work items found under this category."
 						>
 							<template #item-code="{ item }">
@@ -405,7 +428,7 @@ function deleteItem(item: WorkTypeItem) {
 									class="badge"
 									:class="item.isActive ? 'badge--success' : 'badge--disabled'"
 								>
-									{{ item.isActive ? 'Active' : 'Disabled' }}
+									{{ item.isActive ? "Active" : "Disabled" }}
 								</span>
 							</template>
 							<template #item-actions="{ item }">
@@ -439,7 +462,7 @@ function deleteItem(item: WorkTypeItem) {
 			<template #header>
 				<h3>{{ editingItem.id === 0 ? "New" : "Edit" }} Work Item</h3>
 			</template>
-			
+
 			<div class="form-group">
 				<label class="form-group__label">Item Code</label>
 				<input
@@ -468,14 +491,12 @@ function deleteItem(item: WorkTypeItem) {
 					<span class="switch-toggle__label">Active</span>
 				</label>
 			</div>
-			
+
 			<template #footer>
 				<button class="action-btn action-btn--text" @click="isItemDialogOpen = false">
 					Cancel
 				</button>
-				<button class="action-btn action-btn--primary" @click="saveItem">
-					Save Item
-				</button>
+				<button class="action-btn action-btn--primary" @click="saveItem">Save Item</button>
 			</template>
 		</Dialog>
 	</div>
@@ -497,14 +518,14 @@ function deleteItem(item: WorkTypeItem) {
 
 	&__title-area {
 		h1 {
-			font-size: 24px;
-			font-weight: 700;
+			font-size: var(--typography-fontSize-lg);
+			font-weight: var (--typography-fontWeight-bold);
 			margin: 0 0 4px 0;
-			color: var(--text-main);
+			color: var(--colors-text-primary);
 		}
 		p {
 			font-size: 13px;
-			color: #64748b;
+			color: var(--colors-text-muted);
 			margin: 0;
 		}
 	}
@@ -547,8 +568,6 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-
-
 .list-controls {
 	display: flex;
 	gap: 8px;
@@ -557,7 +576,7 @@ function deleteItem(item: WorkTypeItem) {
 	.search-box {
 		flex: 1;
 	}
-	
+
 	.icon-action-btn {
 		width: 36px;
 		height: 36px;
@@ -569,17 +588,15 @@ function deleteItem(item: WorkTypeItem) {
 		border-radius: 6px;
 		color: var(--colors-text-secondary);
 		cursor: pointer;
-		
-		&:hover, &--active {
+
+		&:hover,
+		&--active {
 			background: var(--colors-surface-hover);
 			color: var(--colors-brand-primary);
 		}
 	}
 }
 
-
-
-// 搜索栏
 .search-box {
 	position: relative;
 	width: 100%;
@@ -589,40 +606,42 @@ function deleteItem(item: WorkTypeItem) {
 		left: 12px;
 		top: 50%;
 		transform: translateY(-50%);
-		color: #94a3b8;
+		color: var(--colors-text-muted);
 		font-size: 18px;
 	}
 
 	&__input {
 		width: 100%;
 		padding: 8px 12px 8px 38px;
-		border: 1px solid #cbd5e1;
+		border: 1px solid var(--colors-surface-border);
 		border-radius: 6px;
 		font-size: 13px;
+		background: var(--colors-surface-background);
+		color: var(--colors-text-primary);
 		outline: none;
 		box-sizing: border-box;
 		&:focus {
-			border-color: var(--colors-primary-deepblue);
+			border-color: var(--colors-brand-primary);
 		}
 	}
 }
 
-// 工单类别列表项
 .type-list {
 	flex-grow: 1;
 	overflow-y: auto;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--spacing-sm);
 }
 
-.type-item {
+.type-card {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
 	padding: var(--spacing-sm) var(--spacing-md);
 	border-radius: 8px;
-	border: 1px solid transparent;
 	cursor: pointer;
 	transition: all 0.2s;
 
@@ -654,7 +673,7 @@ function deleteItem(item: WorkTypeItem) {
 		gap: 4px;
 
 		.type-item--selected & {
-			color: #ffffff;
+			color: var(--colors-text-inverse);
 		}
 
 		&--disabled {
@@ -712,17 +731,12 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-// 详情控制板
 .panel-card {
 	background: var(--colors-surface-card);
 	border: 1px solid var(--colors-surface-border);
 	border-radius: var(--radius-xxs, 12px);
 	padding: var(--spacing-lg);
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-
-	&--bordered {
-		border-left: 6px solid var(--colors-brand-primary); // 复刻原版 Primary Accent
-	}
 
 	&__header {
 		display: flex;
@@ -744,7 +758,6 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-// 内置表单排版
 .form-grid {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
@@ -790,7 +803,6 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-// 原生手写开关 Toggle 按钮 (替代 MudSwitch)
 .switch-toggle {
 	display: inline-flex;
 	align-items: center;
@@ -831,7 +843,6 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-// 原生手写 Checkbox 框 (替代 MudCheckBox)
 .checkbox-container {
 	display: inline-flex;
 	align-items: center;
@@ -866,8 +877,6 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-
-
 // 动作功能小按钮
 .action-btn {
 	border: none;
@@ -879,7 +888,9 @@ function deleteItem(item: WorkTypeItem) {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	transition: background-color 0.15s, filter 0.15s;
+	transition:
+		background-color 0.15s,
+		filter 0.15s;
 
 	&--primary {
 		background-color: var(--colors-brand-primary);
@@ -929,7 +940,6 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-// 右边栏默认空状态
 .empty-state {
 	height: 100%;
 	min-height: 400px;
@@ -952,7 +962,6 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-// 标签小圆圈
 .badge {
 	padding: 2px 8px;
 	border-radius: 12px;
@@ -967,8 +976,6 @@ function deleteItem(item: WorkTypeItem) {
 		background-color: #f1f5f9;
 	}
 }
-
-
 
 .mt-lg {
 	margin-top: var(--spacing-lg);

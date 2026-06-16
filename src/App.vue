@@ -8,7 +8,6 @@ import Snackbar from "@/components/Snackbar.vue";
 </template>
 
 <style lang="scss" scoped>
-/* 可以在这里放一些你全栈通用的全局重置样式 */
 body {
 	margin: 0;
 	padding: 0;

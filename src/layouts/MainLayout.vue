@@ -53,7 +53,7 @@ watch(
 		if (isMobile.value) {
 			isMenuOpen.value = false;
 		}
-	}
+	},
 );
 
 function handleResize() {
@@ -148,7 +148,7 @@ onUnmounted(() => {
 						>
 							<li>
 								<router-link
-									to="/new"
+									to="/work-order/new"
 									class="nav__child"
 									active-class="nav__child-active"
 									><span>New</span></router-link
@@ -156,7 +156,7 @@ onUnmounted(() => {
 							</li>
 							<li>
 								<router-link
-									to="/pending"
+									to="/work-order/pending"
 									class="nav__child"
 									active-class="nav__child-active"
 									><span>Pending Approval</span></router-link
@@ -164,7 +164,7 @@ onUnmounted(() => {
 							</li>
 							<li>
 								<router-link
-									to="/progress"
+									to="/work-order/progress"
 									class="nav__child"
 									active-class="nav__child-active"
 									><span>In Progress</span></router-link
@@ -172,7 +172,7 @@ onUnmounted(() => {
 							</li>
 							<li>
 								<router-link
-									to="/done"
+									to="/work-order/done"
 									class="nav__child"
 									active-class="nav__child-active"
 									><span>Done</span></router-link
@@ -180,7 +180,7 @@ onUnmounted(() => {
 							</li>
 							<li>
 								<router-link
-									to="/completed"
+									to="/work-order/completed"
 									class="nav__child"
 									active-class="nav__child-active"
 									><span>Completed</span></router-link
@@ -188,7 +188,7 @@ onUnmounted(() => {
 							</li>
 							<li>
 								<router-link
-									to="/claimed"
+									to="/work-order/claimed"
 									class="nav__child"
 									active-class="nav__child-active"
 									><span>Claimed</span></router-link
@@ -196,7 +196,7 @@ onUnmounted(() => {
 							</li>
 							<li>
 								<router-link
-									to="/closed"
+									to="/work-order/closed"
 									class="nav__child"
 									active-class="nav__child-active"
 									><span>Closed</span></router-link
@@ -204,7 +204,7 @@ onUnmounted(() => {
 							</li>
 							<li>
 								<router-link
-									to="/cancelled"
+									to="/work-order/cancelled"
 									class="nav__child"
 									active-class="nav__child-active"
 									><span>Cancelled</span></router-link
@@ -216,7 +216,7 @@ onUnmounted(() => {
 					<!-- Customers -->
 					<router-link
 						class="nav__item"
-						to="/customer"
+						to="/customer/list"
 						active-class="nav__item--active"
 						title="Customers"
 					>
@@ -227,7 +227,7 @@ onUnmounted(() => {
 					<!-- Employees -->
 					<router-link
 						class="nav__item"
-						to="/user"
+						to="/user/list"
 						active-class="nav__item--active"
 						title="Employees"
 					>
@@ -354,10 +354,12 @@ onUnmounted(() => {
 					'app-main--rail': (isDesktop && isDocked) || isTablet,
 				}"
 			>
+				<!-- Content -->
 				<div class="app-content">
 					<router-view />
 				</div>
 
+				<!-- Footer -->
 				<footer class="app-footer">
 					<p>Copyright © 2026</p>
 					<p>(Version 1.0.1.20260410.1.0a)</p>

@@ -1,22 +1,22 @@
 export const darkTheme = {
 	colors: {
 		brand: {
-			primary: "#6366F1",       // 暗色模式下稍微提高亮度提升可读性
+			primary: "#6366F1",
 			primaryHover: "#4F46E5",
 			primaryActive: "#4338CA",
 			primarySoft: "rgba(99, 102, 241, 0.15)",
 		},
 		surface: {
-			background: "#090D16",    // 极其深邃的科技感黑蓝底色
-			card: "#111827",          // 卡片层级
-			sidebar: "#111827",       // 侧边栏与卡片同级
-			border: "#1F2937",        // 深色边框
-			hover: "#1F2937",         // 悬浮态
+			background: "#090D16",
+			card: "#111827",
+			sidebar: "#111827",
+			border: "#1F2937",
+			hover: "#1F2937",
 		},
 		text: {
-			primary: "#F8FAFC",       // 白字
-			secondary: "#94A3B8",     // 浅灰字
-			muted: "#64748B",         // 暗灰字
+			primary: "#F8FAFC",
+			secondary: "#94A3B8",
+			muted: "#64748B",
 			inverse: "#0F172A",
 			disabled: "#334155",
 		},
@@ -39,7 +39,7 @@ export const darkTheme = {
 			claimed: "#2DD4BF",
 			closed: "#94A3B8",
 			cancelled: "#F87171",
-			draft: "#64748B"
-		}
+			draft: "#64748B",
+		},
 	},
 } as const;

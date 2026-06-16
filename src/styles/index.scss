@@ -4,9 +4,11 @@
 
 @use "./components/button";
 @use "./components/checkbox";
+@use "./components/chip";
 @use "./components/snackbar";
 @use "./components/textbox";
 
 @use "./pages/account";
+@use "./pages/dashboard";
 
 @use "./main.scss";

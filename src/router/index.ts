@@ -42,6 +42,30 @@ const routes = [
 		],
 	},
 	{
+		path: "/customer",
+		component: MainLayout,
+		children: [
+			{
+				path: "list",
+				name: "Customer List",
+				component: () => import("@/views/Customer/CustomerList.vue"),
+				meta: { requiresAuth: true },
+			},
+			{
+				path: "profile",
+				name: "Customer Profile",
+				component: () => import("@/views/Customer/CustomerProfile.vue"),
+				meta: { requiresAuth: true },
+			},
+			{
+				path: "form",
+				name: "Customer Form",
+				component: () => import("@/views/Customer/CustomerForm.vue"),
+				meta: { requiresAuth: true },
+			},
+		],
+	},
+	{
 		path: "/maintenance",
 		component: MainLayout,
 		children: [
@@ -86,6 +110,22 @@ const routes = [
 				name: "User Permission",
 				component: () => import("@/views/Maintenance/UserPermission.vue"),
 				meta: { requiresAuth: true },
+			},
+		],
+	},
+	{
+		path: "/user",
+		component: MainLayout,
+		children: [
+			{
+				path: "list",
+				name: "User List",
+				component: () => import("@/views/User/UserList.vue"),
+			},
+			{
+				path: "profile",
+				name: "User Profile",
+				component: () => import("@/views/User/UserProfile.vue"),
 			},
 		],
 	},
