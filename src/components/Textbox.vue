@@ -2,17 +2,18 @@
 import { ref, computed } from "vue";
 
 const props = defineProps<{
-	modelValue?: string;
+	modelValue?: string | number | null;
 	label?: string;
 	placeholder?: string;
 	type?: string;
 	disabled?: boolean;
 	error?: string;
 	hint?: string;
+	hideFooter?: boolean;
 }>();
 
 const emit = defineEmits<{
-	(e: "update:modelValue", value: string): void;
+	(e: "update:modelValue", value: string | number | null): void;
 }>();
 
 // Control password visibility state
@@ -28,7 +29,11 @@ const inputType = computed(() => {
 
 function onInput(e: Event) {
 	const target = e.target as HTMLInputElement;
-	emit("update:modelValue", target.value);
+	let value: string | number | null = target.value;
+	if (props.type === "number") {
+		value = target.value === "" ? null : Number(target.value);
+	}
+	emit("update:modelValue", value);
 }
 
 function togglePassword() {
@@ -67,7 +72,7 @@ function togglePassword() {
 			<slot name="suffix" />
 		</div>
 
-		<div class="textbox-field__footer">
+		<div class="textbox-field__footer" v-if="!hideFooter">
 			<Transition name="fade-slide">
 				<p v-if="error" class="textbox-field__error">
 					<i class="mdi mdi-alert-circle-outline textbox-field__error-icon"></i>

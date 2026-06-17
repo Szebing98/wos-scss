@@ -5,6 +5,7 @@ import Dialog from "@/components/Dialog.vue";
 import Card from "@/components/Card.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Select from "@/components/Select.vue";
+import Textbox from "@/components/Textbox.vue";
 
 interface DocNoFormatModel {
 	id: number;
@@ -207,27 +208,18 @@ function deleteFormat(item: DocNoFormatModel) {
 		<div class="maintenance-grid">
 			<Card class="maintenance-grid__left-panel">
 				<div class="list-controls">
-					<div class="search-box">
-						<i class="mdi mdi-magnify search-box__icon"></i>
-						<input
-							v-model="searchString"
-							type="text"
-							placeholder="Search module or prefix..."
-							class="search-box__input"
-						/>
-					</div>
+					<Textbox
+						v-model="searchString"
+						placeholder="Search module or prefix..."
+						style="flex: 1;"
+						hide-footer
+					>
+						<template #prefix>
+							<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+						</template>
+					</Textbox>
 
 					<FilterPanel show-reset align="right" @reset="resetFilter">
-						<template #trigger="{ isActive }">
-							<button
-								class="icon-action-btn"
-								:class="{ 'icon-action-btn--active': isActive }"
-								title="Filter"
-							>
-								<i class="mdi mdi-filter-variant"></i>
-							</button>
-						</template>
-
 						<Select v-model="filterActive" label="Status">
 							<option value="all">All</option>
 							<option value="active">Active</option>
@@ -361,10 +353,8 @@ function deleteFormat(item: DocNoFormatModel) {
 					<label class="form-group__label"
 						>Module Code <span class="u-required">*</span></label
 					>
-					<input
+					<Textbox
 						v-model="formData.module"
-						type="text"
-						class="form-group__input"
 						:disabled="!isNewRecord"
 						placeholder="e.g. INV, PO, WO"
 					/>
@@ -373,49 +363,45 @@ function deleteFormat(item: DocNoFormatModel) {
 					<label class="form-group__label"
 						>Prefix <span class="u-required">*</span></label
 					>
-					<input
+					<Textbox
 						v-model="formData.prefix"
-						type="text"
-						class="form-group__input"
 						placeholder="e.g. TECH, MYS"
 					/>
 				</div>
 				<div class="form-group">
 					<label class="form-group__label">Date Format Pattern</label>
-					<select v-model="formData.dateFormat" class="filter-dropdown">
+					<Select v-model="formData.dateFormat">
 						<option value="YYYYMMDD">YYYYMMDD (e.g. 20260616)</option>
 						<option value="YYYYMM">YYYYMM (e.g. 202606)</option>
 						<option value="YYMM">YYMM (e.g. 2606)</option>
 						<option value="">None (Disable)</option>
-					</select>
+					</Select>
 				</div>
 				<div class="form-group">
 					<label class="form-group__label">Delimiter Separator</label>
-					<input
+					<Textbox
 						v-model="formData.delimiter"
-						type="text"
 						maxlength="5"
-						class="form-group__input u-font-mono"
+						class="u-font-mono"
 						placeholder="e.g. -, /, _"
 					/>
 				</div>
 				<div class="form-group">
 					<label class="form-group__label">Serial Code Width</label>
-					<input
+					<Textbox
 						v-model.number="formData.padding"
 						type="number"
 						min="1"
 						max="10"
-						class="form-group__input"
 					/>
 				</div>
 				<div class="form-group">
 					<label class="form-group__label">Next Serial Counter</label>
-					<input
+					<Textbox
 						v-model.number="formData.nextNumber"
 						type="number"
 						min="1"
-						class="form-group__input u-text-primary u-font-weight-bold"
+						class="u-text-primary u-font-weight-bold"
 					/>
 				</div>
 				<div class="form-group form-group--full" style="padding-top: var(--spacing-xs)">
@@ -478,12 +464,12 @@ function deleteFormat(item: DocNoFormatModel) {
 
 	.icon-action-btn--primary {
 		background-color: rgba(80, 88, 242, 0.08);
-		color: var(--colors-primary-deepblue);
+		color: var(--colors-brand-primary);
 		border-radius: 50%;
 		width: 32px;
 		height: 32px;
 		&:hover {
-			background-color: var(--colors-primary-deepblue);
+			background-color: var(--colors-brand-primary);
 			color: white;
 		}
 	}
@@ -659,7 +645,6 @@ function deleteFormat(item: DocNoFormatModel) {
 	&:hover {
 		border-color: var(--colors-brand-primary);
 		background-color: var(--colors-surface-hover);
-		transform: translateY(-1px);
 	}
 	&--selected {
 		background-color: var(--colors-surface-hover) !important;
@@ -681,32 +666,7 @@ function deleteFormat(item: DocNoFormatModel) {
 	overflow-y: auto;
 	padding-right: 2px;
 }
-.search-box {
-	position: relative;
-	width: 100%;
-	.search-box__icon {
-		position: absolute;
-		left: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: var(--colors-text-muted);
-		font-size: 18px;
-	}
-	.search-box__input {
-		width: 100%;
-		padding: 8px 12px 8px 38px;
-		border: 1px solid var(--colors-surface-border);
-		border-radius: 6px;
-		font-size: 13px;
-		outline: none;
-		box-sizing: border-box;
-		background: var(--colors-surface-background);
-		color: var(--colors-text-primary);
-		&:focus {
-			border-color: var(--colors-brand-primary);
-		}
-	}
-}
+
 .form-grid {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
@@ -727,8 +687,6 @@ function deleteFormat(item: DocNoFormatModel) {
 		font-weight: 600;
 		color: var(--colors-text-primary);
 	}
-	&__input,
-	.filter-dropdown,
 	&__textarea {
 		width: 100%;
 		padding: 8px 12px;
@@ -773,9 +731,10 @@ function deleteFormat(item: DocNoFormatModel) {
 		}
 	}
 	input:checked + &__slider {
-		background-color: #22c55e;
+		background-color: var(--status-completed);
 		&::before {
 			transform: translateX(16px);
+			background-color: #ffffff;
 		}
 	}
 	&__label {

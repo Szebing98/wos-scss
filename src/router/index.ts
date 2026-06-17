@@ -114,6 +114,18 @@ const routes = [
 		],
 	},
 	{
+		path: "/audit-log",
+		component: MainLayout,
+		children: [
+			{
+				path: "",
+				name: "System Audit Log",
+				component: () => import("@/views/Maintenance/AuditLog.vue"),
+				meta: { requiresAuth: true },
+			},
+		],
+	},
+	{
 		path: "/user",
 		component: MainLayout,
 		children: [

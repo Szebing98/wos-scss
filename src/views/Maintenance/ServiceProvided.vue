@@ -2,40 +2,37 @@
 	<div class="services-view">
 		<div class="services-view__header">
 			<div class="services-view__title-area">
-				<div class="title-with-action">
-					<h1>Service Catalog</h1>
-					<button
-						class="icon-action-btn icon-action-btn--primary"
-						@click="prepareCreate"
-						title="Add New Service"
-					>
-						<i class="mdi mdi-wrench-clock"></i>
-					</button>
-				</div>
+				<h1>Service Catalog</h1>
 				<p class="services-view__subtitle">
 					Manage labor services, technical fees, and standard rates
 				</p>
 			</div>
+			<button class="action-btn action-btn--primary" @click="prepareCreate">
+				<i class="mdi mdi-plus"></i> Add Service
+			</button>
 		</div>
 
-		<div class="filter-panel">
-			<div class="filter-panel__left">
-				<div class="search-box">
-					<i class="mdi mdi-magnify search-box__icon"></i>
-					<input
-						v-model="searchString"
-						type="text"
-						placeholder="Search Service No, Name or Code..."
-						class="search-box__input"
-					/>
-				</div>
-				<label class="checkbox-container">
-					<input type="checkbox" v-model="showActiveOnly" />
-					<span class="checkbox-container__box"></span>
-					Active Services Only
-				</label>
+		<Card style="padding: var(--spacing-md);">
+			<div class="filter-bar">
+				<Textbox
+					v-model="searchString"
+					placeholder="Search Service No, Name or Code..."
+					style="flex: 1;"
+					hide-footer
+				>
+					<template #prefix>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+					</template>
+				</Textbox>
+				<FilterPanel show-reset align="right" @reset="resetFilters">
+					<Select v-model="filterStatus" label="Status">
+						<option value="all">All</option>
+						<option value="active">Active</option>
+						<option value="inactive">Disabled</option>
+					</Select>
+				</FilterPanel>
 			</div>
-		</div>
+		</Card>
 
 		<Card class="table-scroll-container" style="padding: 0">
 			<Table
@@ -95,10 +92,8 @@
 					<label class="form-group__label"
 						>Service No <span class="u-required">*</span></label
 					>
-					<input
+					<Textbox
 						v-model="editingService.serviceNo"
-						type="text"
-						class="form-group__input"
 						placeholder="e.g. SVC-GEN-01"
 					/>
 				</div>
@@ -107,10 +102,8 @@
 					<label class="form-group__label"
 						>Internal Code <span class="u-required">*</span></label
 					>
-					<input
+					<Textbox
 						v-model="editingService.code"
-						type="text"
-						class="form-group__input"
 						:disabled="!isNewRecord"
 						placeholder="e.g. LAB-01"
 					/>
@@ -120,7 +113,7 @@
 					<label class="form-group__label"
 						>Service Description Name <span class="u-required">*</span></label
 					>
-					<input v-model="editingService.name" type="text" class="form-group__input" />
+					<Textbox v-model="editingService.name" />
 				</div>
 
 				<div class="form-group">
@@ -138,21 +131,20 @@
 
 				<div class="form-group">
 					<label class="form-group__label">Unit (UOM)</label>
-					<select v-model="editingService.uom" class="filter-dropdown">
+					<Select v-model="editingService.uom">
 						<option value="HOUR">Per Hour</option>
 						<option value="JOB">Per Job</option>
 						<option value="TRIP">Per Trip</option>
 						<option value="DAY">Per Day</option>
-					</select>
+					</Select>
 				</div>
 
 				<div class="form-group form-group--full">
 					<label class="form-group__label">Efficiency Rate / Multiplier</label>
-					<input
+					<Textbox
 						v-model.number="editingService.rate"
 						type="number"
 						step="0.1"
-						class="form-group__input"
 						placeholder="Standard service rate multiplier"
 					/>
 				</div>
@@ -194,6 +186,9 @@ import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import Dialog from "@/components/Dialog.vue";
 import Card from "@/components/Card.vue";
+import Textbox from "@/components/Textbox.vue";
+import Select from "@/components/Select.vue";
+import FilterPanel from "@/components/FilterPanel.vue";
 
 interface ServiceProvided {
 	id: number;
@@ -208,9 +203,13 @@ interface ServiceProvided {
 }
 
 const searchString = ref("");
-const showActiveOnly = ref(true);
+const filterStatus = ref("active");
 const isDrawerOpen = ref(false);
 const isNewRecord = ref(false);
+
+function resetFilters() {
+	filterStatus.value = "all";
+}
 
 const tableHeaders: TableHeader[] = [
 	{ key: "code", label: "Service No / Code", width: "25%" },
@@ -282,7 +281,9 @@ const filteredServices = computed(() => {
 			(x.code && x.code.toLowerCase().includes(search)) ||
 			(x.serviceNo && x.serviceNo.toLowerCase().includes(search));
 
-		const matchesActive = !showActiveOnly.value || x.isActive;
+		const matchesActive = 
+			filterStatus.value === "all" || 
+			(filterStatus.value === "active" ? x.isActive : !x.isActive);
 
 		return matchesSearch && matchesActive;
 	});
@@ -364,6 +365,12 @@ function formatPrice(value: number) {
 		gap: var(--spacing-md);
 	}
 	&__title-area {
+		h1 {
+			font-size: 24px;
+			font-weight: 700;
+			margin: 0 0 4px;
+			color: var(--colors-text-primary);
+		}
 		p {
 			font-size: 13px;
 			color: var(--colors-text-muted);
@@ -372,47 +379,10 @@ function formatPrice(value: number) {
 	}
 }
 
-.title-with-action {
-	@include flex-row($align: center, $gap: 12px);
-	h1 {
-		font-size: 24px;
-		font-weight: 700;
-		margin: 0;
-		color: var(--text-main);
-	}
-
-	.icon-action-btn--primary {
-		background-color: rgba(80, 88, 242, 0.08);
-		color: var(--colors-primary-deepblue);
-		border-radius: 50%;
-		width: 32px;
-		height: 32px;
-		&:hover {
-			background-color: var(--colors-primary-deepblue);
-			color: white;
-		}
-	}
-}
-
-.filter-panel {
-	background: var(--colors-surface-card);
-	border: 1px solid var(--colors-surface-border);
-	border-radius: 4px 12px 12px 4px;
-	padding: var(--spacing-md);
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
-
-	&__left {
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-lg);
-		flex-grow: 1;
-		max-width: 500px;
-		@media (max-width: 640px) {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--spacing-sm);
-		}
-	}
+.filter-bar {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
 }
 
 .service-cell {
@@ -479,8 +449,6 @@ function formatPrice(value: number) {
 		font-weight: 600;
 		color: var(--colors-text-primary);
 	}
-	&__input,
-	.filter-dropdown,
 	&__textarea {
 		width: 100%;
 		padding: 8px 12px;
@@ -498,66 +466,6 @@ function formatPrice(value: number) {
 	}
 }
 
-.search-box {
-	position: relative;
-	flex-grow: 1;
-	.search-box__icon {
-		position: absolute;
-		left: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: var(--colors-text-muted);
-		font-size: 18px;
-	}
-	.search-box__input {
-		width: 100%;
-		padding: 8px 12px 8px 38px;
-		border: 1px solid var(--colors-surface-border);
-		border-radius: 6px;
-		font-size: 13px;
-		outline: none;
-		box-sizing: border-box;
-		background: var(--colors-surface-background);
-		color: var(--colors-text-primary);
-		&:focus {
-			border-color: var(--colors-brand-primary);
-		}
-	}
-}
-.checkbox-container {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 13px;
-	font-weight: 500;
-	cursor: pointer;
-	white-space: nowrap;
-	color: var(--colors-text-primary);
-	input {
-		display: none;
-	}
-	&__box {
-		width: 16px;
-		height: 16px;
-		border: 2px solid var(--colors-surface-border);
-		border-radius: 4px;
-		position: relative;
-		transition: all 0.15s;
-	}
-	input:checked + &__box {
-		background-color: var(--colors-brand-primary);
-		border-color: var(--colors-brand-primary);
-		&::after {
-			content: "✓";
-			position: absolute;
-			color: white;
-			font-size: 11px;
-			font-weight: bold;
-			left: 2px;
-			top: -2px;
-		}
-	}
-}
 .switch-toggle {
 	display: inline-flex;
 	align-items: center;
@@ -580,15 +488,16 @@ function formatPrice(value: number) {
 			top: 2px;
 			width: 14px;
 			height: 14px;
-			background-color: white;
+			background-color: var(--colors-text-primary);
 			border-radius: 50%;
 			transition: transform 0.2s;
 		}
 	}
 	input:checked + &__slider {
-		background-color: #22c55e;
+		background-color: var(--status-completed);
 		&::before {
 			transform: translateX(16px);
+			background-color: #ffffff;
 		}
 	}
 	&__label {

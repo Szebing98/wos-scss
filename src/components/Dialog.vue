@@ -2,9 +2,14 @@
 	<div class="modal-mask" v-if="modelValue">
 		<div class="modal-box">
 			<div v-if="title || $slots.header" class="modal-box__header">
-				<slot name="header">
-					<h3>{{ title }}</h3>
-				</slot>
+				<div class="modal-box__title">
+					<slot name="header">
+						<h3>{{ title }}</h3>
+					</slot>
+				</div>
+				<button class="modal-box__close" @click="$emit('update:modelValue', false)" title="Close">
+					<i class="mdi mdi-close"></i>
+				</button>
 			</div>
 			<div class="modal-box__body">
 				<slot></slot>
@@ -50,10 +55,36 @@ defineEmits<{
 	&__header {
 		padding: var(--spacing-md) var(--spacing-lg);
 		border-bottom: 1px solid var(--colors-surface-border);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
 		h3 {
 			font-size: 16px;
 			font-weight: 600;
 			margin: 0;
+			color: var(--colors-text-primary);
+		}
+	}
+	&__title {
+		flex-grow: 1;
+	}
+	&__close {
+		background: transparent;
+		border: none;
+		color: var(--colors-text-muted);
+		font-size: 20px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border-radius: 6px;
+		transition: all 0.2s;
+		margin-right: -8px;
+
+		&:hover {
+			background-color: var(--colors-surface-hover);
 			color: var(--colors-text-primary);
 		}
 	}

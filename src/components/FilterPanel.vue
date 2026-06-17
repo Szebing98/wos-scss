@@ -1,7 +1,15 @@
 <template>
 	<div class="filter-panel-wrapper" ref="wrapperRef">
 		<div @click="toggle" class="filter-trigger">
-			<slot name="trigger" :isActive="isOpen"></slot>
+			<slot name="trigger" :isActive="isOpen">
+				<button 
+					class="icon-action-btn" 
+					:class="{ 'icon-action-btn--active': isOpen }" 
+					title="Filter"
+				>
+					<i class="mdi mdi-filter-variant"></i>
+				</button>
+			</slot>
 		</div>
 
 		<Transition name="popover">
@@ -74,6 +82,27 @@ onUnmounted(() => {
 
 .filter-trigger {
 	display: inline-block;
+
+	.icon-action-btn {
+		width: 40px;
+		height: 40px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--colors-surface-background);
+		border: 1px solid var(--colors-surface-border);
+		border-radius: 6px;
+		color: var(--colors-text-secondary);
+		cursor: pointer;
+		font-size: 20px;
+		transition: all 0.2s;
+
+		&:hover,
+		&--active {
+			background: var(--colors-surface-hover);
+			color: var(--colors-brand-primary);
+		}
+	}
 }
 
 .filter-popover {

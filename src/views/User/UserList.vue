@@ -2,120 +2,106 @@
 	<div class="maintenance-view">
 		<div class="maintenance-view__header">
 			<div class="maintenance-view__title-area">
-				<div class="title-with-action">
-					<h1>Employee Directory</h1>
-					<button
-						class="icon-action-btn icon-action-btn--primary"
-						@click="handleCreateUser"
-						title="Add New Employee"
-					>
-						<i class="mdi mdi-account-plus"></i>
-					</button>
-				</div>
+				<h1>Employee Directory</h1>
 				<p class="maintenance-view__subtitle">
 					Manage internal technicians, support staff, and system administrative roles
 				</p>
 			</div>
+			<button class="action-btn action-btn--primary" @click="handleCreateUser">
+				<i class="mdi mdi-plus"></i> Add Employee
+			</button>
 		</div>
 
-		<div class="filter-panel">
-			<div class="filter-panel__left">
-				<div class="search-box">
-					<i class="mdi mdi-magnify search-box__icon"></i>
-					<input
-						v-model="searchQuery"
-						type="text"
-						placeholder="Search by Name, Email or Code..."
-						class="search-box__input"
-					/>
-				</div>
+		<Card style="padding: var(--spacing-md);">
+			<div class="filter-bar">
+				<Textbox
+					v-model="searchQuery"
+					placeholder="Search by Name, Email or Code..."
+					style="flex: 1;"
+					hide-footer
+				>
+					<template #prefix>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+					</template>
+				</Textbox>
 
-				<select v-model="roleFilter" class="filter-dropdown">
-					<option value="all">All Roles</option>
-					<option value="SA">Superadmin</option>
-					<option value="Administrator">Administrator</option>
-					<option value="Manager">Manager</option>
-					<option value="Engineer">Engineer</option>
-				</select>
+				<FilterPanel show-reset align="right" @reset="resetFilters">
+					<Select v-model="roleFilter" label="Role">
+						<option value="all">All Roles</option>
+						<option value="SA">Superadmin</option>
+						<option value="Administrator">Administrator</option>
+						<option value="Manager">Manager</option>
+						<option value="Engineer">Engineer</option>
+					</Select>
 
-				<label class="checkbox-container">
-					<input type="checkbox" v-model="showActiveOnly" />
-					<span class="checkbox-container__box"></span>
-					Active Only
-				</label>
+					<Select v-model="filterStatus" label="Status">
+						<option value="all">All</option>
+						<option value="active">Active</option>
+						<option value="inactive">Suspended</option>
+					</Select>
+				</FilterPanel>
 			</div>
-		</div>
+		</Card>
 
-		<div class="panel-card table-scroll-container">
-			<table class="data-table data-table--striped">
-				<thead>
-					<tr>
-						<th>Employee</th>
-						<th>Internal Code</th>
-						<th>Assigned Role</th>
-						<th>Contact Email</th>
-						<th>Status</th>
-						<th class="u-text-right" style="width: 120px">Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr v-for="user in filteredUsers" :key="user.code">
-						<td>
-							<div class="employee-cell">
-								<div
-									class="employee-cell__avatar"
-									:style="getRandomAvatarBg(user.name)"
-								>
-									{{ user.name[0] }}
-								</div>
-								<div class="employee-cell__info">
-									<span class="employee-cell__name">{{ user.name }}</span>
-									<span class="employee-cell__title">GS Technical Dept</span>
-								</div>
-							</div>
-						</td>
-						<td class="u-font-mono">{{ user.code }}</td>
-						<td>
-							<Chip :type="getRoleChipType(user.role)">{{ user.role }}</Chip>
-						</td>
-						<td>{{ user.email }}</td>
-						<td>
-							<Chip :type="user.isActive ? 'success' : 'default'">
-								{{ user.isActive ? "Active" : "Suspended" }}
-							</Chip>
-						</td>
-						<td class="u-text-right">
-							<button
-								class="icon-action-btn"
-								@click="viewUserProfile(user.code)"
-								title="View Profile / Edit"
-							>
-								<i class="mdi mdi-account-edit-outline"></i>
-							</button>
-							<button
-								class="icon-action-btn icon-action-btn--danger"
-								@click="toggleUserStatus(user)"
-								:title="user.isActive ? 'Suspend' : 'Activate'"
-							>
-								<i
-									class="mdi"
-									:class="
-										user.isActive
-											? 'mdi-account-off-outline'
-											: 'mdi-account-check-outline'
-									"
-								></i>
-							</button>
-						</td>
-					</tr>
-					<tr v-if="filteredUsers.length === 0">
-						<td colspan="6" class="data-table__empty">
-							No employees found matching the search matrix.
-						</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
+		<Card class="table-scroll-container" style="padding: 0;">
+			<Table
+				:headers="headers"
+				:items="filteredUsers"
+				emptyMessage="No employees found matching the search matrix."
+			>
+				<template #item-employee="{ item: user }">
+					<div class="employee-cell">
+						<div
+							class="employee-cell__avatar"
+							:style="getRandomAvatarBg(user.name)"
+						>
+							{{ user.name[0] }}
+						</div>
+						<div class="employee-cell__info">
+							<span class="employee-cell__name">{{ user.name }}</span>
+							<span class="employee-cell__title">GS Technical Dept</span>
+						</div>
+					</div>
+				</template>
+				<template #item-code="{ item: user }">
+					<span class="u-font-mono">{{ user.code }}</span>
+				</template>
+				<template #item-role="{ item: user }">
+					<Chip :type="getRoleChipType(user.role)">{{ user.role }}</Chip>
+				</template>
+				<template #item-email="{ item: user }">
+					{{ user.email }}
+				</template>
+				<template #item-status="{ item }">
+					<Chip :type="item.isActive ? 'success' : 'default'">
+						{{ item.isActive ? "Active" : "Disabled" }}
+					</Chip>
+				</template>
+				<template #item-actions="{ item: user }">
+					<button
+						class="icon-action-btn"
+						@click="viewUserProfile(user.code)"
+						title="View Profile / Edit"
+					>
+						<i class="mdi mdi-account-edit-outline"></i>
+					</button>
+					<button
+						class="icon-action-btn icon-action-btn--danger"
+						@click="toggleUserStatus(user)"
+						:title="user.isActive ? 'Suspend' : 'Activate'"
+					>
+						<i
+							class="mdi"
+							:class="
+								user.isActive
+									? 'mdi-account-off-outline'
+									: 'mdi-account-check-outline'
+							"
+						></i>
+					</button>
+				</template>
+			</Table>
+		</Card>
 	</div>
 </template>
 
@@ -123,6 +109,21 @@
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import Chip from "@/components/Chip.vue";
+import Table from "@/components/Table.vue";
+import type { TableHeader } from "@/components/Table.vue";
+import Textbox from "@/components/Textbox.vue";
+import Select from "@/components/Select.vue";
+import FilterPanel from "@/components/FilterPanel.vue";
+import Card from "@/components/Card.vue";
+
+const headers: TableHeader[] = [
+	{ key: "employee", label: "Employee" },
+	{ key: "code", label: "Internal Code" },
+	{ key: "role", label: "Assigned Role" },
+	{ key: "email", label: "Contact Email" },
+	{ key: "status", label: "Status" },
+	{ key: "actions", label: "Actions", align: "right", width: "120px" },
+];
 
 interface UserModel {
 	code: string;
@@ -135,7 +136,12 @@ interface UserModel {
 const router = useRouter();
 const searchQuery = ref("");
 const roleFilter = ref("all");
-const showActiveOnly = ref(false);
+const filterStatus = ref("all");
+
+function resetFilters() {
+	roleFilter.value = "all";
+	filterStatus.value = "all";
+}
 
 // Mock 员工库核心数据
 const users = ref<UserModel[]>([
@@ -186,7 +192,9 @@ const filteredUsers = computed(() => {
 			u.code.toLowerCase().includes(search);
 
 		const matchesRole = roleFilter.value === "all" || u.role === roleFilter.value;
-		const matchesActive = !showActiveOnly.value || u.isActive;
+		const matchesActive = 
+			filterStatus.value === "all" || 
+			(filterStatus.value === "active" ? u.isActive : !u.isActive);
 
 		return matchesSearch && matchesRole && matchesActive;
 	});
@@ -197,7 +205,7 @@ function handleCreateUser() {
 	router.push("/user/form");
 }
 
-function viewUserProfile(code: string) {
+function viewUserProfile(_code: string) {
 	// router.push(`/maintenance/user-profile?code=${code}`);
 	router.push("/user/profile");
 }
@@ -235,24 +243,29 @@ function getRandomAvatarBg(name: string) {
 }
 
 // 1. 标题与雷达按钮
-.title-with-action {
-	@include flex-row($align: center, $gap: 12px);
-	h1 {
-		font-size: 24px;
-		font-weight: 700;
-		margin: 0;
-		color: #0f172a;
-	}
+.maintenance-view {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-lg);
 
-	.icon-action-btn--primary {
-		background-color: rgba(80, 88, 242, 0.08);
-		color: var(--colors-primary-deepblue);
-		border-radius: 50%;
-		width: 32px;
-		height: 32px;
-		&:hover {
-			background-color: var(--colors-primary-deepblue);
-			color: white;
+	&__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: var(--spacing-md);
+	}
+	&__title-area {
+		h1 {
+			font-size: 24px;
+			font-weight: 700;
+			margin: 0 0 4px;
+			color: var(--colors-text-primary);
+		}
+		p {
+			font-size: 13px;
+			color: var(--colors-text-muted);
+			margin: 0;
 		}
 	}
 }
@@ -262,7 +275,7 @@ function getRandomAvatarBg(name: string) {
 	border: none;
 	font-size: 13px;
 	font-weight: 600;
-	color: var(--colors-primary-deepblue);
+	color: var(--colors-brand-primary);
 	cursor: pointer;
 	padding: 0;
 	@include flex-row($align: center, $gap: 4px);
@@ -335,7 +348,7 @@ function getRandomAvatarBg(name: string) {
 		width: 90px;
 		height: 90px;
 		border-radius: 50%;
-		background: var(--colors-primary-deepblue);
+		background: var(--colors-brand-primary);
 		color: white;
 		font-size: 36px;
 		font-weight: 800;
@@ -381,210 +394,18 @@ function getRandomAvatarBg(name: string) {
 }
 
 // 4. 基础全局对齐工具面板与表格
-.filter-panel {
-	background: white;
-	border: 1px solid var(--border-color);
-	border-radius: 12px;
-	padding: var(--spacing-md);
+.filter-bar {
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
-	&__left {
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-lg);
-		flex-grow: 1;
-	}
+	gap: var(--spacing-sm);
+	flex-wrap: wrap;
 }
 .table-scroll-container {
 	max-height: 640px;
 	overflow-y: auto;
 	padding: 0 !important;
 }
-.panel-card {
-	background: white;
-	border: 1px solid var(--border-color);
-	border-radius: 12px;
-	padding: 24px;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
-	&__title {
-		font-size: 16px;
-		font-weight: 700;
-		margin: 0;
-		color: #1e293b;
-	}
-}
-.data-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 13px;
-	th,
-	td {
-		padding: 12px;
-		text-align: left;
-		vertical-align: middle;
-	}
-	th {
-		color: #64748b;
-		border-bottom: 1px solid var(--border-color);
-		font-weight: 600;
-		background: white;
-		position: sticky;
-		top: 0;
-		z-index: 10;
-	}
-	tr {
-		border-bottom: 1px solid #f1f5f9;
-	}
-	&--striped {
-		tbody tr:nth-child(even) {
-			background-color: #f8fafc;
-		}
-	}
-	&__empty {
-		text-align: center !important;
-		color: #94a3b8;
-		padding: 40px !important;
-	}
-}
-.search-box {
-	position: relative;
-	flex-grow: 1;
-	max-width: 360px;
-	.search-box__icon {
-		position: absolute;
-		left: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: #94a3b8;
-		font-size: 18px;
-	}
-	.search-box__input {
-		width: 100%;
-		padding: 8px 12px 8px 38px;
-		border: 1px solid #cbd5e1;
-		border-radius: 6px;
-		font-size: 13px;
-		outline: none;
-		box-sizing: border-box;
-		&:focus {
-			border-color: var(--colors-primary-deepblue);
-		}
-	}
-}
-.form-grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 16px;
-	@media (max-width: 540px) {
-		grid-template-columns: 1fr;
-	}
-}
-.form-group {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-	&--full {
-		grid-column: span 2;
-	}
-	&--checkbox-row {
-		grid-column: span 2;
-		padding-top: 4px;
-	}
-	&__label {
-		font-size: 13px;
-		font-weight: 600;
-		color: #475569;
-	}
-	&__input,
-	.filter-dropdown,
-	&__textarea {
-		width: 100%;
-		padding: 8px 12px;
-		border: 1px solid #cbd5e1;
-		border-radius: 6px;
-		font-size: 13px;
-		outline: none;
-		font-family: inherit;
-		box-sizing: border-box;
-		&:focus {
-			border-color: var(--colors-primary-deepblue);
-		}
-	}
-}
-.switch-toggle {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	cursor: pointer;
-	input {
-		display: none;
-	}
-	&__slider {
-		width: 34px;
-		height: 18px;
-		background-color: #cbd5e1;
-		border-radius: 20px;
-		position: relative;
-		transition: background-color 0.2s;
-		&::before {
-			content: "";
-			position: absolute;
-			left: 2px;
-			top: 2px;
-			width: 14px;
-			height: 14px;
-			background-color: white;
-			border-radius: 50%;
-			transition: transform 0.2s;
-		}
-	}
-	input:checked + &__slider {
-		background-color: #22c55e;
-		&::before {
-			transform: translateX(16px);
-		}
-	}
-	&__label {
-		font-size: 13px;
-		font-weight: 600;
-		color: #475569;
-	}
-}
-.checkbox-container {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 13px;
-	font-weight: 500;
-	cursor: pointer;
-	white-space: nowrap;
-	input {
-		display: none;
-	}
-	&__box {
-		width: 16px;
-		height: 16px;
-		border: 2px solid #cbd5e1;
-		border-radius: 4px;
-		position: relative;
-		transition: all 0.15s;
-	}
-	input:checked + &__box {
-		background-color: var(--colors-primary-deepblue);
-		border-color: var(--colors-primary-deepblue);
-		&::after {
-			content: "✓";
-			position: absolute;
-			color: white;
-			font-size: 11px;
-			font-weight: bold;
-			left: 2px;
-			top: -2px;
-		}
-	}
-}
+
 .action-btn {
 	border: none;
 	border-radius: 6px;
@@ -596,19 +417,19 @@ function getRandomAvatarBg(name: string) {
 	align-items: center;
 	gap: 6px;
 	&--primary {
-		background-color: var(--colors-primary-deepblue);
+		background-color: var(--colors-brand-primary);
 		color: white;
 		&:hover {
-			background-color: #444acf;
+			opacity: 0.9;
 		}
 	}
 	&--outlined {
 		background-color: transparent;
-		border: 1px solid #cbd5e1;
-		color: #475569;
+		border: 1px solid var(--colors-surface-border);
+		color: var(--colors-text-primary);
 		&:hover {
-			background-color: #f1f5f9;
-			border-color: #b2b2b2;
+			background-color: var(--colors-surface-hover);
+			border-color: var(--colors-text-muted);
 		}
 	}
 }
@@ -621,8 +442,8 @@ function getRandomAvatarBg(name: string) {
 	cursor: pointer;
 	border-radius: 6px;
 	&:hover {
-		background-color: #f1f5f9;
-		color: var(--colors-primary-deepblue);
+		background-color: var(--colors-surface-hover);
+		color: var(--colors-brand-primary);
 	}
 	&--danger {
 		&:hover {
@@ -660,7 +481,7 @@ function getRandomAvatarBg(name: string) {
 	text-align: right !important;
 }
 .u-text-primary {
-	color: var(--colors-primary-deepblue) !important;
+	color: var(--colors-brand-primary) !important;
 }
 .u-font-mono {
 	font-family: monospace;

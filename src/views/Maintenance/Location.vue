@@ -5,6 +5,9 @@ import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import Dialog from "@/components/Dialog.vue";
 import Card from "@/components/Card.vue";
+import Textbox from "@/components/Textbox.vue";
+import Select from "@/components/Select.vue";
+import FilterPanel from "@/components/FilterPanel.vue";
 
 interface SubNode {
 	code: string;
@@ -23,8 +26,12 @@ interface CountryModel {
 
 const viewMode = ref<"card" | "table">("card");
 const searchString = ref("");
-const showActiveOnly = ref(false);
+const filterStatus = ref("all");
 const isDrawerOpen = ref(false);
+
+function resetFilters() {
+	filterStatus.value = "all";
+}
 const selectedCountry = ref<CountryModel | null>(null);
 
 const countries = ref<CountryModel[]>([]);
@@ -100,7 +107,9 @@ const filteredCountries = computed(() => {
 			!searchString.value ||
 			c.name.toLowerCase().includes(searchString.value.toLowerCase()) ||
 			c.alpha3Code.toLowerCase().includes(searchString.value.toLowerCase());
-		const matchesActive = !showActiveOnly.value || c.isActive;
+		const matchesActive = 
+			filterStatus.value === "all" || 
+			(filterStatus.value === "active" ? c.isActive : !c.isActive);
 		return matchesSearch && matchesActive;
 	});
 
@@ -182,20 +191,23 @@ function syncWithLhdn() {
 
 		<div class="filter-panel">
 			<div class="filter-panel__left">
-				<div class="search-box">
-					<i class="mdi mdi-magnify search-box__icon"></i>
-					<input
-						v-model="searchString"
-						type="text"
-						placeholder="Search Country or Code (e.g. MYS, Malaysia)..."
-						class="search-box__input"
-					/>
-				</div>
-				<label class="checkbox-container">
-					<input type="checkbox" v-model="showActiveOnly" />
-					<span class="checkbox-container__box"></span>
-					Show Active Only
-				</label>
+				<Textbox
+					v-model="searchString"
+					placeholder="Search Country or Code (e.g. MYS, Malaysia)..."
+					style="flex: 1;"
+					hide-footer
+				>
+					<template #prefix>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+					</template>
+				</Textbox>
+				<FilterPanel show-reset align="right" @reset="resetFilters">
+					<Select v-model="filterStatus" label="Status">
+						<option value="all">All</option>
+						<option value="active">Active</option>
+						<option value="inactive">Disabled</option>
+					</Select>
+				</FilterPanel>
 			</div>
 
 			<div class="view-toggle">
@@ -565,69 +577,9 @@ function syncWithLhdn() {
 	}
 }
 
-.search-box {
-	position: relative;
-	width: 100%;
 
-	&__icon {
-		position: absolute;
-		left: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: var(--colors-text-muted);
-		font-size: 18px;
-	}
 
-	&__input {
-		width: 100%;
-		padding: 8px 12px 8px 38px;
-		border: 1px solid var(--colors-surface-border);
-		border-radius: 6px;
-		font-size: 13px;
-		background: var(--colors-surface-background);
-		color: var(--colors-text-primary);
-		outline: none;
-		box-sizing: border-box;
-		&:focus {
-			border-color: var(--colors-brand-primary);
-		}
-	}
-}
 
-.checkbox-container {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 13px;
-	font-weight: 500;
-	cursor: pointer;
-	white-space: nowrap;
-	color: var(--colors-text-primary);
-	input {
-		display: none;
-	}
-	&__box {
-		width: 16px;
-		height: 16px;
-		border: 2px solid var(--colors-surface-border);
-		border-radius: 4px;
-		position: relative;
-		transition: all 0.15s;
-	}
-	input:checked + &__box {
-		background-color: var(--colors-brand-primary);
-		border-color: var(--colors-brand-primary);
-		&::after {
-			content: "✓";
-			position: absolute;
-			color: white;
-			font-size: 11px;
-			font-weight: bold;
-			left: 2px;
-			top: -2px;
-		}
-	}
-}
 .switch-toggle {
 	display: inline-flex;
 	align-items: center;
@@ -655,9 +607,10 @@ function syncWithLhdn() {
 		}
 	}
 	input:checked + &__slider {
-		background-color: #22c55e;
+		background-color: var(--status-completed);
 		&::before {
 			transform: translateX(16px);
+			background-color: #ffffff;
 		}
 	}
 }

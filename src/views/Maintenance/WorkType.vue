@@ -6,6 +6,7 @@ import Dialog from "@/components/Dialog.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Table from "@/components/Table.vue";
+import Textbox from "@/components/Textbox.vue";
 import type { TableHeader } from "@/components/Table.vue";
 
 interface WorkType {
@@ -216,15 +217,16 @@ function deleteItem(item: WorkTypeItem) {
 		<div class="maintenance-grid">
 			<div class="maintenance-grid__left-panel">
 				<div class="list-controls">
-					<div class="search-box">
-						<i class="mdi mdi-magnify search-box__icon"></i>
-						<input
-							v-model="searchType"
-							type="text"
-							placeholder="Search types..."
-							class="search-box__input"
-						/>
-					</div>
+					<Textbox
+						v-model="searchType"
+						placeholder="Search types..."
+						style="flex: 1;"
+						hide-footer
+					>
+						<template #prefix>
+							<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+						</template>
+					</Textbox>
 
 					<FilterPanel show-reset align="right" @reset="resetTypeFilter">
 						<template #trigger="{ isActive }">
@@ -252,31 +254,37 @@ function deleteItem(item: WorkTypeItem) {
 				</div>
 
 				<div class="type-list">
-					<div
-						v-for="type in filteredWorkTypes"
-						:key="type.code"
-						class="type-card"
-						:class="{ 'type-card--selected': selectedType?.code === type.code }"
-						@click="selectType(type)"
-					>
-						<div class="type-card__content">
-							<span class="type-card__name">
-								{{ type.name }}
-								<span class="type-card__code">({{ type.code }})</span>
-							</span>
-							<div class="type-card__chips">
-								<Chip :type="type.isActive ? 'success' : 'default'">
-									{{ type.isActive ? "Active" : "Inactive" }}
-								</Chip>
-								<Chip
-									v-if="type.withEquipmentForm"
-									type="warning"
-									icon="mdi-assignment"
-								>
-									With Equipment Form
-								</Chip>
+					<template v-if="filteredWorkTypes.length > 0">
+						<div
+							v-for="type in filteredWorkTypes"
+							:key="type.code"
+							class="type-card"
+							:class="{ 'type-card--selected': selectedType?.code === type.code }"
+							@click="selectType(type)"
+						>
+							<div class="type-card__content">
+								<span class="type-card__name">
+									{{ type.name }}
+									<span class="type-card__code">({{ type.code }})</span>
+								</span>
+								<div class="type-card__chips">
+									<Chip :type="type.isActive ? 'success' : 'default'">
+										{{ type.isActive ? "Active" : "Inactive" }}
+									</Chip>
+									<Chip
+										v-if="type.withEquipmentForm"
+										type="warning"
+										icon="mdi-assignment"
+									>
+										With Equipment Form
+									</Chip>
+								</div>
 							</div>
 						</div>
+					</template>
+					<div v-else class="empty-state" style="height: auto; min-height: 200px; background: transparent; border: none;">
+						<i class="mdi mdi-magnify-close empty-state__icon" style="font-size: 36px; margin-bottom: 8px;"></i>
+						<p style="font-size: 13px;">No data found</p>
 					</div>
 				</div>
 			</div>
@@ -332,11 +340,7 @@ function deleteItem(item: WorkTypeItem) {
 						<div v-else class="form-grid">
 							<div class="form-group">
 								<label class="form-group__label">Work Type Name</label>
-								<input
-									v-model="selectedType.name"
-									type="text"
-									class="form-group__input"
-								/>
+								<Textbox v-model="selectedType.name" />
 							</div>
 							<div class="form-group form-group--checkbox">
 								<label class="checkbox-container">
@@ -386,15 +390,16 @@ function deleteItem(item: WorkTypeItem) {
 						</template>
 
 						<div class="list-controls" style="margin-bottom: 16px">
-							<div class="search-box">
-								<i class="mdi mdi-magnify search-box__icon"></i>
-								<input
-									v-model="searchItem"
-									type="text"
-									placeholder="Search items..."
-									class="search-box__input"
-								/>
-							</div>
+							<Textbox
+								v-model="searchItem"
+								placeholder="Search items..."
+								style="flex: 1;"
+								hide-footer
+							>
+								<template #prefix>
+									<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+								</template>
+							</Textbox>
 
 							<FilterPanel show-reset align="right" @reset="resetItemFilter">
 								<template #trigger="{ isActive }">
@@ -465,16 +470,14 @@ function deleteItem(item: WorkTypeItem) {
 
 			<div class="form-group">
 				<label class="form-group__label">Item Code</label>
-				<input
+				<Textbox
 					v-model="editingItem.code"
-					type="text"
-					class="form-group__input"
 					:disabled="editingItem.id !== 0"
 				/>
 			</div>
 			<div class="form-group">
 				<label class="form-group__label">Item Name</label>
-				<input v-model="editingItem.name" type="text" class="form-group__input" />
+				<Textbox v-model="editingItem.name" />
 			</div>
 			<div class="form-group">
 				<label class="form-group__label">Description</label>
@@ -573,13 +576,9 @@ function deleteItem(item: WorkTypeItem) {
 	gap: 8px;
 	align-items: center;
 
-	.search-box {
-		flex: 1;
-	}
-
 	.icon-action-btn {
-		width: 36px;
-		height: 36px;
+		width: 40px;
+		height: 40px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -588,40 +587,12 @@ function deleteItem(item: WorkTypeItem) {
 		border-radius: 6px;
 		color: var(--colors-text-secondary);
 		cursor: pointer;
+		font-size: 20px;
 
 		&:hover,
 		&--active {
 			background: var(--colors-surface-hover);
 			color: var(--colors-brand-primary);
-		}
-	}
-}
-
-.search-box {
-	position: relative;
-	width: 100%;
-
-	&__icon {
-		position: absolute;
-		left: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: var(--colors-text-muted);
-		font-size: 18px;
-	}
-
-	&__input {
-		width: 100%;
-		padding: 8px 12px 8px 38px;
-		border: 1px solid var(--colors-surface-border);
-		border-radius: 6px;
-		font-size: 13px;
-		background: var(--colors-surface-background);
-		color: var(--colors-text-primary);
-		outline: none;
-		box-sizing: border-box;
-		&:focus {
-			border-color: var(--colors-brand-primary);
 		}
 	}
 }
@@ -798,7 +769,7 @@ function deleteItem(item: WorkTypeItem) {
 		outline: none;
 		font-family: inherit;
 		&:focus {
-			border-color: var(--colors-primary-deepblue);
+			border-color: var(--colors-brand-primary);
 		}
 	}
 }
@@ -863,8 +834,8 @@ function deleteItem(item: WorkTypeItem) {
 		transition: all 0.15s;
 	}
 	input:checked + &__box {
-		background-color: var(--colors-primary-deepblue);
-		border-color: var(--colors-primary-deepblue);
+		background-color: var(--colors-brand-primary);
+		border-color: var(--colors-brand-primary);
 		&::after {
 			content: "✓";
 			position: absolute;
@@ -930,7 +901,7 @@ function deleteItem(item: WorkTypeItem) {
 	border-radius: 4px;
 	&:hover {
 		background-color: #f1f5f9;
-		color: var(--colors-primary-deepblue);
+		color: var(--colors-brand-primary);
 	}
 	&--danger {
 		&:hover {

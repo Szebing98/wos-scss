@@ -1,37 +1,36 @@
 <template>
     <div class="parts-view">
-        <!-- 顶部标题与操作 (对齐你之前喜欢的标题右侧加号设计) -->
         <div class="parts-view__header">
             <div class="parts-view__title-area">
-                <div class="title-with-action">
-                    <h1>Parts Library</h1>
-                    <button class="icon-action-btn icon-action-btn--primary" @click="prepareCreate" title="Add New Part">
-                        <i class="mdi mdi-plus"></i>
-                    </button>
-                </div>
+                <h1>Parts Library</h1>
                 <p class="parts-view__subtitle">Manage replacement parts, pricing, and units of measure</p>
             </div>
+            <button class="action-btn action-btn--primary" @click="prepareCreate">
+                <i class="mdi mdi-plus"></i> Add Part
+            </button>
         </div>
 
-        <!-- 搜索与过滤器工具栏 -->
-        <div class="filter-panel">
-            <div class="filter-panel__left">
-                <div class="search-box">
-                    <i class="mdi mdi-magnify search-box__icon"></i>
-                    <input 
-                        v-model="searchString" 
-                        type="text" 
-                        placeholder="Search Code, Name or Part No..." 
-                        class="search-box__input"
-                    />
-                </div>
-                <label class="checkbox-container">
-                    <input type="checkbox" v-model="showActiveOnly" />
-                    <span class="checkbox-container__box"></span>
-                    Active Only
-                </label>
+        <Card style="padding: var(--spacing-md);">
+            <div class="filter-bar">
+                <Textbox
+                    v-model="searchString"
+                    placeholder="Search Code, Name or Part No..."
+                    style="flex: 1;"
+                    hide-footer
+                >
+                    <template #prefix>
+                        <i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+                    </template>
+                </Textbox>
+                <FilterPanel show-reset align="right" @reset="resetFilters">
+                    <Select v-model="filterStatus" label="Status">
+                        <option value="all">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Disabled</option>
+                    </Select>
+                </FilterPanel>
             </div>
-        </div>
+        </Card>
 
         <!-- 零件数据表格 (带固定高度、条纹与悬浮特效) -->
         <Card class="table-scroll-container" style="padding: 0;">
@@ -79,17 +78,17 @@
             <div class="form-grid">
                 <div class="form-group form-group--full">
                     <label class="form-group__label">Part Number <span class="u-required">*</span></label>
-                    <input v-model="editingPart.partNo" type="text" class="form-group__input" placeholder="Manufacturer Part No" />
+                    <Textbox v-model="editingPart.partNo" placeholder="Manufacturer Part No" />
                 </div>
 
                 <div class="form-group form-group--full">
                     <label class="form-group__label">Internal System Code <span class="u-required">*</span></label>
-                    <input v-model="editingPart.code" type="text" class="form-group__input" :disabled="!isNewRecord" placeholder="e.g. FIL-001" />
+                    <Textbox v-model="editingPart.code" :disabled="!isNewRecord" placeholder="e.g. FIL-001" />
                 </div>
 
                 <div class="form-group form-group--full">
                     <label class="form-group__label">Part Name <span class="u-required">*</span></label>
-                    <input v-model="editingPart.name" type="text" class="form-group__input" />
+                    <Textbox v-model="editingPart.name" />
                 </div>
 
                 <div class="form-group">
@@ -99,12 +98,12 @@
 
                 <div class="form-group">
                     <label class="form-group__label">UOM</label>
-                    <select v-model="editingPart.uom" class="filter-dropdown">
+                    <Select v-model="editingPart.uom">
                         <option value="PCS">Pieces (PCS)</option>
                         <option value="SET">Set</option>
                         <option value="UNIT">Unit</option>
                         <option value="LTR">Litre</option>
-                    </select>
+                    </Select>
                 </div>
 
                 <div class="form-group">
@@ -141,6 +140,9 @@ import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import Dialog from "@/components/Dialog.vue";
 import Card from "@/components/Card.vue";
+import Textbox from "@/components/Textbox.vue";
+import Select from "@/components/Select.vue";
+import FilterPanel from "@/components/FilterPanel.vue";
 
 interface PartReplaced {
     id: number;
@@ -155,9 +157,13 @@ interface PartReplaced {
 }
 
 const searchString = ref("");
-const showActiveOnly = ref(false);
+const filterStatus = ref("all");
 const isDrawerOpen = ref(false);
 const isNewRecord = ref(false);
+
+function resetFilters() {
+    filterStatus.value = "all";
+}
 
 const tableHeaders: TableHeader[] = [
     { key: "code", label: "Code / Part No", width: "25%" },
@@ -191,7 +197,9 @@ const filteredParts = computed(() => {
             (x.code && x.code.toLowerCase().includes(search)) ||
             (x.partNo && x.partNo.toLowerCase().includes(search));
 
-        const matchesActive = !showActiveOnly.value || x.isActive;
+        const matchesActive = 
+            filterStatus.value === "all" || 
+            (filterStatus.value === "active" ? x.isActive : !x.isActive);
 
         return matchesSearch && matchesActive;
     });
@@ -264,41 +272,16 @@ function formatPrice(value: number) {
     }
 
     &__title-area {
+        h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; color: var(--colors-text-primary); }
         p { font-size: 13px; color: var(--colors-text-muted); margin: 0; }
     }
 }
 
-// 标题右侧加号雷达
-.title-with-action {
-    @include flex-row($align: center, $gap: 12px);
-    h1 { font-size: 24px; font-weight: 700; margin: 0; color: var(--text-main); }
-    
-    .icon-action-btn--primary {
-        background-color: rgba(80, 88, 242, 0.08);
-        color: var(--colors-primary-deepblue);
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        &:hover { background-color: var(--colors-primary-deepblue); color: white; }
-    }
-}
-
-// 过滤控制面板
-.filter-panel {
-    background: var(--colors-surface-card);
-    border: 1px solid var(--colors-surface-border);
-    border-radius: var(--radius-xxs, 12px);
-    padding: var(--spacing-md);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
-
-    &__left {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-lg);
-        flex-grow: 1;
-        max-width: 500px;
-        @media (max-width: 640px) { flex-direction: column; align-items: flex-start; gap: var(--spacing-sm); }
-    }
+// Filter bar inside Card
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
 }
 
 // 纵向混合零件单元格
@@ -336,7 +319,7 @@ function formatPrice(value: number) {
     &--checkbox-row { grid-column: span 2; padding-top: var(--spacing-xs); align-items: center; display: flex; flex-direction: row; }
 
     &__label { font-size: 13px; font-weight: 600; color: var(--colors-text-primary); }
-    &__input, &__textarea, .filter-dropdown {
+    &__input, &__textarea {
         width: 100%; padding: 8px 12px; border: 1px solid var(--colors-surface-border); border-radius: 6px;
         font-size: 13px; outline: none; font-family: inherit; box-sizing: border-box;
         background: var(--colors-surface-background); color: var(--colors-text-primary);
@@ -344,10 +327,7 @@ function formatPrice(value: number) {
     }
 }
 
-// 基础全局公用表格元素
-.search-box { position: relative; flex-grow: 1; .search-box__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--colors-text-muted); font-size: 18px; } .search-box__input { width: 100%; padding: 8px 12px 8px 38px; border: 1px solid var(--colors-surface-border); border-radius: 6px; font-size: 13px; outline: none; box-sizing: border-box; background: var(--colors-surface-background); color: var(--colors-text-primary); &:focus { border-color: var(--colors-brand-primary); } } }
-.checkbox-container { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; color: var(--colors-text-primary); input { display: none; } &__box { width: 16px; height: 16px; border: 2px solid var(--colors-surface-border); border-radius: 4px; position: relative; transition: all 0.15s; } input:checked + &__box { background-color: var(--colors-brand-primary); border-color: var(--colors-brand-primary); &::after { content: '✓'; position: absolute; color: white; font-size: 11px; font-weight: bold; left: 2px; top: -2px; } } }
-.switch-toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; input { display: none; } &__slider { width: 34px; height: 18px; background-color: var(--colors-surface-border); border-radius: 20px; position: relative; transition: background-color 0.2s; &::before { content: ''; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; background-color: white; border-radius: 50%; transition: transform 0.2s; } } input:checked + &__slider { background-color: #22c55e; &::before { transform: translateX(16px); } } &__label { font-size: 13px; font-weight: 600; color: var(--colors-text-primary); } }
+.switch-toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; input { display: none; } &__slider { width: 34px; height: 18px; background-color: var(--colors-surface-border); border-radius: 20px; position: relative; transition: background-color 0.2s; &::before { content: ''; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; background-color: var(--colors-text-primary); border-radius: 50%; transition: transform 0.2s; } } input:checked + &__slider { background-color: var(--status-completed); &::before { transform: translateX(16px); background-color: #ffffff; } } &__label { font-size: 13px; font-weight: 600; color: var(--colors-text-primary); } }
 .action-btn { border: none; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 8px 16px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; &--primary { background-color: var(--colors-brand-primary); color: white; &:hover { opacity: 0.9; } } &--text { background: transparent; color: var(--colors-text-muted); &:hover { background: var(--colors-surface-hover); } } }
 .icon-action-btn { background: transparent; border: none; font-size: 16px; color: var(--colors-text-secondary); padding: 6px; cursor: pointer; border-radius: 6px; &:hover { background-color: var(--colors-surface-hover); color: var(--colors-brand-primary); } &--danger { &:hover { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; } } }
 

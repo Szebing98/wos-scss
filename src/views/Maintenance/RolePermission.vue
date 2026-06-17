@@ -59,10 +59,15 @@
 
                 <div v-else class="matrix-container">
                     <div class="filter-panel mb-md">
-                        <div class="search-box">
-                            <i class="mdi mdi-magnify search-box__icon"></i>
-                            <input v-model="searchQuery" type="text" placeholder="Search operational permissions..." class="search-box__input" />
-                        </div>
+                        <Textbox
+                            v-model="searchQuery"
+                            placeholder="Search operational permissions..."
+                            style="flex-grow: 1;"
+                        >
+                            <template #prefix>
+                                <i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+                            </template>
+                        </Textbox>
                     </div>
 
                     <div v-for="(perms, subject) in filteredGroupedPermissions" :key="subject" class="panel-card mb-md">
@@ -116,6 +121,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import Chip from "@/components/Chip.vue";
+import Textbox from "@/components/Textbox.vue";
 
 interface UserGroupModel {
     code: string;
@@ -378,8 +384,7 @@ onMounted(() => {
 
 // 基础脚手架公用样式
 .panel-card { background: var(--colors-surface-card); border: 1px solid var(--colors-surface-border); border-radius: 12px; padding: 24px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01); .panel-card__header-title { @include flex-row($align: center, $gap: 8px); i { font-size: 18px; } h2 { font-size: 15px; font-weight: 700; margin: 0; color: var(--colors-text-primary); } } .panel-card__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; } }
-.filter-panel { background: var(--colors-surface-card); border: 1px solid var(--colors-surface-border); border-radius: 12px; padding: var(--spacing-md); }
-.search-box { position: relative; width: 100%; .search-box__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--colors-text-muted); font-size: 18px; } .search-box__input { width: 100%; padding: 8px 12px 8px 38px; border: 1px solid var(--colors-surface-border); border-radius: 6px; font-size: 13px; outline: none; box-sizing: border-box; background: var(--colors-surface-background); color: var(--colors-text-primary); &:focus { border-color: var(--colors-brand-primary); } } }
+.filter-panel { background: var(--colors-surface-card); border: 1px solid var(--colors-surface-border); border-radius: 12px; padding: var(--spacing-md); display: flex; }
 .action-btn { border: none; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 8px 18px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; &--primary { background-color: var(--colors-brand-primary); color: white; &:hover { opacity: 0.9; } &[disabled] { background-color: var(--colors-surface-border) !important; color: var(--colors-text-muted) !important; cursor: not-allowed; box-shadow: none !important; } } &--text { background: transparent; color: var(--colors-text-muted); font-size: 12px; padding: 4px 8px; &:hover { background: var(--colors-surface-hover); } } }
 .empty-state { height: 100%; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--spacing-xl); background: var(--colors-surface-card); border: 1px solid var(--colors-surface-border); border-radius: 12px; color: var(--colors-text-muted); text-align: center; &__icon { font-size: 4.5rem; opacity: 0.15; margin-bottom: var(--spacing-xs); } p { font-size: 16px; font-weight: 700; color: var(--colors-text-primary); margin: 0; } &__sub { font-size: 12px; color: var(--colors-text-muted); max-width: 400px; margin-top: 6px; line-height: 1.5; } &.border-dashed { border-style: dashed; background-color: transparent; } }
 .checkbox-container { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; color: var(--colors-text-primary); input { display: none; } &__box { width: 16px; height: 16px; border: 2px solid var(--colors-surface-border); border-radius: 4px; position: relative; transition: all 0.15s; } input:checked + &__box { background-color: var(--colors-brand-primary); border-color: var(--colors-brand-primary); &::after { content: '✓'; position: absolute; color: white; font-size: 11px; font-weight: bold; left: 2px; top: -2px; } } }

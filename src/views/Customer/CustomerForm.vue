@@ -26,29 +26,25 @@
 						<label class="form-group__label"
 							>Customer Name <span class="u-required">*</span></label
 						>
-						<input
+						<Textbox
 							v-model="form.name"
-							type="text"
-							class="form-group__input"
 							placeholder="Legal full name"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">AutoCount Debtor Code (AccountNo)</label>
-						<input
+						<Textbox
 							v-model="form.accountNo"
-							type="text"
-							class="form-group__input u-font-mono"
 							placeholder="e.g. 300-A0001"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">License Number</label>
-						<input v-model="form.licenseNo" type="text" class="form-group__input" />
+						<Textbox v-model="form.licenseNo" />
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">System Base Address Code</label>
-						<input v-model="form.addressCode" type="text" class="form-group__input" />
+						<Textbox v-model="form.addressCode" />
 					</div>
 
 					<div class="form-group form-group--checkbox-row mt-xs">
@@ -84,47 +80,40 @@
 				<div class="form-grid">
 					<div class="form-group">
 						<label class="form-group__label">Login/Notification Email</label>
-						<input
+						<Textbox
 							v-model="form.profile.email"
 							type="email"
-							class="form-group__input"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Contact Phone</label>
-						<input v-model="form.profile.phone" type="text" class="form-group__input" />
+						<Textbox v-model="form.profile.phone" />
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Tax Identity No (TIN)</label>
-						<input
+						<Textbox
 							v-model="form.profile.tin"
-							type="text"
-							class="form-group__input u-font-mono"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Business Reg No (BRN)</label>
-						<input
+						<Textbox
 							v-model="form.profile.brn"
-							type="text"
-							class="form-group__input u-font-mono"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Individual Type Selection</label>
-						<select v-model="form.profile.individualType" class="filter-dropdown">
+						<Select v-model="form.profile.individualType">
 							<option value="COMPANY">COMPANY</option>
 							<option value="MyKAD">MyKAD (Malaysian Identity)</option>
 							<option value="PASSPORT">PASSPORT (Foreigner)</option>
 							<option value="GOVERNMENT">GOVERNMENT</option>
-						</select>
+						</Select>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Identity Document Number</label>
-						<input
+						<Textbox
 							v-model="form.profile.identityNo"
-							type="text"
-							class="form-group__input u-font-mono"
 						/>
 					</div>
 				</div>
@@ -147,51 +136,39 @@
 				<div class="form-grid">
 					<div class="form-group">
 						<label class="form-group__label">Default Transaction Currency</label>
-						<input
+						<Textbox
 							v-model="form.metadata.currencyCode"
-							type="text"
-							class="form-group__input u-font-mono"
 							placeholder="MYR"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Credit Limit Amount</label>
-						<input
+						<Textbox
 							v-model="form.metadata.creditLimit"
-							type="text"
-							class="form-group__input u-text-right"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Overdue Limit Amount</label>
-						<input
+						<Textbox
 							v-model="form.metadata.overdueLimit"
-							type="text"
-							class="form-group__input u-text-right"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Linked Accounting Control Account</label>
-						<input
+						<Textbox
 							v-model="form.metadata.controlAccount"
-							type="text"
-							class="form-group__input u-font-mono"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Tax Exemption Reference Number</label>
-						<input
+						<Textbox
 							v-model="form.metadata.taxExemptNo"
-							type="text"
-							class="form-group__input u-font-mono"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Exemption Expiry Date (ISO)</label>
-						<input
+						<Textbox
 							v-model="form.metadata.exemptExpiryDate"
-							type="text"
-							class="form-group__input"
 							placeholder="YYYY-MM-DD"
 						/>
 					</div>
@@ -205,6 +182,8 @@
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Chip from "@/components/Chip.vue";
+import Textbox from "@/components/Textbox.vue";
+import Select from "@/components/Select.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -334,12 +313,12 @@ function handleSubmitForm() {
 
 	.icon-action-btn--primary {
 		background-color: rgba(80, 88, 242, 0.08);
-		color: var(--colors-primary-deepblue);
+		color: var(--colors-brand-primary);
 		border-radius: 50%;
 		width: 32px;
 		height: 32px;
 		&:hover {
-			background-color: var(--colors-primary-deepblue);
+			background-color: var(--colors-brand-primary);
 			color: white;
 		}
 	}
@@ -355,7 +334,7 @@ function handleSubmitForm() {
 	padding: 0;
 	@include flex-row($align: center, $gap: 4px);
 	&:hover {
-		color: var(--colors-primary-deepblue);
+		color: var(--colors-brand-primary);
 	}
 }
 
@@ -428,7 +407,7 @@ function handleSubmitForm() {
 		width: 80px;
 		height: 80px;
 		border-radius: 50%;
-		background: var(--colors-primary-deepblue);
+		background: var(--colors-brand-primary);
 		color: white;
 		font-size: 32px;
 		font-weight: 800;
@@ -481,7 +460,7 @@ function handleSubmitForm() {
 		font-family: monospace;
 		font-size: 14px;
 		font-weight: 700;
-		color: var(--colors-primary-deepblue);
+		color: var(--colors-brand-primary);
 	}
 	&__desc {
 		font-size: 12px;
@@ -500,7 +479,7 @@ function handleSubmitForm() {
 
 // 只读页网格
 .panel-card--readonly {
-	border-top: 4px solid var(--colors-primary-deepblue);
+	border-top: 4px solid var(--colors-brand-primary);
 }
 .readonly-grid {
 	display: grid;
@@ -607,31 +586,7 @@ function handleSubmitForm() {
 		padding: 40px !important;
 	}
 }
-.search-box {
-	position: relative;
-	flex-grow: 1;
-	max-width: 320px;
-	.search-box__icon {
-		position: absolute;
-		left: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: #94a3b8;
-		font-size: 18px;
-	}
-	.search-box__input {
-		width: 100%;
-		padding: 8px 12px 8px 38px;
-		border: 1px solid #cbd5e1;
-		border-radius: 6px;
-		font-size: 13px;
-		outline: none;
-		box-sizing: border-box;
-		&:focus {
-			border-color: var(--colors-primary-deepblue);
-		}
-	}
-}
+
 .form-grid {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
@@ -654,22 +609,7 @@ function handleSubmitForm() {
 	&__label {
 		font-size: 13px;
 		font-weight: 600;
-		color: #475569;
-	}
-	&__input,
-	.filter-dropdown,
-	&__textarea {
-		width: 100%;
-		padding: 8px 12px;
-		border: 1px solid #cbd5e1;
-		border-radius: 6px;
-		font-size: 13px;
-		outline: none;
-		font-family: inherit;
-		box-sizing: border-box;
-		&:focus {
-			border-color: var(--colors-primary-deepblue);
-		}
+		color: var(--colors-text-secondary);
 	}
 }
 .switch-toggle {
@@ -683,7 +623,7 @@ function handleSubmitForm() {
 	&__slider {
 		width: 34px;
 		height: 18px;
-		background-color: #cbd5e1;
+		background-color: var(--colors-surface-border);
 		border-radius: 20px;
 		position: relative;
 		transition: background-color 0.2s;
@@ -694,54 +634,22 @@ function handleSubmitForm() {
 			top: 2px;
 			width: 14px;
 			height: 14px;
-			background-color: white;
+			background-color: var(--colors-text-primary);
 			border-radius: 50%;
 			transition: transform 0.2s;
 		}
 	}
 	input:checked + &__slider {
-		background-color: #22c55e;
+		background-color: var(--status-completed);
 		&::before {
 			transform: translateX(16px);
+			background-color: #ffffff;
 		}
 	}
 	&__label {
 		font-size: 13px;
 		font-weight: 600;
-		color: #475569;
-	}
-}
-.checkbox-container {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 13px;
-	font-weight: 500;
-	cursor: pointer;
-	white-space: nowrap;
-	input {
-		display: none;
-	}
-	&__box {
-		width: 16px;
-		height: 16px;
-		border: 2px solid #cbd5e1;
-		border-radius: 4px;
-		position: relative;
-		transition: all 0.15s;
-	}
-	input:checked + &__box {
-		background-color: var(--colors-primary-deepblue);
-		border-color: var(--colors-primary-deepblue);
-		&::after {
-			content: "✓";
-			position: absolute;
-			color: white;
-			font-size: 11px;
-			font-weight: bold;
-			left: 2px;
-			top: -2px;
-		}
+		color: var(--colors-text-secondary);
 	}
 }
 .action-btn {
@@ -755,7 +663,7 @@ function handleSubmitForm() {
 	align-items: center;
 	gap: 6px;
 	&--primary {
-		background-color: var(--colors-primary-deepblue);
+		background-color: var(--colors-brand-primary);
 		color: white;
 		&:hover {
 			background-color: #444acf;
@@ -789,7 +697,7 @@ function handleSubmitForm() {
 	border-radius: 6px;
 	&:hover {
 		background-color: #f1f5f9;
-		color: var(--colors-primary-deepblue);
+		color: var(--colors-brand-primary);
 	}
 	&--danger {
 		&:hover {
@@ -845,7 +753,7 @@ function handleSubmitForm() {
 	font-weight: 700;
 }
 .u-text-primary {
-	color: var(--colors-primary-deepblue) !important;
+	color: var(--colors-brand-primary) !important;
 }
 .u-required {
 	color: #ef4444;

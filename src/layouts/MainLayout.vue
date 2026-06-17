@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useThemeStore } from "@/stores/theme.store";
+import Dialog from "@/components/Dialog.vue";
+import Button from "@/components/Button.vue";
 
 const themeStore = useThemeStore();
 
@@ -10,6 +12,23 @@ const isMobile = ref(false);
 const isTablet = ref(false);
 const isDesktop = ref(true);
 const isMenuOpen = ref(false);
+
+const isAccountMenuOpen = ref(false);
+const isLogoutDialogOpen = ref(false);
+const router = useRouter();
+
+function handleLogout() {
+	localStorage.removeItem("authToken");
+	isLogoutDialogOpen.value = false;
+	router.push("/account/login");
+}
+
+function handleClickOutside(e: MouseEvent) {
+	const target = e.target as HTMLElement;
+	if (!target.closest('.account-menu-wrapper')) {
+		isAccountMenuOpen.value = false;
+	}
+}
 
 const groups = reactive({
 	workOrders: true,
@@ -71,10 +90,12 @@ function handleResize() {
 onMounted(() => {
 	handleResize();
 	window.addEventListener("resize", handleResize);
+	document.addEventListener("click", handleClickOutside);
 });
 
 onUnmounted(() => {
 	window.removeEventListener("resize", handleResize);
+	document.removeEventListener("click", handleClickOutside);
 });
 </script>
 
@@ -91,12 +112,37 @@ onUnmounted(() => {
 			</div>
 
 			<div class="header-right">
-				<button class="icon-btn" @click="toggleTheme">
-					<i
-						class="mdi"
-						:class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'"
-					></i>
+				<button class="icon-btn" aria-label="Notifications">
+					<i class="mdi mdi-bell-outline"></i>
 				</button>
+				
+				<button class="icon-btn" @click="toggleTheme" aria-label="Toggle Theme">
+					<i class="mdi" :class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'"></i>
+				</button>
+
+				<div class="account-menu-wrapper">
+					<button class="icon-btn account-btn" @click.stop="isAccountMenuOpen = !isAccountMenuOpen" aria-label="Account">
+						<i class="mdi mdi-account-circle-outline"></i>
+					</button>
+					<div v-if="isAccountMenuOpen" class="account-dropdown">
+						<div class="account-dropdown__header">
+							<div class="account-dropdown__avatar">
+								<i class="mdi mdi-account"></i>
+							</div>
+							<div class="account-dropdown__info">
+								<p class="account-dropdown__name">System User</p>
+								<p class="account-dropdown__email">user@gstech.com</p>
+							</div>
+						</div>
+						<div class="account-dropdown__divider"></div>
+						<router-link to="/user/profile" class="account-dropdown__item" @click="isAccountMenuOpen = false">
+							<i class="mdi mdi-account-cog-outline"></i> My Profile
+						</router-link>
+						<button class="account-dropdown__item account-dropdown__item--danger" @click="isLogoutDialogOpen = true; isAccountMenuOpen = false">
+							<i class="mdi mdi-logout"></i> Logout
+						</button>
+					</div>
+				</div>
 			</div>
 		</header>
 
@@ -130,6 +176,7 @@ onUnmounted(() => {
 					<div class="nav__group" :class="{ 'nav__group--expanded': groups.workOrders }">
 						<button
 							class="nav__item"
+							:class="{ 'nav__item--active-parent': route.path.startsWith('/work-order') }"
 							@click="toggleGroup('workOrders')"
 							title="Work Orders"
 						>
@@ -239,6 +286,7 @@ onUnmounted(() => {
 					<div class="nav__group" :class="{ 'nav__group--expanded': groups.maintenance }">
 						<div
 							class="nav__item"
+							:class="{ 'nav__item--active-parent': route.path.startsWith('/maintenance') }"
 							@click="toggleGroup('maintenance')"
 							title="Maintenance"
 						>
@@ -368,5 +416,169 @@ onUnmounted(() => {
 				</footer>
 			</main>
 		</div>
+
+		<Dialog v-model="isLogoutDialogOpen" title="Confirm Logout">
+			<div class="logout-dialog-content">
+				<i class="mdi mdi-logout-variant logout-dialog-icon"></i>
+				<p>Are you sure you want to log out?</p>
+				<span class="logout-dialog-sub">You will need to sign in again to access the system.</span>
+			</div>
+			<template #footer>
+				<Button variant="secondary" @click="isLogoutDialogOpen = false">Cancel</Button>
+				<Button variant="danger" @click="handleLogout">Logout</Button>
+			</template>
+		</Dialog>
 	</div>
 </template>
+
+<style lang="scss" scoped>
+.header-right {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+
+	.icon-btn i {
+		font-size: 24px;
+	}
+}
+
+.account-menu-wrapper {
+	position: relative;
+}
+
+.account-dropdown {
+	position: absolute;
+	top: calc(100% + 8px);
+	right: 0;
+	width: 240px;
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 12px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+	z-index: 100;
+	overflow: hidden;
+	animation: slideDown 0.2s ease;
+
+	&__header {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 16px;
+		background: var(--colors-surface-background);
+	}
+	
+	&__avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		background: var(--colors-brand-primary);
+		color: white;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 20px;
+	}
+
+	&__info {
+		display: flex;
+		flex-direction: column;
+	}
+
+	&__name {
+		margin: 0;
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--colors-text-primary);
+	}
+
+	&__email {
+		margin: 0;
+		font-size: 12px;
+		color: var(--colors-text-muted);
+	}
+
+	&__divider {
+		height: 1px;
+		background: var(--colors-surface-border);
+		margin: 4px 0;
+	}
+
+	&__item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 16px;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--colors-text-primary);
+		text-decoration: none;
+		background: transparent;
+		border: none;
+		width: 100%;
+		cursor: pointer;
+		text-align: left;
+		transition: background-color 0.2s;
+
+		i {
+			font-size: 18px;
+			color: var(--colors-text-muted);
+		}
+
+		&:hover {
+			background: var(--colors-surface-hover);
+			color: var(--colors-brand-primary);
+			i {
+				color: var(--colors-brand-primary);
+			}
+		}
+
+		&--danger {
+			&:hover {
+				background: var(--colors-state-danger-light, rgba(239, 68, 68, 0.05));
+				color: var(--colors-state-danger, #ef4444);
+				i {
+					color: var(--colors-state-danger, #ef4444);
+				}
+			}
+		}
+	}
+}
+
+.logout-dialog-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 8px;
+	padding: 20px 0;
+
+	.logout-dialog-icon {
+		font-size: 48px;
+		color: var(--colors-state-warning, #f59e0b);
+		margin-bottom: 8px;
+	}
+
+	p {
+		font-size: 16px;
+		font-weight: 700;
+		color: var(--colors-text-primary);
+		margin: 0;
+	}
+
+	.logout-dialog-sub {
+		font-size: 13px;
+		color: var(--colors-text-muted);
+	}
+}
+
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+</style>

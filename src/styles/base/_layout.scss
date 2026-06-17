@@ -348,6 +348,18 @@
 					color: #ffffff;
 				}
 			}
+
+			&--active-parent {
+				border-left: none;
+				border-right: 4px solid transparent;
+				background: #5058f2;
+				color: #ffffff;
+				font-weight: normal;
+
+				.nav__icon {
+					color: #ffffff;
+				}
+			}
 		}
 
 		.nav__group {

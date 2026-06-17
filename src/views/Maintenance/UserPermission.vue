@@ -20,12 +20,32 @@
             <div class="panel-card panel-card--selector mb-md">
                 <label class="form-group__label mb-xs">Select Target User</label>
                 <div class="user-select-wrapper">
-                    <select :value="selectedUserCode" @change="handleUserChange" class="user-dropdown">
-                        <option value="" disabled>-- Click to Select a System Employee --</option>
-                        <option v-for="user in users" :key="user.code" :value="user.code">
-                            {{ user.name }} ({{ user.email }})
-                        </option>
-                    </select>
+                    <div class="autocomplete-wrapper" ref="autocompleteRef">
+                        <input 
+                            type="text" 
+                            class="user-dropdown autocomplete-input" 
+                            v-model="userSearchQuery" 
+                            @focus="showUserList = true"
+                            placeholder="Type to search system employee..."
+                        />
+                        <div v-if="showUserList && filteredAutocompleteUsers.length > 0" class="autocomplete-dropdown">
+                            <div 
+                                v-for="user in filteredAutocompleteUsers" 
+                                :key="user.code" 
+                                class="autocomplete-item"
+                                @click="handleUserSelection(user)"
+                            >
+                                <div class="autocomplete-item__avatar">{{ user.name[0] }}</div>
+                                <div class="autocomplete-item__info">
+                                    <span class="autocomplete-item__name">{{ user.name }}</span>
+                                    <span class="autocomplete-item__email">{{ user.email }}</span>
+                                </div>
+                            </div>
+                            <div v-if="filteredAutocompleteUsers.length === 0" class="autocomplete-item autocomplete-item--empty">
+                                No employees found
+                            </div>
+                        </div>
+                    </div>
                     <div class="user-select-wrapper__avatar" v-if="selectedUser">
                         {{ selectedUser.name[0] }}
                     </div>
@@ -49,10 +69,15 @@
 
                 <div v-else class="matrix-grid-area">
                     <div class="filter-panel mb-md">
-                        <div class="search-box">
-                            <i class="mdi mdi-magnify search-box__icon"></i>
-                            <input v-model="searchQuery" type="text" placeholder="Search overridden capabilities..." class="search-box__input" />
-                        </div>
+                        <Textbox
+                            v-model="searchQuery"
+                            placeholder="Search overridden capabilities..."
+                            style="flex-grow: 1;"
+                        >
+                            <template #prefix>
+                                <i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+                            </template>
+                        </Textbox>
                     </div>
 
                     <div v-for="(perms, subject) in filteredGroupedPermissions" :key="subject" class="panel-card mb-md">
@@ -121,6 +146,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import Textbox from "@/components/Textbox.vue";
 
 interface UserModel {
     code: string;
@@ -141,6 +167,20 @@ const isSaving = ref(false);
 
 const selectedUserCode = ref("");
 const selectedUser = ref<UserModel | null>(null);
+
+const userSearchQuery = ref("");
+const showUserList = ref(false);
+const autocompleteRef = ref<HTMLElement | null>(null);
+
+const filteredAutocompleteUsers = computed(() => {
+    if (!userSearchQuery.value) return users.value;
+    const q = userSearchQuery.value.toLowerCase();
+    return users.value.filter(u => 
+        u.name.toLowerCase().includes(q) || 
+        u.email.toLowerCase().includes(q) || 
+        u.code.toLowerCase().includes(q)
+    );
+});
 
 const users = ref<UserModel[]>([]);
 const allPermissions = ref<PermissionModel[]>([]);
@@ -184,13 +224,12 @@ async function loadAllPermissions() {
 }
 
 // 3. 用户切换，进行多级权限合并交织运算
-async function handleUserChange(event: Event) {
-    const code = (event.target as HTMLSelectElement).value;
-    selectedUserCode.value = code;
-    const foundUser = users.value.find(u => u.code === code);
-    if (!foundUser) return;
+async function handleUserSelection(user: UserModel) {
+    userSearchQuery.value = `${user.name} (${user.email})`;
+    showUserList.value = false;
     
-    selectedUser.value = foundUser;
+    selectedUserCode.value = user.code;
+    selectedUser.value = user;
     isLoadingPermissions.value = true;
     
     inheritedPermissions.value.clear();
@@ -198,8 +237,8 @@ async function handleUserChange(event: Event) {
 
     try {
         // 串行获取 Effective（最终有效集）和 Direct Overrides（直接覆盖集）
-        const effectiveRes = await fetch(`api/permissions/users/${code}`);
-        const overridesRes = await fetch(`api/permissions/users/${code}/overrides`);
+        const effectiveRes = await fetch(`api/permissions/users/${user.code}`);
+        const overridesRes = await fetch(`api/permissions/users/${user.code}/overrides`);
 
         if (overridesRes.ok) {
             const directOverrides: PermissionModel[] = await overridesRes.json();
@@ -227,6 +266,21 @@ async function handleUserChange(event: Event) {
         isLoadingPermissions.value = false;
     }
 }
+
+function handleClickOutside(e: MouseEvent) {
+    if (autocompleteRef.value && !autocompleteRef.value.contains(e.target as Node)) {
+        showUserList.value = false;
+        if (selectedUser.value && userSearchQuery.value !== `${selectedUser.value.name} (${selectedUser.value.email})`) {
+            userSearchQuery.value = `${selectedUser.value.name} (${selectedUser.value.email})`;
+        }
+    }
+}
+
+onMounted(() => {
+    loadUsers();
+    loadAllPermissions();
+    document.addEventListener("mousedown", handleClickOutside);
+});
 
 // 4. 清理反向规则，只输出标准的 UI 行
 const filteredGroupedPermissions = computed(() => {
@@ -313,10 +367,7 @@ async function saveOverrides() {
     }
 }
 
-onMounted(() => {
-    loadUsers();
-    loadAllPermissions();
-});
+
 </script>
 
 <style lang="scss" scoped>
@@ -352,8 +403,8 @@ onMounted(() => {
 
 // 👤 高级感用户选择外壳
 .panel-card--selector {
-    background-color: white;
-    border: 1px solid var(--border-color);
+    background-color: var(--colors-surface-card);
+    border: 1px solid var(--colors-surface-border);
     border-radius: 12px;
     padding: var(--spacing-md) var(--spacing-lg);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
@@ -364,20 +415,52 @@ onMounted(() => {
     @include flex-row($align: center);
     width: 100%;
 
-    .user-dropdown {
-        width: 100%; padding: 10px 14px 10px 48px; border: 1px solid #cbd5e1;
-        border-radius: 8px; font-size: 14px; font-weight: 500; color: #1e293b;
-        background-color: #ffffff; outline: none; cursor: pointer; appearance: none;
-        &:focus { border-color: var(--colors-primary-deepblue); }
+    .autocomplete-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .autocomplete-input {
+        width: 100%; padding: 10px 14px 10px 48px; border: 1px solid var(--colors-surface-border);
+        border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--colors-text-primary);
+        background-color: var(--colors-surface-background); outline: none; transition: border-color 0.2s;
+        &:focus { border-color: var(--colors-brand-primary); }
+    }
+
+    .autocomplete-dropdown {
+        position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+        background: var(--colors-surface-card); border: 1px solid var(--colors-surface-border);
+        border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        z-index: 10; max-height: 240px; overflow-y: auto;
+    }
+
+    .autocomplete-item {
+        padding: 10px 14px; display: flex; align-items: center; gap: 12px;
+        cursor: pointer; transition: background-color 0.15s;
+        
+        &:hover { background-color: var(--colors-surface-hover); }
+
+        &__avatar {
+            width: 28px; height: 28px; border-radius: 50%; background: var(--colors-brand-primary);
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700; flex-shrink: 0;
+        }
+
+        &__info { display: flex; flex-direction: column; gap: 2px; }
+        &__name { font-size: 13px; font-weight: 600; color: var(--colors-text-primary); }
+        &__email { font-size: 11px; color: var(--colors-text-muted); }
+
+        &--empty { cursor: default; color: var(--colors-text-muted); justify-content: center; font-size: 13px; }
+        &--empty:hover { background-color: transparent; }
     }
 
     // 左侧悬浮大厂缩写头像
     &__avatar {
         position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-        width: 26px; height: 26px; background-color: var(--colors-primary-deepblue);
+        width: 26px; height: 26px; background-color: var(--colors-brand-primary);
         color: white; font-size: 12px; font-weight: 700; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        pointer-events: none;
+        pointer-events: none; z-index: 2;
     }
 }
 
@@ -389,13 +472,13 @@ onMounted(() => {
 }
 
 .override-box {
-    border: 1px solid var(--border-color); background-color: #f8fafc; padding: 14px var(--spacing-md);
+    border: 1px solid var(--colors-surface-border); background-color: var(--colors-surface-background); padding: 14px var(--spacing-md);
     border-radius: 12px; transition: all 0.2s ease;
     @include flex-row($align: center, $gap: 12px); justify-content: space-between;
 
     &__info { display: flex; flex-direction: column; gap: 2px; }
-    &__action { font-size: 14px; font-weight: 700; color: #1e293b; text-transform: capitalize; }
-    &__inherited-text { font-size: 11px; color: #94a3b8; font-weight: 500; }
+    &__action { font-size: 14px; font-weight: 700; color: var(--colors-text-primary); text-transform: uppercase; letter-spacing: 0.05em; }
+    &__inherited-text { font-size: 11px; color: var(--colors-text-muted); font-family: monospace; }
 
     &:hover { border-color: #cbd5e1; }
 
@@ -417,8 +500,10 @@ onMounted(() => {
 // 🌟 3. 纯原生手写大厂轻奢三态分段纽 (Segmented Controls)
 // ==========================================
 .segmented-control {
-    display: inline-flex; background-color: #f1f5f9; padding: 3px; border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    display: inline-flex;    background: var(--colors-surface-background);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid var(--colors-surface-border);
 
     &__item {
         cursor: pointer; display: block;
@@ -428,12 +513,20 @@ onMounted(() => {
     &__button {
         display: block; padding: 5px 10px; border-radius: 6px; font-size: 11px;
         font-weight: 600; color: #64748b; text-align: center; transition: all 0.15s ease;
-        user-select: none;
+        color: var(--colors-text-muted);
+
+        &:hover { color: var(--colors-text-primary); }
+
+        &:checked + .segmented-control__button {
+            background-color: var(--colors-surface-card);
+            color: var(--colors-text-primary);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
     }
 
     // 三态动态激活选中流
     input:checked + &__button {
-        background-color: white; color: #1e293b; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        background-color: var(--colors-brand-primary); color: white; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     }
     input:checked + &__button--allow {
         background-color: #22c55e !important; color: white !important; box-shadow: 0 3px 8px rgba(34, 197, 94, 0.25);
@@ -444,15 +537,14 @@ onMounted(() => {
 }
 
 // 基础脚手架公用样式
-.panel-card { background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01); .panel-card__header-title { @include flex-row($align: center, $gap: 8px); i { font-size: 18px; } h2 { font-size: 15px; font-weight: 700; margin: 0; color: #1e293b; } } .panel-card__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; } }
-.filter-panel { background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: var(--spacing-md); }
-.search-box { position: relative; width: 100%; .search-box__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 18px; } .search-box__input { width: 100%; padding: 8px 12px 8px 38px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; box-sizing: border-box; &:focus { border-color: var(--colors-primary-deepblue); } } }
-.action-btn { border: none; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 8px 18px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; &--primary { background-color: var(--colors-primary-deepblue); color: white; &:hover { background-color: #444acf; } &[disabled] { background-color: #cbd5e1 !important; color: #94a3b8 !important; cursor: not-allowed; box-shadow: none !important; } } &--text { background: transparent; color: #64748b; font-size: 12px; padding: 4px 8px; &:hover { background: #f1f5f9; } } }
-.empty-state { height: 100%; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--spacing-xl); background: white; border: 1px solid var(--border-color); border-radius: 12px; color: #94a3b8; text-align: center; &__icon { font-size: 4.5rem; opacity: 0.15; margin-bottom: var(--spacing-xs); } p { font-size: 16px; font-weight: 700; color: #475569; margin: 0; } &__sub { font-size: 12px; color: #94a3b8; max-width: 400px; margin-top: 6px; line-height: 1.5; } &.border-dashed { border-style: dashed; background-color: transparent; } }
+.panel-card { background: var(--colors-surface-card); border: 1px solid var(--colors-surface-border); border-radius: 12px; padding: 24px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01); .panel-card__header-title { @include flex-row($align: center, $gap: 8px); i { font-size: 18px; } h2 { font-size: 15px; font-weight: 700; margin: 0; color: var(--colors-text-primary); } } .panel-card__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; } }
+.filter-panel { background: var(--colors-surface-card); border: 1px solid var(--colors-surface-border); border-radius: 12px; padding: var(--spacing-md); display: flex; }
+.action-btn { border: none; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 8px 18px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; &--primary { background-color: var(--colors-brand-primary); color: white; &:hover { background-color: #444acf; } &[disabled] { background-color: #cbd5e1 !important; color: #94a3b8 !important; cursor: not-allowed; box-shadow: none !important; } } &--text { background: transparent; color: #64748b; font-size: 12px; padding: 4px 8px; &:hover { background: #f1f5f9; } } }
+.empty-state { height: 100%; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--spacing-xl); background: var(--colors-surface-card); border: 1px solid var(--colors-surface-border); border-radius: 12px; color: #94a3b8; text-align: center; &__icon { font-size: 4.5rem; opacity: 0.15; margin-bottom: var(--spacing-xs); } p { font-size: 16px; font-weight: 700; color: var(--colors-text-primary); margin: 0; } &__sub { font-size: 12px; color: #94a3b8; max-width: 400px; margin-top: 6px; line-height: 1.5; } &.border-dashed { border-style: dashed; background-color: transparent; } }
 
 .mb-xs { margin-bottom: var(--spacing-xs); }
 .mb-md { margin-bottom: var(--spacing-md); }
-.u-text-primary { color: var(--colors-primary-deepblue) !important; }
+.u-text-primary { color: var(--colors-brand-primary) !important; }
 .u-font-mono { font-family: monospace; }
 .u-font-weight-bold { font-weight: 700; }
 </style>

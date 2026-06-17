@@ -54,15 +54,13 @@
 				<div class="panel-card">
 					<h2 class="panel-card__title mb-lg">Account Configuration</h2>
 
-					<div class="form-grid">
+				<div class="form-grid">
 						<div class="form-group">
 							<label class="form-group__label"
 								>Internal Employee Code <span class="u-required">*</span></label
 							>
-							<input
+							<Textbox
 								v-model="profileData.code"
-								type="text"
-								class="form-group__input u-font-mono"
 								:disabled="!isNewMode"
 								placeholder="e.g. USR-099"
 							/>
@@ -72,10 +70,8 @@
 							<label class="form-group__label"
 								>Full Name <span class="u-required">*</span></label
 							>
-							<input
+							<Textbox
 								v-model="profileData.name"
-								type="text"
-								class="form-group__input"
 								placeholder="Enter first and last name"
 							/>
 						</div>
@@ -84,22 +80,21 @@
 							<label class="form-group__label"
 								>Corporate Email Address <span class="u-required">*</span></label
 							>
-							<input
+							<Textbox
 								v-model="profileData.email"
 								type="email"
-								class="form-group__input"
 								placeholder="username@gstech.com"
 							/>
 						</div>
 
 						<div class="form-group">
 							<label class="form-group__label">Assigned Authorization Role</label>
-							<select v-model="profileData.role" class="filter-dropdown">
+							<Select v-model="profileData.role">
 								<option value="Superadmin">Superadmin (Root)</option>
 								<option value="Administrator">Administrator</option>
 								<option value="Manager">Manager / Scheduler</option>
 								<option value="Engineer">Field Engineer / Tech</option>
-							</select>
+							</Select>
 						</div>
 
 						<div class="form-group form-group--checkbox-row">
@@ -132,6 +127,8 @@
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Chip from "@/components/Chip.vue";
+import Textbox from "@/components/Textbox.vue";
+import Select from "@/components/Select.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -209,12 +206,12 @@ function goToOverrides() {
 
 	.icon-action-btn--primary {
 		background-color: rgba(80, 88, 242, 0.08);
-		color: var(--colors-primary-deepblue);
+		color: var(--colors-brand-primary);
 		border-radius: 50%;
 		width: 32px;
 		height: 32px;
 		&:hover {
-			background-color: var(--colors-primary-deepblue);
+			background-color: var(--colors-brand-primary);
 			color: white;
 		}
 	}
@@ -225,7 +222,7 @@ function goToOverrides() {
 	border: none;
 	font-size: 13px;
 	font-weight: 600;
-	color: var(--colors-primary-deepblue);
+	color: var(--colors-brand-primary);
 	cursor: pointer;
 	padding: 0;
 	@include flex-row($align: center, $gap: 4px);
@@ -298,7 +295,7 @@ function goToOverrides() {
 		width: 90px;
 		height: 90px;
 		border-radius: 50%;
-		background: var(--colors-primary-deepblue);
+		background: var(--colors-brand-primary);
 		color: white;
 		font-size: 36px;
 		font-weight: 800;
@@ -365,77 +362,7 @@ function goToOverrides() {
 	overflow-y: auto;
 	padding: 0 !important;
 }
-.panel-card {
-	background: white;
-	border: 1px solid var(--border-color);
-	border-radius: 12px;
-	padding: 24px;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
-	&__title {
-		font-size: 16px;
-		font-weight: 700;
-		margin: 0;
-		color: #1e293b;
-	}
-}
-.data-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 13px;
-	th,
-	td {
-		padding: 12px;
-		text-align: left;
-		vertical-align: middle;
-	}
-	th {
-		color: #64748b;
-		border-bottom: 1px solid var(--border-color);
-		font-weight: 600;
-		background: white;
-		position: sticky;
-		top: 0;
-		z-index: 10;
-	}
-	tr {
-		border-bottom: 1px solid #f1f5f9;
-	}
-	&--striped {
-		tbody tr:nth-child(even) {
-			background-color: #f8fafc;
-		}
-	}
-	&__empty {
-		text-align: center !important;
-		color: #94a3b8;
-		padding: 40px !important;
-	}
-}
-.search-box {
-	position: relative;
-	flex-grow: 1;
-	max-width: 360px;
-	.search-box__icon {
-		position: absolute;
-		left: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: #94a3b8;
-		font-size: 18px;
-	}
-	.search-box__input {
-		width: 100%;
-		padding: 8px 12px 8px 38px;
-		border: 1px solid #cbd5e1;
-		border-radius: 6px;
-		font-size: 13px;
-		outline: none;
-		box-sizing: border-box;
-		&:focus {
-			border-color: var(--colors-primary-deepblue);
-		}
-	}
-}
+
 .form-grid {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
@@ -458,21 +385,21 @@ function goToOverrides() {
 	&__label {
 		font-size: 13px;
 		font-weight: 600;
-		color: #475569;
+		color: var(--colors-text-secondary);
 	}
-	&__input,
-	.filter-dropdown,
 	&__textarea {
 		width: 100%;
 		padding: 8px 12px;
-		border: 1px solid #cbd5e1;
+		border: 1px solid var(--colors-surface-border);
 		border-radius: 6px;
 		font-size: 13px;
 		outline: none;
 		font-family: inherit;
 		box-sizing: border-box;
+		background: var(--colors-surface-background);
+		color: var(--colors-text-primary);
 		&:focus {
-			border-color: var(--colors-primary-deepblue);
+			border-color: var(--colors-brand-primary);
 		}
 	}
 }
@@ -487,7 +414,7 @@ function goToOverrides() {
 	&__slider {
 		width: 34px;
 		height: 18px;
-		background-color: #cbd5e1;
+		background-color: var(--colors-surface-border);
 		border-radius: 20px;
 		position: relative;
 		transition: background-color 0.2s;
@@ -498,54 +425,22 @@ function goToOverrides() {
 			top: 2px;
 			width: 14px;
 			height: 14px;
-			background-color: white;
+			background-color: var(--colors-text-primary);
 			border-radius: 50%;
 			transition: transform 0.2s;
 		}
 	}
 	input:checked + &__slider {
-		background-color: #22c55e;
+		background-color: var(--status-completed);
 		&::before {
 			transform: translateX(16px);
+			background-color: #ffffff;
 		}
 	}
 	&__label {
 		font-size: 13px;
 		font-weight: 600;
-		color: #475569;
-	}
-}
-.checkbox-container {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 13px;
-	font-weight: 500;
-	cursor: pointer;
-	white-space: nowrap;
-	input {
-		display: none;
-	}
-	&__box {
-		width: 16px;
-		height: 16px;
-		border: 2px solid #cbd5e1;
-		border-radius: 4px;
-		position: relative;
-		transition: all 0.15s;
-	}
-	input:checked + &__box {
-		background-color: var(--colors-primary-deepblue);
-		border-color: var(--colors-primary-deepblue);
-		&::after {
-			content: "✓";
-			position: absolute;
-			color: white;
-			font-size: 11px;
-			font-weight: bold;
-			left: 2px;
-			top: -2px;
-		}
+		color: var(--colors-text-secondary);
 	}
 }
 .action-btn {
@@ -559,7 +454,7 @@ function goToOverrides() {
 	align-items: center;
 	gap: 6px;
 	&--primary {
-		background-color: var(--colors-primary-deepblue);
+		background-color: var(--colors-brand-primary);
 		color: white;
 		&:hover {
 			background-color: #444acf;
@@ -585,7 +480,7 @@ function goToOverrides() {
 	border-radius: 6px;
 	&:hover {
 		background-color: #f1f5f9;
-		color: var(--colors-primary-deepblue);
+		color: var(--colors-brand-primary);
 	}
 	&--danger {
 		&:hover {
@@ -623,7 +518,7 @@ function goToOverrides() {
 	text-align: right !important;
 }
 .u-text-primary {
-	color: var(--colors-primary-deepblue) !important;
+	color: var(--colors-brand-primary) !important;
 }
 .u-font-mono {
 	font-family: monospace;
