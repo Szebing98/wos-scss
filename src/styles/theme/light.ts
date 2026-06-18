@@ -39,7 +39,7 @@ export const lightTheme = {
 			claimed: "#14B8A6",
 			closed: "#64748B",
 			cancelled: "#EF4444",
-			draft: "#475569"
-		}
+			draft: "#475569",
+		},
 	},
 } as const;

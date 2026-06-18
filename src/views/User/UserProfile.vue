@@ -54,7 +54,7 @@
 				<div class="panel-card">
 					<h2 class="panel-card__title mb-lg">Account Configuration</h2>
 
-				<div class="form-grid">
+					<div class="form-grid">
 						<div class="form-group">
 							<label class="form-group__label"
 								>Internal Employee Code <span class="u-required">*</span></label
@@ -160,7 +160,6 @@ onMounted(() => {
 	if (mode === "new") {
 		isNewMode.value = true;
 	} else if (userCode) {
-		// 模拟通过选定 Code 还原详情
 		isNewMode.value = false;
 		profileData.value = {
 			code: String(userCode),
@@ -194,7 +193,6 @@ function goToOverrides() {
 	gap: $gap;
 }
 
-// 1. 标题与雷达按钮
 .title-with-action {
 	@include flex-row($align: center, $gap: 12px);
 	h1 {
@@ -231,7 +229,6 @@ function goToOverrides() {
 	}
 }
 
-// 2. 纵向复杂混合表格单元格 (Employee Cell)
 .employee-cell {
 	@include flex-row($align: center, $gap: 12px);
 
@@ -264,7 +261,6 @@ function goToOverrides() {
 	}
 }
 
-// 3. 🌟 双栏个人中心大栅格 (Profile Multi-Panel Grid)
 .profile-grid {
 	display: grid;
 	grid-template-columns: 4fr 8fr;
@@ -282,7 +278,6 @@ function goToOverrides() {
 	}
 }
 
-// 立体大头像展示卡
 .user-meta-card {
 	display: flex;
 	flex-direction: column;
@@ -321,7 +316,6 @@ function goToOverrides() {
 	}
 }
 
-// 快捷配置盒
 .quick-nav-box {
 	text-align: left;
 	width: 100%;
@@ -340,7 +334,6 @@ function goToOverrides() {
 	}
 }
 
-// 4. 基础全局对齐工具面板与表格
 .filter-panel {
 	background: white;
 	border: 1px solid var(--border-color);

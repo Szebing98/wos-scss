@@ -220,11 +220,14 @@ function deleteItem(item: WorkTypeItem) {
 					<Textbox
 						v-model="searchType"
 						placeholder="Search types..."
-						style="flex: 1;"
+						style="flex: 1"
 						hide-footer
 					>
 						<template #prefix>
-							<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+							<i
+								class="mdi mdi-magnify"
+								style="font-size: 18px; margin-right: 4px"
+							></i>
 						</template>
 					</Textbox>
 
@@ -282,9 +285,21 @@ function deleteItem(item: WorkTypeItem) {
 							</div>
 						</div>
 					</template>
-					<div v-else class="empty-state" style="height: auto; min-height: 200px; background: transparent; border: none;">
-						<i class="mdi mdi-magnify-close empty-state__icon" style="font-size: 36px; margin-bottom: 8px;"></i>
-						<p style="font-size: 13px;">No data found</p>
+					<div
+						v-else
+						class="empty-state"
+						style="
+							height: auto;
+							min-height: 200px;
+							background: transparent;
+							border: none;
+						"
+					>
+						<i
+							class="mdi mdi-magnify-close empty-state__icon"
+							style="font-size: 36px; margin-bottom: 8px"
+						></i>
+						<p style="font-size: 13px">No data found</p>
 					</div>
 				</div>
 			</div>
@@ -393,11 +408,14 @@ function deleteItem(item: WorkTypeItem) {
 							<Textbox
 								v-model="searchItem"
 								placeholder="Search items..."
-								style="flex: 1;"
+								style="flex: 1"
 								hide-footer
 							>
 								<template #prefix>
-									<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+									<i
+										class="mdi mdi-magnify"
+										style="font-size: 18px; margin-right: 4px"
+									></i>
 								</template>
 							</Textbox>
 
@@ -470,10 +488,7 @@ function deleteItem(item: WorkTypeItem) {
 
 			<div class="form-group">
 				<label class="form-group__label">Item Code</label>
-				<Textbox
-					v-model="editingItem.code"
-					:disabled="editingItem.id !== 0"
-				/>
+				<Textbox v-model="editingItem.code" :disabled="editingItem.id !== 0" />
 			</div>
 			<div class="form-group">
 				<label class="form-group__label">Item Name</label>
@@ -767,6 +782,7 @@ function deleteItem(item: WorkTypeItem) {
 		border-radius: 6px;
 		font-size: 13px;
 		outline: none;
+		background-color: var(--colors-text-inverse);
 		font-family: inherit;
 		&:focus {
 			border-color: var(--colors-brand-primary);
@@ -848,7 +864,6 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-// 动作功能小按钮
 .action-btn {
 	border: none;
 	border-radius: 6px;

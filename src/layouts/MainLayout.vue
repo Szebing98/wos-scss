@@ -25,7 +25,7 @@ function handleLogout() {
 
 function handleClickOutside(e: MouseEvent) {
 	const target = e.target as HTMLElement;
-	if (!target.closest('.account-menu-wrapper')) {
+	if (!target.closest(".account-menu-wrapper")) {
 		isAccountMenuOpen.value = false;
 	}
 }
@@ -115,13 +115,20 @@ onUnmounted(() => {
 				<button class="icon-btn" aria-label="Notifications">
 					<i class="mdi mdi-bell-outline"></i>
 				</button>
-				
+
 				<button class="icon-btn" @click="toggleTheme" aria-label="Toggle Theme">
-					<i class="mdi" :class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'"></i>
+					<i
+						class="mdi"
+						:class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'"
+					></i>
 				</button>
 
 				<div class="account-menu-wrapper">
-					<button class="icon-btn account-btn" @click.stop="isAccountMenuOpen = !isAccountMenuOpen" aria-label="Account">
+					<button
+						class="icon-btn account-btn"
+						@click.stop="isAccountMenuOpen = !isAccountMenuOpen"
+						aria-label="Account"
+					>
 						<i class="mdi mdi-account-circle-outline"></i>
 					</button>
 					<div v-if="isAccountMenuOpen" class="account-dropdown">
@@ -135,10 +142,20 @@ onUnmounted(() => {
 							</div>
 						</div>
 						<div class="account-dropdown__divider"></div>
-						<router-link to="/user/profile" class="account-dropdown__item" @click="isAccountMenuOpen = false">
+						<router-link
+							to="/user/profile"
+							class="account-dropdown__item"
+							@click="isAccountMenuOpen = false"
+						>
 							<i class="mdi mdi-account-cog-outline"></i> My Profile
 						</router-link>
-						<button class="account-dropdown__item account-dropdown__item--danger" @click="isLogoutDialogOpen = true; isAccountMenuOpen = false">
+						<button
+							class="account-dropdown__item account-dropdown__item--danger"
+							@click="
+								isLogoutDialogOpen = true;
+								isAccountMenuOpen = false;
+							"
+						>
 							<i class="mdi mdi-logout"></i> Logout
 						</button>
 					</div>
@@ -176,7 +193,9 @@ onUnmounted(() => {
 					<div class="nav__group" :class="{ 'nav__group--expanded': groups.workOrders }">
 						<button
 							class="nav__item"
-							:class="{ 'nav__item--active-parent': route.path.startsWith('/work-order') }"
+							:class="{
+								'nav__item--active-parent': route.path.startsWith('/work-order'),
+							}"
 							@click="toggleGroup('workOrders')"
 							title="Work Orders"
 						>
@@ -286,7 +305,9 @@ onUnmounted(() => {
 					<div class="nav__group" :class="{ 'nav__group--expanded': groups.maintenance }">
 						<div
 							class="nav__item"
-							:class="{ 'nav__item--active-parent': route.path.startsWith('/maintenance') }"
+							:class="{
+								'nav__item--active-parent': route.path.startsWith('/maintenance'),
+							}"
 							@click="toggleGroup('maintenance')"
 							title="Maintenance"
 						>
@@ -421,7 +442,9 @@ onUnmounted(() => {
 			<div class="logout-dialog-content">
 				<i class="mdi mdi-logout-variant logout-dialog-icon"></i>
 				<p>Are you sure you want to log out?</p>
-				<span class="logout-dialog-sub">You will need to sign in again to access the system.</span>
+				<span class="logout-dialog-sub"
+					>You will need to sign in again to access the system.</span
+				>
 			</div>
 			<template #footer>
 				<Button variant="secondary" @click="isLogoutDialogOpen = false">Cancel</Button>
@@ -466,7 +489,7 @@ onUnmounted(() => {
 		padding: 16px;
 		background: var(--colors-surface-background);
 	}
-	
+
 	&__avatar {
 		width: 40px;
 		height: 40px;

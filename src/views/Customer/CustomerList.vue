@@ -13,15 +13,15 @@
 		</div>
 
 		<div class="filter-panel">
-			<div class="filter-panel__left" style="align-items: flex-start;">
+			<div class="filter-panel__left" style="align-items: flex-start">
 				<Textbox
 					v-model="searchQuery"
 					placeholder="Search Name, AutoCount No or Tax ID..."
-					style="flex: 1;"
+					style="flex: 1"
 					hide-footer
 				>
 					<template #prefix>
-						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px"></i>
 					</template>
 				</Textbox>
 
@@ -56,10 +56,7 @@
 			>
 				<template #item-customer="{ item: customer }">
 					<div class="employee-cell">
-						<div
-							class="employee-cell__avatar"
-							:style="getAvatarStyle(customer.name)"
-						>
+						<div class="employee-cell__avatar" :style="getAvatarStyle(customer.name)">
 							{{ customer.name[0] }}
 						</div>
 						<div class="employee-cell__info">
@@ -81,9 +78,7 @@
 				</template>
 				<template #item-tax="{ item: customer }">
 					<div v-if="customer.profile" class="tax-cell">
-						<span class="tax-cell__tin"
-							>TIN: {{ customer.profile.tin || "N/A" }}</span
-						>
+						<span class="tax-cell__tin">TIN: {{ customer.profile.tin || "N/A" }}</span>
 						<span class="tax-cell__type"
 							>{{ customer.profile.individualType }} |
 							{{ customer.profile.identityNo || "No ID" }}</span
@@ -225,11 +220,11 @@ const filteredCustomers = computed(() => {
 		const matchesIdentity =
 			identityFilter.value === "all" ||
 			(c.profile && c.profile.individualType === identityFilter.value);
-		const matchesStatus = 
-			filterStatus.value === "all" || 
+		const matchesStatus =
+			filterStatus.value === "all" ||
 			(filterStatus.value === "active" ? c.isActive : !c.isActive);
-		const matchesEinvoice = 
-			filterEinvoice.value === "all" || 
+		const matchesEinvoice =
+			filterEinvoice.value === "all" ||
 			(filterEinvoice.value === "required" ? c.requestEinvoice : !c.requestEinvoice);
 
 		return matchesSearch && matchesIdentity && matchesStatus && matchesEinvoice;
@@ -288,8 +283,6 @@ function countryFormatAccount(acc: string) {
 		}
 	}
 }
-
-
 
 .back-link-btn {
 	background: transparent;

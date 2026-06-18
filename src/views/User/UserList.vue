@@ -12,16 +12,16 @@
 			</button>
 		</div>
 
-		<Card style="padding: var(--spacing-md);">
+		<Card style="padding: var(--spacing-md)">
 			<div class="filter-bar">
 				<Textbox
 					v-model="searchQuery"
 					placeholder="Search by Name, Email or Code..."
-					style="flex: 1;"
+					style="flex: 1"
 					hide-footer
 				>
 					<template #prefix>
-						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px"></i>
 					</template>
 				</Textbox>
 
@@ -43,7 +43,7 @@
 			</div>
 		</Card>
 
-		<Card class="table-scroll-container" style="padding: 0;">
+		<Card class="table-scroll-container" style="padding: 0">
 			<Table
 				:headers="headers"
 				:items="filteredUsers"
@@ -51,10 +51,7 @@
 			>
 				<template #item-employee="{ item: user }">
 					<div class="employee-cell">
-						<div
-							class="employee-cell__avatar"
-							:style="getRandomAvatarBg(user.name)"
-						>
+						<div class="employee-cell__avatar" :style="getRandomAvatarBg(user.name)">
 							{{ user.name[0] }}
 						</div>
 						<div class="employee-cell__info">
@@ -143,7 +140,6 @@ function resetFilters() {
 	filterStatus.value = "all";
 }
 
-// Mock 员工库核心数据
 const users = ref<UserModel[]>([
 	{
 		code: "USR-001",
@@ -192,8 +188,8 @@ const filteredUsers = computed(() => {
 			u.code.toLowerCase().includes(search);
 
 		const matchesRole = roleFilter.value === "all" || u.role === roleFilter.value;
-		const matchesActive = 
-			filterStatus.value === "all" || 
+		const matchesActive =
+			filterStatus.value === "all" ||
 			(filterStatus.value === "active" ? u.isActive : !u.isActive);
 
 		return matchesSearch && matchesRole && matchesActive;
@@ -227,7 +223,6 @@ function getRoleChipType(role: string) {
 	}
 }
 
-// 依照名字生成确定性的柔和彩色头像背景
 function getRandomAvatarBg(name: string) {
 	const colors = ["#5058F2", "#06B6D4", "#10B981", "#F59E0B", "#6366F1"];
 	const index = name.length % colors.length;
@@ -242,7 +237,6 @@ function getRandomAvatarBg(name: string) {
 	gap: $gap;
 }
 
-// 1. 标题与雷达按钮
 .maintenance-view {
 	display: flex;
 	flex-direction: column;
@@ -284,7 +278,6 @@ function getRandomAvatarBg(name: string) {
 	}
 }
 
-// 2. 纵向复杂混合表格单元格 (Employee Cell)
 .employee-cell {
 	@include flex-row($align: center, $gap: 12px);
 
@@ -317,7 +310,6 @@ function getRandomAvatarBg(name: string) {
 	}
 }
 
-// 3. 🌟 双栏个人中心大栅格 (Profile Multi-Panel Grid)
 .profile-grid {
 	display: grid;
 	grid-template-columns: 4fr 8fr;
@@ -335,7 +327,6 @@ function getRandomAvatarBg(name: string) {
 	}
 }
 
-// 立体大头像展示卡
 .user-meta-card {
 	display: flex;
 	flex-direction: column;
@@ -374,7 +365,6 @@ function getRandomAvatarBg(name: string) {
 	}
 }
 
-// 快捷配置盒
 .quick-nav-box {
 	text-align: left;
 	width: 100%;
@@ -393,7 +383,6 @@ function getRandomAvatarBg(name: string) {
 	}
 }
 
-// 4. 基础全局对齐工具面板与表格
 .filter-bar {
 	display: flex;
 	align-items: center;
@@ -433,6 +422,7 @@ function getRandomAvatarBg(name: string) {
 		}
 	}
 }
+
 .icon-action-btn {
 	background: transparent;
 	border: none;
