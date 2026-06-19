@@ -20,19 +20,87 @@ const attentionHeaders: TableHeader[] = [
 
 const lastUpdatedTime = ref("12 Jun 2026, 04:26 PM");
 
-const chartData = [25, 35, 15, 25];
-const chartLabels = ["Plumbing", "Electrical", "HVAC", "General"];
-const chartColors = ["#3B82F6", "#F59E0B", "#6366F1", "#06B6D4"];
 
-const statusCards = ref([
-	{ title: "New", count: 8, icon: "mdi-plus-circle", baseColor: "#3B82F6" },
-	{ title: "Pending Approval", count: 6, icon: "mdi-clock", baseColor: "#F59E0B" },
-	{ title: "In Progress", count: 2, icon: "mdi-wrench", baseColor: "#6366F1" },
-	{ title: "Done", count: 0, icon: "mdi-check-circle", baseColor: "#06B6D4" },
-	{ title: "Completed", count: 2, icon: "mdi-assignment-turned-in", baseColor: "#10B981" },
-	{ title: "Claimed", count: 1, icon: "mdi-credit-card", baseColor: "#14B8A6" },
-	{ title: "Closed", count: 3, icon: "mdi-power", baseColor: "#64748B" },
-	{ title: "Cancelled", count: 1, icon: "mdi-cancel", baseColor: "#EF4444" },
+enum WorkOrderStatus {
+	New = "New",
+	PendingApproval = "PendingApproval",
+	InProgress = "InProgress",
+	Done = "Done",
+	Completed = "Completed",
+	Claimed = "Claimed",
+	Closed = "Closed",
+	Cancelled = "Cancelled"
+}
+
+const cardRoute = "/work-orders?status=";
+
+const cardList = ref([
+	
+	{
+		label: "New",
+		count: 8,
+		status: WorkOrderStatus.New,
+		icon: "mdi-plus-circle-outline",
+		route: `${cardRoute}${WorkOrderStatus.New}`,
+		baseColor: "#3B82F6"
+	},
+	{
+		label: "Pending",
+		count: 6,
+		status: WorkOrderStatus.PendingApproval,
+		icon: "mdi-clock-outline",
+		route: `${cardRoute}${WorkOrderStatus.PendingApproval}`,
+		baseColor: "#F59E0B"
+	},
+	{
+		label: "In Progress",
+		count: 2,
+		status: WorkOrderStatus.InProgress,
+		icon: "mdi-wrench",
+		route: `${cardRoute}${WorkOrderStatus.InProgress}`,
+		baseColor: "#6366F1"
+	},
+	{
+		label: "Done",
+		count: 0,
+		status: WorkOrderStatus.Done,
+		icon: "mdi-check-circle",
+		route: `${cardRoute}${WorkOrderStatus.Done}`,
+		baseColor: "#06B6D4"
+	},
+	{
+		label: "Completed",
+		count: 2,
+		status: WorkOrderStatus.Completed,
+		icon: "mdi-clipboard-check",
+		route: `${cardRoute}${WorkOrderStatus.Completed}`,
+		baseColor: "#10B981"
+	},
+	{
+		label: "Claimed",
+		count: 1,
+		status: WorkOrderStatus.Claimed,
+		icon: "mdi-credit-card-check",
+		route: `${cardRoute}${WorkOrderStatus.Claimed}`,
+		baseColor: "#14B8A6"
+	},
+	{
+		label: "Closed",
+		count: 3,
+		status: WorkOrderStatus.Closed,
+		icon: "mdi-power",
+		route: `${cardRoute}${WorkOrderStatus.Closed}`,
+		baseColor: "#64748B"
+	},
+	{
+		label: "Cancelled",
+		count: 1,
+		status: WorkOrderStatus.Cancelled,
+		icon: "mdi-close-circle",
+		route: `${cardRoute}${WorkOrderStatus.Cancelled}`,
+		baseColor: "#EF4444"
+	},
+	
 ]);
 
 const drafts = ref([
@@ -54,30 +122,6 @@ const pendingActionItems = ref([
 		statusColor: "#F59E0B",
 		actionText: "Approve",
 		actionBtnColor: "#3B82F6",
-	},
-]);
-
-const activities = ref([
-	{
-		woNumber: "WO-8821",
-		title: "Rejected",
-		description: "Manager: 'Please re-upload the site photo, it's too blurry.'",
-		timeAgo: "10 mins ago",
-		color: "#EF4444",
-	},
-	{
-		woNumber: "WO-8815",
-		title: "Status Changed",
-		description: "Moved to 'In Progress' by System",
-		timeAgo: "1 hour ago",
-		color: "#3B82F6",
-	},
-	{
-		woNumber: "WO-8790",
-		title: "Payment Claimed",
-		description: "Your claim has been processed successfully.",
-		timeAgo: "Yesterday",
-		color: "#10B981",
 	},
 ]);
 
@@ -129,15 +173,15 @@ function refreshData() {
 				<h1>Dashboard</h1>
 				<p class="dashboard__updated-time">Last updated: {{ lastUpdatedTime }}</p>
 			</div>
-			<button class="dashboard__refresh-btn" @click="refreshData">
+			<button class="btn btn--icon" @click="refreshData">
 				<i class="mdi mdi-refresh"></i>
 			</button>
 		</div>
 
 		<div class="dashboard__cards-grid">
 			<div
-				v-for="item in statusCards"
-				:key="item.title"
+				v-for="item in cardList"
+				:key="item.label"
 				class="status-card"
 				:class="{ 'status-card--dark': themeStore.dark }"
 				:style="getCardStyle(item)"
@@ -152,7 +196,7 @@ function refreshData() {
 						<span class="status-card__number" :style="getNumberStyle(item)">{{
 							item.count
 						}}</span>
-						<span class="status-card__title">{{ item.title }}</span>
+						<span class="status-card__title">{{ item.label }}</span>
 					</div>
 				</div>
 			</div>
@@ -171,130 +215,13 @@ function refreshData() {
 
 			<div class="dashboard__content-grid">
 				<div class="dashboard__panel">
-					<h2 class="dashboard__panel-title">Work by Type</h2>
-					<div class="chart-container">
-						<svg class="donut-chart" viewBox="0 0 42 42">
-							<circle
-								class="donut-hole"
-								cx="21"
-								cy="21"
-								r="15.915"
-								fill="transparent"
-							></circle>
-							<circle
-								class="donut-ring"
-								cx="21"
-								cy="21"
-								r="15.915"
-								fill="transparent"
-								stroke="var(--colors-surface-border)"
-								stroke-width="3"
-							></circle>
-
-							<circle
-								class="donut-segment"
-								cx="21"
-								cy="21"
-								r="15.915"
-								fill="transparent"
-								stroke="#3B82F6"
-								stroke-width="4"
-								stroke-dasharray="25 75"
-								stroke-dashoffset="25"
-							></circle>
-							<circle
-								class="donut-segment"
-								cx="21"
-								cy="21"
-								r="15.915"
-								fill="transparent"
-								stroke="#F59E0B"
-								stroke-width="4"
-								stroke-dasharray="35 65"
-								stroke-dashoffset="100"
-							></circle>
-							<circle
-								class="donut-segment"
-								cx="21"
-								cy="21"
-								r="15.915"
-								fill="transparent"
-								stroke="#6366F1"
-								stroke-width="4"
-								stroke-dasharray="15 85"
-								stroke-dashoffset="65"
-							></circle>
-							<circle
-								class="donut-segment"
-								cx="21"
-								cy="21"
-								r="15.915"
-								fill="transparent"
-								stroke="#06B6D4"
-								stroke-width="4"
-								stroke-dasharray="25 75"
-								stroke-dashoffset="50"
-							></circle>
-						</svg>
-
-						<div class="chart-legends">
-							<div
-								v-for="(label, index) in chartLabels"
-								:key="label"
-								class="legend-item"
-							>
-								<span
-									class="legend-item__color"
-									:style="{ backgroundColor: chartColors[index] }"
-								></span>
-								<span class="legend-item__text"
-									>{{ label }} ({{ chartData[index] }}%)</span
-								>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="dashboard__panel">
-					<div class="dashboard__panel-header">
-						<h2 class="dashboard__panel-title">Recent Updates</h2>
-						<button class="text-btn">
-							View History <i class="mdi mdi-arrow-right"></i>
-						</button>
-					</div>
-
-					<div class="timeline">
-						<div
-							v-for="activity in activities"
-							:key="activity.woNumber"
-							class="timeline-item"
-						>
-							<div
-								class="timeline-item__badge"
-								:style="{ backgroundColor: activity.color }"
-							></div>
-							<div class="timeline-item__card">
-								<div class="timeline-item__header">
-									<span class="timeline-item__title"
-										><strong>{{ activity.woNumber }}</strong> -
-										{{ activity.title }}</span
-									>
-									<span class="timeline-item__time">{{ activity.timeAgo }}</span>
-								</div>
-								<p class="timeline-item__desc">{{ activity.description }}</p>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="dashboard__panel">
 					<div class="dashboard__panel-header">
 						<h2 class="dashboard__panel-title">My Recent Drafts</h2>
-						<button class="text-btn">View All</button>
+						<button class="btn btn--text">View All</button>
 					</div>
-					<Table :headers="draftHeaders" :items="drafts" emptyMessage="No recent drafts.">
+					<Table paginate :headers="draftHeaders" :items="drafts" emptyMessage="No recent drafts.">
 						<template #item-action="{ item }">
-							<button class="icon-btn icon-btn--info">
+							<button class="btn btn--icon-primary">
 								<i class="mdi mdi-pencil"></i>
 							</button>
 						</template>
@@ -304,9 +231,10 @@ function refreshData() {
 				<div class="dashboard__panel">
 					<div class="dashboard__panel-header">
 						<h2 class="dashboard__panel-title">Requires Attention</h2>
-						<button class="text-btn">View All</button>
+						<button class="btn btn--text">View All</button>
 					</div>
 					<Table
+						paginate
 						:headers="attentionHeaders"
 						:items="pendingActionItems"
 						emptyMessage="No items require attention."
@@ -318,7 +246,7 @@ function refreshData() {
 						</template>
 						<template #item-action="{ item }">
 							<button
-								class="action-btn"
+								class="btn btn--outlined"
 								:style="getBtnActionStyle(item.actionBtnColor)"
 							>
 								{{ item.actionText }}

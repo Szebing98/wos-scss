@@ -1,111 +1,7 @@
-<template>
-	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
-				<h1>Employee Directory</h1>
-				<p class="maintenance-view__subtitle">
-					Manage internal technicians, support staff, and system administrative roles
-				</p>
-			</div>
-			<button class="action-btn action-btn--primary" @click="handleCreateUser">
-				<i class="mdi mdi-plus"></i> Add Employee
-			</button>
-		</div>
-
-		<Card style="padding: var(--spacing-md)">
-			<div class="filter-bar">
-				<Textbox
-					v-model="searchQuery"
-					placeholder="Search by Name, Email or Code..."
-					style="flex: 1"
-					hide-footer
-				>
-					<template #prefix>
-						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px"></i>
-					</template>
-				</Textbox>
-
-				<FilterPanel show-reset align="right" @reset="resetFilters">
-					<Select v-model="roleFilter" label="Role">
-						<option value="all">All Roles</option>
-						<option value="SA">Superadmin</option>
-						<option value="Administrator">Administrator</option>
-						<option value="Manager">Manager</option>
-						<option value="Engineer">Engineer</option>
-					</Select>
-
-					<Select v-model="filterStatus" label="Status">
-						<option value="all">All</option>
-						<option value="active">Active</option>
-						<option value="inactive">Suspended</option>
-					</Select>
-				</FilterPanel>
-			</div>
-		</Card>
-
-		<Card class="table-scroll-container" style="padding: 0">
-			<Table
-				:headers="headers"
-				:items="filteredUsers"
-				emptyMessage="No employees found matching the search matrix."
-			>
-				<template #item-employee="{ item: user }">
-					<div class="employee-cell">
-						<div class="employee-cell__avatar" :style="getRandomAvatarBg(user.name)">
-							{{ user.name[0] }}
-						</div>
-						<div class="employee-cell__info">
-							<span class="employee-cell__name">{{ user.name }}</span>
-							<span class="employee-cell__title">GS Technical Dept</span>
-						</div>
-					</div>
-				</template>
-				<template #item-code="{ item: user }">
-					<span class="u-font-mono">{{ user.code }}</span>
-				</template>
-				<template #item-role="{ item: user }">
-					<Chip :type="getRoleChipType(user.role)">{{ user.role }}</Chip>
-				</template>
-				<template #item-email="{ item: user }">
-					{{ user.email }}
-				</template>
-				<template #item-status="{ item }">
-					<Chip :type="item.isActive ? 'success' : 'default'">
-						{{ item.isActive ? "Active" : "Disabled" }}
-					</Chip>
-				</template>
-				<template #item-actions="{ item: user }">
-					<button
-						class="icon-action-btn"
-						@click="viewUserProfile(user.code)"
-						title="View Profile / Edit"
-					>
-						<i class="mdi mdi-account-edit-outline"></i>
-					</button>
-					<button
-						class="icon-action-btn icon-action-btn--danger"
-						@click="toggleUserStatus(user)"
-						:title="user.isActive ? 'Suspend' : 'Activate'"
-					>
-						<i
-							class="mdi"
-							:class="
-								user.isActive
-									? 'mdi-account-off-outline'
-									: 'mdi-account-check-outline'
-							"
-						></i>
-					</button>
-				</template>
-			</Table>
-		</Card>
-	</div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
-import Chip from "@/components/Chip.vue";
+import Badge from "@/components/Badge.vue";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import Textbox from "@/components/Textbox.vue";
@@ -201,9 +97,8 @@ function handleCreateUser() {
 	router.push("/user/form");
 }
 
-function viewUserProfile(_code: string) {
-	// router.push(`/maintenance/user-profile?code=${code}`);
-	router.push("/user/profile");
+function viewUserProfile(code: string) {
+	router.push(`/user/profile?code=${code}`);
 }
 
 function toggleUserStatus(user: UserModel) {
@@ -229,6 +124,113 @@ function getRandomAvatarBg(name: string) {
 	return { backgroundColor: colors[index] };
 }
 </script>
+
+<template>
+	<div class="maintenance-view">
+		<div class="maintenance-view__header">
+			<div class="maintenance-view__title-area">
+				<h1>Employee Directory</h1>
+				<p class="maintenance-view__subtitle">
+					Manage internal technicians, support staff, and system administrative roles
+				</p>
+			</div>
+			<button class="btn btn--primary" @click="handleCreateUser">
+				<i class="mdi mdi-plus"></i> Add Employee
+			</button>
+		</div>
+
+		<Card style="padding: var(--spacing-md)">
+			<div class="filter-bar">
+				<Textbox
+					v-model="searchQuery"
+					placeholder="Search by Name, Email or Code..."
+					style="flex: 1"
+					hide-footer
+				>
+					<template #prefix>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px"></i>
+					</template>
+				</Textbox>
+
+				<FilterPanel show-reset align="right" @reset="resetFilters">
+					<Select v-model="roleFilter" label="Role">
+						<option value="all">All Roles</option>
+						<option value="SA">Superadmin</option>
+						<option value="Administrator">Administrator</option>
+						<option value="Manager">Manager</option>
+						<option value="Engineer">Engineer</option>
+					</Select>
+
+					<Select v-model="filterStatus" label="Status">
+						<option value="all">All</option>
+						<option value="active">Active</option>
+						<option value="inactive">Inactive</option>
+					</Select>
+				</FilterPanel>
+			</div>
+		</Card>
+
+		<Card class="table-scroll-container" style="padding: 0">
+			<Table
+				paginate
+				hover
+				:headers="headers"
+				:items="filteredUsers"
+				emptyMessage="No employees found matching the search matrix."
+				@row-click="(user) => viewUserProfile(user.code)"
+			>
+				<template #item-employee="{ item: user }">
+					<div class="employee-cell">
+						<div class="employee-cell__avatar" :style="getRandomAvatarBg(user.name)">
+							{{ user.name[0] }}
+						</div>
+						<div class="employee-cell__info">
+							<span class="employee-cell__name">{{ user.name }}</span>
+							<span class="employee-cell__title">GS Technical Dept</span>
+						</div>
+					</div>
+				</template>
+				<template #item-code="{ item: user }">
+					<span class="u-font-mono">{{ user.code }}</span>
+				</template>
+				<template #item-role="{ item: user }">
+					<Badge :type="getRoleChipType(user.role)">{{ user.role }}</Badge>
+				</template>
+				<template #item-email="{ item: user }">
+					{{ user.email }}
+				</template>
+				<template #item-status="{ item }">
+					<Badge :type="item.isActive ? 'success' : 'error'">
+						{{ item.isActive ? "Active" : "Inactive" }}
+					</Badge>
+				</template>
+				<template #item-actions="{ item: user }">
+					<button
+						class="btn btn--icon"
+						@click.stop="viewUserProfile(user.code)"
+						title="View Profile / Edit"
+					>
+						<i class="mdi mdi-account-edit-outline"></i>
+					</button>
+					<button
+						class="btn btn--icon-danger"
+						@click.stop="toggleUserStatus(user)"
+						:title="user.isActive ? 'Suspend' : 'Activate'"
+					>
+						<i
+							class="mdi"
+							:class="
+								user.isActive
+									? 'mdi-account-off-outline'
+									: 'mdi-account-check-outline'
+							"
+						></i>
+					</button>
+				</template>
+			</Table>
+		</Card>
+	</div>
+</template>
 
 <style lang="scss" scoped>
 @mixin flex-row($align: stretch, $gap: 0) {
@@ -302,11 +304,11 @@ function getRandomAvatarBg(name: string) {
 	&__name {
 		font-size: 14px;
 		font-weight: 700;
-		color: #1e293b;
+		color: var(--colors-text-primary);
 	}
 	&__title {
 		font-size: 11px;
-		color: #94a3b8;
+		color: var(--colors-text-muted);
 	}
 }
 
@@ -395,53 +397,9 @@ function getRandomAvatarBg(name: string) {
 	padding: 0 !important;
 }
 
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 16px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--primary {
-		background-color: var(--colors-brand-primary);
-		color: white;
-		&:hover {
-			opacity: 0.9;
-		}
-	}
-	&--outlined {
-		background-color: transparent;
-		border: 1px solid var(--colors-surface-border);
-		color: var(--colors-text-primary);
-		&:hover {
-			background-color: var(--colors-surface-hover);
-			border-color: var(--colors-text-muted);
-		}
-	}
-}
 
-.icon-action-btn {
-	background: transparent;
-	border: none;
-	font-size: 18px;
-	color: #64748b;
-	padding: 6px;
-	cursor: pointer;
-	border-radius: 6px;
-	&:hover {
-		background-color: var(--colors-surface-hover);
-		color: var(--colors-brand-primary);
-	}
-	&--danger {
-		&:hover {
-			background-color: #fef2f2;
-			color: #ef4444;
-		}
-	}
-}
+
+
 
 .mt-xs {
 	margin-top: var(--spacing-xs);

@@ -1,156 +1,13 @@
-<template>
-	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
-				<h1>System Audit Log</h1>
-				<p class="maintenance-view__subtitle">
-					Monitor and track all system operations and data modifications
-				</p>
-			</div>
-		</div>
-
-		<Card style="padding: var(--spacing-md);">
-			<div class="filter-bar">
-				<Textbox
-					v-model="searchQuery"
-					placeholder="Search by User Code..."
-					style="flex: 1;"
-					hide-footer
-				>
-					<template #prefix>
-						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
-					</template>
-				</Textbox>
-
-				<FilterPanel show-reset align="right" @reset="resetFilters">
-					<Select v-model="filterModule" label="Module">
-						<option value="all">All Modules</option>
-						<option v-for="mod in modules" :key="mod" :value="mod">{{ mod }}</option>
-					</Select>
-
-					<Select v-model="filterType" label="Action Type">
-						<option value="all">All Actions</option>
-						<option value="CREATE">Create</option>
-						<option value="UPDATE">Update</option>
-						<option value="DELETE">Delete</option>
-					</Select>
-				</FilterPanel>
-			</div>
-		</Card>
-
-		<Card class="table-scroll-container" style="padding: 0;">
-			<Table
-				:headers="headers"
-				:items="filteredLogs"
-				emptyMessage="No audit logs found for the selected criteria."
-			>
-				<template #item-timestamp="{ item }">
-					<div class="audit-cell">
-						<span class="audit-cell__date">{{ formatDate(item.createdAt) }}</span>
-						<span class="audit-cell__time">{{ formatTime(item.createdAt) }}</span>
-					</div>
-				</template>
-
-				<template #item-user="{ item }">
-					<div class="audit-user">
-						<div class="audit-user__avatar">
-							{{ item.createdBy ? item.createdBy[0].toUpperCase() : 'S' }}
-						</div>
-						<div class="audit-user__info">
-							<span class="audit-user__name">{{ item.createdBy || 'SYSTEM' }}</span>
-						</div>
-					</div>
-				</template>
-
-				<template #item-module="{ item }">
-					<div class="audit-cell">
-						<span class="audit-cell__module">{{ item.module }}</span>
-						<span v-if="item.moduleCode" class="audit-cell__code">{{ item.moduleCode }}</span>
-					</div>
-				</template>
-
-				<template #item-action="{ item }">
-					<Chip :type="getActionTypeClass(item.auditType)">
-						{{ item.auditType }}
-					</Chip>
-				</template>
-
-				<template #item-actions="{ item }">
-					<button class="icon-action-btn" @click="viewDetails(item)" title="View Changes">
-						<i class="mdi mdi-eye-outline"></i>
-					</button>
-				</template>
-			</Table>
-		</Card>
-
-		<!-- Change Detail Drawer -->
-		<Dialog v-model="isDetailDrawerOpen">
-			<template #header>
-				<div class="drawer-header">
-					<h2>Record Details</h2>
-					<Chip :type="getActionTypeClass(selectedLog?.auditType || '')">
-						{{ selectedLog?.auditType }}
-					</Chip>
-				</div>
-				<p class="drawer-subtitle">
-					{{ selectedLog?.module }} {{ selectedLog?.moduleCode ? `(${selectedLog.moduleCode})` : '' }}
-				</p>
-			</template>
-
-			<div class="detail-drawer-content">
-				<div v-if="isLoadingDetails" class="loading-state">
-					<i class="mdi mdi-loading mdi-spin"></i>
-					<span>Fetching field changes...</span>
-				</div>
-				
-				<div v-else-if="logChanges.length === 0" class="empty-state">
-					<i class="mdi mdi-text-box-search-outline empty-state__icon"></i>
-					<p>No Explicit Field Changes</p>
-					<span class="empty-state__sub">This action did not record specific property differences.</span>
-				</div>
-
-				<div v-else class="changes-list">
-					<div v-for="(change, index) in logChanges" :key="index" class="change-card">
-						<div class="change-card__header">
-							<i class="mdi mdi-code-tags"></i>
-							<span>{{ change.changedField }}</span>
-						</div>
-						<div class="change-card__diff">
-							<div class="diff-box diff-box--old" v-if="change.old !== null && change.old !== undefined">
-								<div class="diff-box__label">Previous</div>
-								<div class="diff-box__value">{{ change.old || '—' }}</div>
-							</div>
-							
-							<div class="diff-icon" v-if="change.old !== null && change.old !== undefined">
-								<i class="mdi mdi-arrow-right"></i>
-							</div>
-							
-							<div class="diff-box diff-box--new" v-if="change.new !== null && change.new !== undefined">
-								<div class="diff-box__label">Updated</div>
-								<div class="diff-box__value">{{ change.new || '—' }}</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<template #footer>
-				<button class="action-btn action-btn--text" @click="isDetailDrawerOpen = false">Close</button>
-			</template>
-		</Dialog>
-	</div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
-import Chip from "@/components/Chip.vue";
 import Dialog from "@/components/Dialog.vue";
 import Textbox from "@/components/Textbox.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Select from "@/components/Select.vue";
+import Badge from "@/components/Badge.vue";
 
 interface AuditLog {
 	guid: string;
@@ -305,6 +162,152 @@ onMounted(() => {
 });
 </script>
 
+<template>
+	<div class="maintenance-view">
+		<div class="maintenance-view__header">
+			<div class="maintenance-view__title-area">
+				<h1>System Audit Log</h1>
+				<p class="maintenance-view__subtitle">
+					Monitor and track all system operations and data modifications
+				</p>
+			</div>
+		</div>
+
+		<Card style="padding: var(--spacing-md);">
+			<div class="filter-bar">
+				<Textbox
+					v-model="searchQuery"
+					placeholder="Search by User Code..."
+					style="flex: 1;"
+					hide-footer
+				>
+					<template #prefix>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+					</template>
+				</Textbox>
+
+				<FilterPanel show-reset align="right" @reset="resetFilters">
+					<Select v-model="filterModule" label="Module">
+						<option value="all">All Modules</option>
+						<option v-for="mod in modules" :key="mod" :value="mod">{{ mod }}</option>
+					</Select>
+
+					<Select v-model="filterType" label="Action Type">
+						<option value="all">All Actions</option>
+						<option value="CREATE">Create</option>
+						<option value="UPDATE">Update</option>
+						<option value="DELETE">Delete</option>
+					</Select>
+				</FilterPanel>
+			</div>
+		</Card>
+
+		<Card class="table-scroll-container" style="padding: 0;">
+			<Table
+				paginate
+				:headers="headers"
+				:items="filteredLogs"
+				emptyMessage="No audit logs found for the selected criteria."
+			>
+				<template #item-timestamp="{ item }">
+					<div class="audit-cell">
+						<span class="audit-cell__date">{{ formatDate(item.createdAt) }}</span>
+						<span class="audit-cell__time">{{ formatTime(item.createdAt) }}</span>
+					</div>
+				</template>
+
+				<template #item-user="{ item }">
+					<div class="audit-user">
+						<div class="audit-user__avatar">
+							{{ item.createdBy ? item.createdBy[0].toUpperCase() : 'S' }}
+						</div>
+						<div class="audit-user__info">
+							<span class="audit-user__name">{{ item.createdBy || 'SYSTEM' }}</span>
+						</div>
+					</div>
+				</template>
+
+				<template #item-module="{ item }">
+					<div class="audit-cell">
+						<span class="audit-cell__module">{{ item.module }}</span>
+						<span v-if="item.moduleCode" class="audit-cell__code">{{ item.moduleCode }}</span>
+					</div>
+				</template>
+
+				<template #item-action="{ item }">
+					<Badge :type="getActionTypeClass(item.auditType)">
+						{{ item.auditType }}
+					</Badge>
+				</template>
+
+				<template #item-actions="{ item }">
+					<button class="btn btn--icon" @click="viewDetails(item)" title="View Changes">
+						<i class="mdi mdi-eye-outline"></i>
+					</button>
+				</template>
+			</Table>
+		</Card>
+
+		<!-- Change Detail Drawer -->
+		<Dialog v-model="isDetailDrawerOpen">
+			<template #header>
+				<div class="drawer-header">
+					<h2>Record Details</h2>
+					<Badge :type="getActionTypeClass(selectedLog?.auditType || '')">
+						{{ selectedLog?.auditType }}
+					</Badge>
+				</div>
+				<p class="drawer-subtitle">
+					{{ selectedLog?.module }} {{ selectedLog?.moduleCode ? `(${selectedLog.moduleCode})` : '' }}
+				</p>
+			</template>
+
+			<div class="detail-drawer-content">
+				<div v-if="isLoadingDetails" class="loading-state">
+					<i class="mdi mdi-loading mdi-spin"></i>
+					<span>Fetching field changes...</span>
+				</div>
+				
+				<div v-else-if="logChanges.length === 0" class="empty-state">
+					<i class="mdi mdi-text-box-search-outline empty-state__icon"></i>
+					<p>No Explicit Field Changes</p>
+					<span class="empty-state__sub">This action did not record specific property differences.</span>
+				</div>
+
+				<div v-else class="changes-list">
+					<div v-for="(change, index) in logChanges" :key="index" class="change-card">
+						<div class="change-card__header">
+							<i class="mdi mdi-code-tags"></i>
+							<span>{{ change.changedField }}</span>
+						</div>
+						<div class="change-card__diff">
+							<div class="diff-box diff-box--old" v-if="change.old !== null && change.old !== undefined">
+								<div class="diff-box__label">Previous</div>
+								<div class="diff-box__value">{{ change.old || '—' }}</div>
+							</div>
+							
+							<div class="diff-icon" v-if="change.old !== null && change.old !== undefined">
+								<i class="mdi mdi-arrow-right"></i>
+							</div>
+							
+							<div class="diff-box diff-box--new" v-if="change.new !== null && change.new !== undefined">
+								<div class="diff-box__label">Updated</div>
+								<div class="diff-box__value">{{ change.new || '—' }}</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<template #footer>
+				<button class="btn btn--text" @click="isDetailDrawerOpen = false">Close</button>
+			</template>
+		</Dialog>
+	</div>
+</template>
+
+
+
 <style lang="scss" scoped>
 @mixin flex-row($align: stretch, $gap: 0) {
 	display: flex;
@@ -392,39 +395,9 @@ onMounted(() => {
 	}
 }
 
-.icon-action-btn {
-	background: transparent;
-	border: none;
-	font-size: 18px;
-	color: var(--colors-text-muted);
-	padding: 6px;
-	cursor: pointer;
-	border-radius: 6px;
-	&:hover {
-		background-color: var(--colors-surface-hover);
-		color: var(--colors-brand-primary);
-	}
-}
 
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 16px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--text {
-		background: transparent;
-		color: var(--colors-text-muted);
-		padding: 6px 12px;
-		&:hover {
-			background: var(--colors-surface-hover);
-		}
-	}
-}
+
+
 
 // Drawer Content Styles
 .drawer-header {

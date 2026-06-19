@@ -1,13 +1,60 @@
+<script setup lang="ts">
+import Badge from "@/components/Badge.vue";
+import { ref, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+
+const route = useRoute();
+const router = useRouter();
+const customer = ref<any>(null);
+
+onMounted(() => {
+	const code = route.query.code;
+	customer.value = {
+		code: code || "CUST-001",
+		accountNo: "300-A0001",
+		name: "Asiasoft Tech Sdn Bhd",
+		licenseNo: "L-9901",
+		isActive: true,
+		requestEinvoice: true,
+		addressCode: "ADDR-KL",
+		profile: {
+			email: "finance@asiasoft.com",
+			phone: "+603-88889999",
+			tin: "T2100992010",
+			brn: "200801030089",
+			individualType: "COMPANY",
+			identityNo: "831418-H",
+			msicCode: "62010",
+			msicDesc: "Computer programming activities",
+		},
+		metadata: {
+			currencyCode: "MYR",
+			creditLimit: "50,000.00",
+			overdueLimit: "10,000.00",
+			controlAccount: "200-DEBTOR",
+			taxExemptNo: "TX-EX-992A",
+			exemptExpiryDate: "2027-12-31 00:00:00",
+			deliveryAddressCode: "DEL-HQ-KL",
+			attention: "Mr. Tan Boon",
+		},
+	};
+});
+
+function handleEditCustomer() {
+	router.push(`/customer/form?code=${customer.value.code}`);
+}
+</script>
+
 <template>
 	<div class="maintenance-view">
 		<div class="maintenance-view__header">
 			<div class="maintenance-view__title-area">
-				<button class="back-link-btn" @click="router.back()">
-					<i class="mdi mdi-arrow-left"></i> Back to Customers
+				<button class="btn btn--text" style="color: var(--colors-brand-primary); padding: 0" @click="router.back()">
+					<i class="mdi mdi-arrow-left"></i> Back to Customer List
 				</button>
 				<h1 class="mt-xs">Customer Profile</h1>
 			</div>
-			<button class="action-btn action-btn--primary" @click="handleEditCustomer">
+			<button class="btn btn--primary" @click="handleEditCustomer">
 				<i class="mdi mdi-pencil-outline"></i> Edit Customer Profile
 			</button>
 		</div>
@@ -24,22 +71,22 @@
 					}}</span>
 
 					<div class="user-meta-card__badges mt-sm">
-						<Chip :type="customer.requestEinvoice ? 'info' : 'default'">
+						<Badge :type="customer.requestEinvoice ? 'info' : 'default'">
 							{{
 								customer.requestEinvoice
 									? "LHDN MyInvois Enabled"
 									: "Standard Invoicing"
 							}}
-						</Chip>
-						<Chip :type="customer.isActive ? 'success' : 'default'">
-							{{ customer.isActive ? "Active Debt" : "Disabled" }}
-						</Chip>
+						</Badge>
+						<Badge :type="customer.isActive ? 'success' : 'error'">
+							{{ customer.isActive ? "Active" : "Inactive" }}
+						</Badge>
 					</div>
 
 					<div class="divider my-md"></div>
 
 					<div v-if="customer.profile" class="quick-nav-box w-full">
-						<span class="quick-nav-box__label">MSIC Core Business</span>
+						<span class="quick-n	av-box__label">MSIC Core Business</span>
 						<div class="msic-display-box mt-xs">
 							<span class="msic-display-box__code">{{
 								customer.profile.msicCode
@@ -165,54 +212,6 @@
 	</div>
 </template>
 
-<script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import Chip from "@/components/Chip.vue";
-
-const route = useRoute();
-const router = useRouter();
-const customer = ref<any>(null);
-
-onMounted(() => {
-	const code = route.query.code;
-	// 模拟按照 Code 还原对应的详细 Response 模型
-	customer.value = {
-		code: code || "CUST-001",
-		accountNo: "300-A0001",
-		name: "Asiasoft Tech Sdn Bhd",
-		licenseNo: "L-9901",
-		isActive: true,
-		requestEinvoice: true,
-		addressCode: "ADDR-KL",
-		profile: {
-			email: "finance@asiasoft.com",
-			phone: "+603-88889999",
-			tin: "T2100992010",
-			brn: "200801030089",
-			individualType: "COMPANY",
-			identityNo: "831418-H",
-			msicCode: "62010",
-			msicDesc: "Computer programming activities",
-		},
-		metadata: {
-			currencyCode: "MYR",
-			creditLimit: "50,000.00",
-			overdueLimit: "10,000.00",
-			controlAccount: "200-DEBTOR",
-			taxExemptNo: "TX-EX-992A",
-			exemptExpiryDate: "2027-12-31 00:00:00",
-			deliveryAddressCode: "DEL-HQ-KL",
-			attention: "Mr. Tan Boon",
-		},
-	};
-});
-
-function handleEditCustomer() {
-	router.push(`/maintenance/customer-form?code=${customer.value.code}`);
-}
-</script>
-
 <style lang="scss" scoped>
 @mixin flex-row($align: stretch, $gap: 0) {
 	display: flex;
@@ -241,7 +240,6 @@ function handleEditCustomer() {
 	}
 }
 
-// 极简圆形加号雷达
 .title-with-action {
 	@include flex-row($align: center, $gap: 12px);
 	h1 {
@@ -278,7 +276,6 @@ function handleEditCustomer() {
 	}
 }
 
-// 纵向混合税务元数据
 .tax-cell {
 	display: flex;
 	flex-direction: column;
@@ -294,14 +291,13 @@ function handleEditCustomer() {
 	}
 }
 
-// 员工头像骨架项
 .employee-cell {
 	@include flex-row($align: center, $gap: 12px);
 	&__avatar {
 		width: 36px;
 		height: 36px;
 		border-radius: 50%;
-		color: white;
+		color: var();
 		font-weight: 700;
 		font-size: 14px;
 		display: flex;
@@ -324,7 +320,6 @@ function handleEditCustomer() {
 	}
 }
 
-// 🌟 读写分离联动卡片结构
 .profile-grid {
 	display: grid;
 	grid-template-columns: 3.8fr 8.2fr;
@@ -390,7 +385,6 @@ function handleEditCustomer() {
 	}
 }
 
-// MSIC 发票代码卡盒
 .msic-display-box {
 	background-color: #f8fafc;
 	border: 1px solid var(--border-color);
@@ -409,15 +403,12 @@ function handleEditCustomer() {
 		line-height: 1.4;
 	}
 }
-
-// 🌟 核心：对应 Zod 动态规则未满足时的“危险拦截状态类”
 .panel-card--disabled-mask {
 	border: 1px dashed #fca5a5 !important;
-	background: linear-gradient(180deg, #ffffff, #fef2f2) !important; // 微微泛红提示风险
+	background: linear-gradient(180deg, #ffffff, #fef2f2) !important; 
 	box-shadow: none !important;
 }
 
-// 只读页网格
 .panel-card--readonly {
 	border-top: 4px solid var(--colors-brand-primary);
 }
@@ -447,7 +438,6 @@ function handleEditCustomer() {
 	}
 }
 
-// 公用面板、检索与表格底层
 .panel-card {
 	background: white;
 	border: 1px solid var(--border-color);
@@ -489,60 +479,8 @@ function handleEditCustomer() {
 	}
 }
 
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 16px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--primary {
-		background-color: var(--colors-brand-primary);
-		color: white;
-		&:hover {
-			background-color: #444acf;
-		}
-	}
-	&--outlined {
-		background-color: transparent;
-		border: 1px solid #cbd5e1;
-		color: #475569;
-		&:hover {
-			background-color: #f1f5f9;
-		}
-	}
-	&--text {
-		background: transparent;
-		color: #64748b;
-		font-size: 12px;
-		padding: 4px 8px;
-		&:hover {
-			background: #f1f5f9;
-		}
-	}
-}
-.icon-action-btn {
-	background: transparent;
-	border: none;
-	font-size: 18px;
-	color: #64748b;
-	padding: 6px;
-	cursor: pointer;
-	border-radius: 6px;
-	&:hover {
-		background-color: #f1f5f9;
-		color: var(--colors-brand-primary);
-	}
-	&--danger {
-		&:hover {
-			background-color: #fef2f2;
-			color: #ef4444;
-		}
-	}
-}
+
+
 
 .mt-xs {
 	margin-top: var(--spacing-xs);

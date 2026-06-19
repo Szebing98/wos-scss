@@ -8,7 +8,7 @@
 				</p>
 			</div>
 			<button
-				class="action-btn action-btn--primary"
+				class="btn btn--primary"
 				:disabled="!selectedUser || isSaving"
 				@click="saveOverrides"
 			>
@@ -705,39 +705,7 @@ async function saveOverrides() {
 	padding: var(--spacing-md);
 	display: flex;
 }
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 18px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--primary {
-		background-color: var(--colors-brand-primary);
-		color: white;
-		&:hover {
-			background-color: #444acf;
-		}
-		&[disabled] {
-			background-color: #cbd5e1 !important;
-			color: #94a3b8 !important;
-			cursor: not-allowed;
-			box-shadow: none !important;
-		}
-	}
-	&--text {
-		background: transparent;
-		color: #64748b;
-		font-size: 12px;
-		padding: 4px 8px;
-		&:hover {
-			background: #f1f5f9;
-		}
-	}
-}
+
 .empty-state {
 	height: 100%;
 	min-height: 400px;

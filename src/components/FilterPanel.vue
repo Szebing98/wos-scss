@@ -2,13 +2,13 @@
 	<div class="filter-panel-wrapper" ref="wrapperRef">
 		<div @click="toggle" class="filter-trigger">
 			<slot name="trigger" :isActive="isOpen">
-				<button 
-					class="icon-action-btn" 
-					:class="{ 'icon-action-btn--active': isOpen }" 
+				<Button 
+					variant="icon" 
+					:class="{ 'btn--icon-active': isOpen }" 
 					title="Filter"
 				>
 					<i class="mdi mdi-filter-variant"></i>
-				</button>
+				</Button>
 			</slot>
 		</div>
 
@@ -16,7 +16,7 @@
 			<div v-if="isOpen" class="filter-popover" :class="`filter-popover--${align}`">
 				<div class="filter-popover__header">
 					<h4>Filters</h4>
-					<button class="icon-btn" @click="close" title="Close">
+					<button class="btn btn--icon" @click="close" title="Close">
 						<i class="mdi mdi-close"></i>
 					</button>
 				</div>
@@ -24,7 +24,7 @@
 					<slot></slot>
 				</div>
 				<div class="filter-popover__footer" v-if="showReset">
-					<button class="text-link" @click="handleReset">Reset Filters</button>
+					<button class="btn btn--text" @click="handleReset">Reset Filters</button>
 				</div>
 			</div>
 		</Transition>
@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
+import Button from "./Button.vue";
 
 defineProps<{
 	showReset?: boolean;
@@ -83,10 +84,10 @@ onUnmounted(() => {
 .filter-trigger {
 	display: inline-block;
 
-	.icon-action-btn {
+	:deep(.btn--icon) {
 		width: 40px;
 		height: 40px;
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		background: var(--colors-surface-background);
@@ -96,9 +97,10 @@ onUnmounted(() => {
 		cursor: pointer;
 		font-size: 20px;
 		transition: all 0.2s;
+		padding: 0;
 
 		&:hover,
-		&--active {
+		&.btn--icon-active {
 			background: var(--colors-surface-hover);
 			color: var(--colors-brand-primary);
 		}

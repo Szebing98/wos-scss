@@ -2,7 +2,7 @@
 	<div class="maintenance-view">
 		<div class="maintenance-view__header">
 			<div class="maintenance-view__title-area">
-				<button class="back-link-btn" @click="router.back()">
+				<button class="btn btn--text" style="color: var(--colors-brand-primary); padding: 0" @click="router.back()">
 					<i class="mdi mdi-arrow-left"></i> Cancel
 				</button>
 				<h1 class="mt-xs">
@@ -11,7 +11,7 @@
 					}}
 				</h1>
 			</div>
-			<button class="action-btn action-btn--primary" @click="handleSubmitForm">
+			<button class="btn btn--primary" @click="handleSubmitForm">
 				<i class="mdi mdi-content-save-check-outline"></i> Commit Changes
 			</button>
 		</div>
@@ -652,60 +652,8 @@ function handleSubmitForm() {
 		color: var(--colors-text-secondary);
 	}
 }
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 16px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--primary {
-		background-color: var(--colors-brand-primary);
-		color: white;
-		&:hover {
-			background-color: #444acf;
-		}
-	}
-	&--outlined {
-		background-color: transparent;
-		border: 1px solid #cbd5e1;
-		color: #475569;
-		&:hover {
-			background-color: #f1f5f9;
-		}
-	}
-	&--text {
-		background: transparent;
-		color: #64748b;
-		font-size: 12px;
-		padding: 4px 8px;
-		&:hover {
-			background: #f1f5f9;
-		}
-	}
-}
-.icon-action-btn {
-	background: transparent;
-	border: none;
-	font-size: 18px;
-	color: #64748b;
-	padding: 6px;
-	cursor: pointer;
-	border-radius: 6px;
-	&:hover {
-		background-color: #f1f5f9;
-		color: var(--colors-brand-primary);
-	}
-	&--danger {
-		&:hover {
-			background-color: #fef2f2;
-			color: #ef4444;
-		}
-	}
-}
+
+
 
 .mt-xs {
 	margin-top: var(--spacing-xs);

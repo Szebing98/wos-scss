@@ -7,7 +7,7 @@
 						<h3>{{ title }}</h3>
 					</slot>
 				</div>
-				<button class="modal-box__close" @click="$emit('update:modelValue', false)" title="Close">
+				<button class="btn btn--icon" style="margin-right: -8px" @click="$emit('update:modelValue', false)" title="Close">
 					<i class="mdi mdi-close"></i>
 				</button>
 			</div>
@@ -68,27 +68,7 @@ defineEmits<{
 	&__title {
 		flex-grow: 1;
 	}
-	&__close {
-		background: transparent;
-		border: none;
-		color: var(--colors-text-muted);
-		font-size: 20px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 32px;
-		height: 32px;
-		border-radius: 6px;
-		transition: all 0.2s;
-		margin-right: -8px;
-
-		&:hover {
-			background-color: var(--colors-surface-hover);
-			color: var(--colors-text-primary);
-		}
-	}
-	&__body {
+&__body {
 		padding: var(--spacing-lg);
 		display: flex;
 		flex-direction: column;
@@ -101,5 +81,8 @@ defineEmits<{
 		justify-content: flex-end;
 		gap: var(--spacing-sm);
 	}
-}
+	}
+	
+	
+
 </style>

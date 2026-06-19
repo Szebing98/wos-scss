@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import Chip from "@/components/Chip.vue";
 import Dialog from "@/components/Dialog.vue";
 import Card from "@/components/Card.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Select from "@/components/Select.vue";
 import Textbox from "@/components/Textbox.vue";
+import Badge from "@/components/Badge.vue";
 
 interface DocNoFormatModel {
 	id: number;
@@ -189,20 +189,14 @@ function deleteFormat(item: DocNoFormatModel) {
 	<div class="maintenance-view">
 		<div class="maintenance-view__header">
 			<div class="maintenance-view__title-area">
-				<div class="title-with-action">
-					<h1>Document Number Format</h1>
-					<button
-						class="icon-action-btn icon-action-btn--primary"
-						@click="prepareNewFormat"
-						title="Add New Format"
-					>
-						<i class="mdi mdi-plus"></i>
-					</button>
-				</div>
+				<h1>Document Number Format</h1>
 				<p class="maintenance-view__subtitle">
 					Configure numbering rules and generation patterns for system modules
 				</p>
 			</div>
+			<button class="btn btn--primary" @click="prepareNewFormat">
+				<i class="mdi mdi-plus"></i> New Format
+			</button>
 		</div>
 
 		<div class="maintenance-grid">
@@ -242,9 +236,9 @@ function deleteFormat(item: DocNoFormatModel) {
 								>Preview: {{ generatePreview(item) }}</span
 							>
 						</div>
-						<Chip :type="item.isActive ? 'success' : 'default'">
+						<Badge :type="item.isActive ? 'success' : 'error'">
 							{{ item.isActive ? "Active" : "Disabled" }}
-						</Chip>
+						</Badge>
 					</div>
 				</div>
 			</Card>
@@ -258,14 +252,14 @@ function deleteFormat(item: DocNoFormatModel) {
 								generatePreview(selectedFormat)
 							}}</span>
 						</div>
-						<Chip type="info" icon="mdi-xml">Sample Output</Chip>
+						<Badge type="info" icon="mdi-xml">Sample Output</Badge>
 					</div>
 
 					<Card class="panel-card--readonly mt-md">
 						<div class="panel-card__header">
 							<h2>Configuration Rules</h2>
 							<button
-								class="icon-action-btn icon-action-btn--edit"
+								class="btn btn--icon-edit"
 								@click="openEditModal"
 								title="Edit Configuration"
 							>
@@ -323,7 +317,7 @@ function deleteFormat(item: DocNoFormatModel) {
 							"
 						>
 							<button
-								class="action-btn action-btn--danger-text"
+								class="btn btn--danger-text"
 								@click="deleteFormat(selectedFormat)"
 							>
 								<i class="mdi mdi-delete-outline"></i> Delete Format Rule
@@ -414,10 +408,10 @@ function deleteFormat(item: DocNoFormatModel) {
 			</div>
 
 			<template #footer>
-				<button class="action-btn action-btn--text" @click="isDialogOpen = false">
+				<button class="btn btn--text" @click="isDialogOpen = false">
 					Cancel
 				</button>
-				<button class="action-btn action-btn--primary" @click="saveFormat">
+				<button class="btn btn--primary" @click="saveFormat">
 					Save Configuration
 				</button>
 			</template>
@@ -743,53 +737,8 @@ function deleteFormat(item: DocNoFormatModel) {
 		color: var(--colors-text-primary);
 	}
 }
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 16px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--primary {
-		background-color: var(--colors-brand-primary);
-		color: white;
-		&:hover {
-			opacity: 0.9;
-		}
-	}
-	&--text {
-		background: transparent;
-		color: var(--colors-text-muted);
-		&:hover {
-			background: var(--colors-surface-hover);
-		}
-	}
-	&--danger-text {
-		background: transparent;
-		color: #ef4444;
-		padding: 4px 8px;
-		font-size: 12px;
-		&:hover {
-			background: rgba(239, 68, 68, 0.1);
-		}
-	}
-}
-.icon-action-btn {
-	background: transparent;
-	border: none;
-	font-size: 16px;
-	color: var(--colors-text-secondary);
-	padding: 6px;
-	cursor: pointer;
-	border-radius: 6px;
-	&:hover {
-		background-color: var(--colors-surface-hover);
-		color: var(--colors-brand-primary);
-	}
-}
+
+
 .empty-state {
 	height: 100%;
 	min-height: 400px;

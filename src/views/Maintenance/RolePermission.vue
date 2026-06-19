@@ -1,3 +1,177 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from "vue";
+import Textbox from "@/components/Textbox.vue";
+import Badge from "@/components/Badge.vue";
+
+interface UserGroupModel {
+	code: string;
+	name: string;
+	description: string;
+}
+
+interface PermissionModel {
+	code: string;
+	action: string;
+	subject: string;
+	inverted: boolean;
+}
+
+const isLoadingGroups = ref(false);
+const isLoadingPermissions = ref(false);
+const isSaving = ref(false);
+
+const selectedGroupCode = ref("");
+const searchQuery = ref("");
+
+const groups = ref<UserGroupModel[]>([]);
+const allPermissions = ref<PermissionModel[]>([]);
+const selectedPermissionCodes = ref<Set<string>>(new Set());
+
+async function loadGroups() {
+	isLoadingGroups.value = true;
+	try {
+		const response = await fetch("api/user-groups");
+		if (response.ok) {
+			groups.value = await response.json();
+		} else {
+			throw new Error();
+		}
+	} catch {
+		groups.value = [
+			{ code: "SA", name: "Superadmin", description: "Complete system control" },
+			{
+				code: "Administrator",
+				name: "Administrator",
+				description: "Manage users and settings",
+			},
+			{ code: "Manager", name: "Manager", description: "Manage engineers and schedules" },
+			{ code: "Engineer", name: "Engineer", description: "Execute work orders" },
+			{ code: "Sales", name: "Sales", description: "Manage customer requests" },
+		];
+	} finally {
+		isLoadingGroups.value = false;
+	}
+}
+
+async function loadAllPermissions() {
+	try {
+		const response = await fetch("api/permissions");
+		if (response.ok) {
+			allPermissions.value = await response.json();
+		}
+	} catch {
+		allPermissions.value = [
+			{ code: "user_read", subject: "User", action: "read", inverted: false },
+			{ code: "user_create", subject: "User", action: "create", inverted: false },
+			{ code: "user_update", subject: "User", action: "update", inverted: false },
+			{ code: "user_delete", subject: "User", action: "delete", inverted: false },
+			{ code: "wo_read", subject: "WorkOrder", action: "read", inverted: false },
+			{ code: "wo_create", subject: "WorkOrder", action: "create", inverted: false },
+			{ code: "wo_update", subject: "WorkOrder", action: "update", inverted: false },
+			{ code: "wo_delete", subject: "WorkOrder", action: "delete", inverted: false },
+			{ code: "customer_read", subject: "Customer", action: "read", inverted: false },
+			{ code: "customer_create", subject: "Customer", action: "create", inverted: false },
+			{ code: "customer_update", subject: "Customer", action: "update", inverted: false },
+			{ code: "report_read", subject: "Report", action: "read", inverted: false },
+		];
+	}
+}
+
+async function handleGroupChange(groupCode: string) {
+	selectedGroupCode.value = groupCode;
+	isLoadingPermissions.value = true;
+	selectedPermissionCodes.value.clear();
+
+	try {
+		const response = await fetch(`api/permissions/groups/${groupCode}`);
+		if (response.ok) {
+			const groupPermissions: PermissionModel[] = await response.json();
+			groupPermissions.forEach((p) => selectedPermissionCodes.value.add(p.code));
+		}
+	} catch {
+		console.warn(`Simulating empty authorization set for mock-role: ${groupCode}`);
+	} finally {
+		isLoadingPermissions.value = false;
+	}
+}
+
+const filteredGroupedPermissions = computed(() => {
+	const result: Record<string, PermissionModel[]> = {};
+	if (!allPermissions.value) return result;
+
+	allPermissions.value.forEach((x) => {
+		const query = searchQuery.value.toLowerCase();
+		const matches =
+			!searchQuery.value ||
+			x.subject.toLowerCase().includes(query) ||
+			x.action.toLowerCase().includes(query) ||
+			x.code.toLowerCase().includes(query);
+
+		if (matches) {
+			if (!result[x.subject]) result[x.subject] = [];
+			result[x.subject].push(x);
+		}
+	});
+	return result;
+});
+
+function isChecked(code: string): boolean {
+	return selectedPermissionCodes.value.has(code);
+}
+
+function onPermissionToggle(code: string, checked: boolean) {
+	if (checked) selectedPermissionCodes.value.add(code);
+	else selectedPermissionCodes.value.delete(code);
+}
+
+function togglePermission(code: string) {
+	if (selectedPermissionCodes.value.has(code)) {
+		selectedPermissionCodes.value.delete(code);
+	} else {
+		selectedPermissionCodes.value.add(code);
+	}
+}
+
+function toggleAllInSubject(subject: string, enable: boolean) {
+	const subjectPerms = allPermissions.value.filter((x) => x.subject === subject);
+	subjectPerms.forEach((p) => {
+		if (enable) selectedPermissionCodes.value.add(p.code);
+		else selectedPermissionCodes.value.delete(p.code);
+	});
+}
+
+async function saveGroupPermissions() {
+	if (!selectedGroupCode.value) return;
+	isSaving.value = true;
+
+	try {
+		const payload = { permission_codes: Array.from(selectedPermissionCodes.value) };
+		const response = await fetch(`api/permissions/groups/${selectedGroupCode.value}/sync`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload),
+		});
+
+		if (response.ok) {
+			alert(`Successfully updated permissions for role "${selectedGroupCode.value}"!`);
+		} else {
+			const err = await response.text();
+			alert(`Error saving group permissions: ${err}`);
+		}
+	} catch (ex: any) {
+		alert(`Operation failed: ${ex.message}`);
+	} finally {
+		isSaving.value = false;
+	}
+}
+
+onMounted(() => {
+	loadGroups();
+	loadAllPermissions();
+});
+</script>
+
+
 <template>
 	<div class="maintenance-view">
 		<div class="maintenance-view__header">
@@ -8,7 +182,7 @@
 				</p>
 			</div>
 			<button
-				class="action-btn action-btn--primary"
+				class="btn btn--primary"
 				:disabled="!selectedGroupCode || isSaving"
 				@click="saveGroupPermissions"
 			>
@@ -41,7 +215,7 @@
 							<span class="type-card__name">{{ group.name }}</span>
 							<span class="type-card__code">{{ group.description }}</span>
 						</div>
-						<Chip type="info">{{ group.code }}</Chip>
+						<Badge type="info">{{ group.code }}</Badge>
 					</div>
 				</div>
 			</div>
@@ -89,13 +263,13 @@
 							</div>
 							<div class="panel-card__header-actions">
 								<button
-									class="action-btn action-btn--text action-btn--sm u-text-primary"
+									class="btn btn--text"
 									@click="toggleAllInSubject(String(subject), true)"
 								>
 									Select All
 								</button>
 								<button
-									class="action-btn action-btn--text action-btn--sm"
+									class="btn btn--text"
 									@click="toggleAllInSubject(String(subject), false)"
 								>
 									Clear All
@@ -142,187 +316,6 @@
 		</div>
 	</div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import Chip from "@/components/Chip.vue";
-import Textbox from "@/components/Textbox.vue";
-
-interface UserGroupModel {
-	code: string;
-	name: string;
-	description: string;
-}
-
-interface PermissionModel {
-	code: string;
-	action: string;
-	subject: string;
-	inverted: boolean;
-}
-
-const isLoadingGroups = ref(false);
-const isLoadingPermissions = ref(false);
-const isSaving = ref(false);
-
-const selectedGroupCode = ref("");
-const searchQuery = ref("");
-
-const groups = ref<UserGroupModel[]>([]);
-const allPermissions = ref<PermissionModel[]>([]);
-// 💡 原生态高履约速度：利用 Set 追踪哈希命中状态，速度比 C# HashSet 还要快！
-const selectedPermissionCodes = ref<Set<string>>(new Set());
-
-// 1. 初始化拉取主角色
-async function loadGroups() {
-	isLoadingGroups.value = true;
-	try {
-		const response = await fetch("api/user-groups");
-		if (response.ok) {
-			groups.value = await response.json();
-		} else {
-			throw new Error();
-		}
-	} catch {
-		// 完美对齐你的 Mock Fallback 数据
-		groups.value = [
-			{ code: "SA", name: "Superadmin", description: "Complete system control" },
-			{
-				code: "Administrator",
-				name: "Administrator",
-				description: "Manage users and settings",
-			},
-			{ code: "Manager", name: "Manager", description: "Manage engineers and schedules" },
-			{ code: "Engineer", name: "Engineer", description: "Execute work orders" },
-			{ code: "Sales", name: "Sales", description: "Manage customer requests" },
-		];
-	} finally {
-		isLoadingGroups.value = false;
-	}
-}
-
-// 2. 初始化拉取全量系统权限库
-async function loadAllPermissions() {
-	try {
-		const response = await fetch("api/permissions");
-		if (response.ok) {
-			allPermissions.value = await response.json();
-		}
-	} catch {
-		allPermissions.value = [
-			{ code: "user_read", subject: "User", action: "read", inverted: false },
-			{ code: "user_create", subject: "User", action: "create", inverted: false },
-			{ code: "user_update", subject: "User", action: "update", inverted: false },
-			{ code: "user_delete", subject: "User", action: "delete", inverted: false },
-			{ code: "wo_read", subject: "WorkOrder", action: "read", inverted: false },
-			{ code: "wo_create", subject: "WorkOrder", action: "create", inverted: false },
-			{ code: "wo_update", subject: "WorkOrder", action: "update", inverted: false },
-			{ code: "wo_delete", subject: "WorkOrder", action: "delete", inverted: false },
-			{ code: "customer_read", subject: "Customer", action: "read", inverted: false },
-			{ code: "customer_create", subject: "Customer", action: "create", inverted: false },
-			{ code: "customer_update", subject: "Customer", action: "update", inverted: false },
-			{ code: "report_read", subject: "Report", action: "read", inverted: false },
-		];
-	}
-}
-
-// 3. 点击左侧角色切换，拉取交叉绑定关系
-async function handleGroupChange(groupCode: string) {
-	selectedGroupCode.value = groupCode;
-	isLoadingPermissions.value = true;
-	selectedPermissionCodes.value.clear();
-
-	try {
-		const response = await fetch(`api/permissions/groups/${groupCode}`);
-		if (response.ok) {
-			const groupPermissions: PermissionModel[] = await response.json();
-			groupPermissions.forEach((p) => selectedPermissionCodes.value.add(p.code));
-		}
-	} catch {
-		console.warn(`Simulating empty authorization set for mock-role: ${groupCode}`);
-	} finally {
-		isLoadingPermissions.value = false;
-	}
-}
-
-// 4. 多重动态交织过滤加 Subject 归组计算属性 (关键)
-const filteredGroupedPermissions = computed(() => {
-	const result: Record<string, PermissionModel[]> = {};
-	if (!allPermissions.value) return result;
-
-	allPermissions.value.forEach((x) => {
-		const query = searchQuery.value.toLowerCase();
-		const matches =
-			!searchQuery.value ||
-			x.subject.toLowerCase().includes(query) ||
-			x.action.toLowerCase().includes(query) ||
-			x.code.toLowerCase().includes(query);
-
-		if (matches) {
-			if (!result[x.subject]) result[x.subject] = [];
-			result[x.subject].push(x);
-		}
-	});
-	return result;
-});
-
-function isChecked(code: string): boolean {
-	return selectedPermissionCodes.value.has(code);
-}
-
-function onPermissionToggle(code: string, checked: boolean) {
-	if (checked) selectedPermissionCodes.value.add(code);
-	else selectedPermissionCodes.value.delete(code);
-}
-
-// 💡 交互优化：点按容器整块区域直接触发 Toggle 勾选
-function togglePermission(code: string) {
-	if (selectedPermissionCodes.value.has(code)) {
-		selectedPermissionCodes.value.delete(code);
-	} else {
-		selectedPermissionCodes.value.add(code);
-	}
-}
-
-function toggleAllInSubject(subject: string, enable: boolean) {
-	const subjectPerms = allPermissions.value.filter((x) => x.subject === subject);
-	subjectPerms.forEach((p) => {
-		if (enable) selectedPermissionCodes.value.add(p.code);
-		else selectedPermissionCodes.value.delete(p.code);
-	});
-}
-
-// 5. 数据同步回传
-async function saveGroupPermissions() {
-	if (!selectedGroupCode.value) return;
-	isSaving.value = true;
-
-	try {
-		const payload = { permission_codes: Array.from(selectedPermissionCodes.value) };
-		const response = await fetch(`api/permissions/groups/${selectedGroupCode.value}/sync`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(payload),
-		});
-
-		if (response.ok) {
-			alert(`Successfully updated permissions for role "${selectedGroupCode.value}"!`);
-		} else {
-			const err = await response.text();
-			alert(`Error saving group permissions: ${err}`);
-		}
-	} catch (ex: any) {
-		alert(`Operation failed: ${ex.message}`);
-	} finally {
-		isSaving.value = false;
-	}
-}
-
-onMounted(() => {
-	loadGroups();
-	loadAllPermissions();
-});
-</script>
 
 <style lang="scss" scoped>
 @mixin flex-row($align: stretch, $gap: 0) {
@@ -535,39 +528,7 @@ onMounted(() => {
 	padding: var(--spacing-md);
 	display: flex;
 }
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 18px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--primary {
-		background-color: var(--colors-brand-primary);
-		color: white;
-		&:hover {
-			opacity: 0.9;
-		}
-		&[disabled] {
-			background-color: var(--colors-surface-border) !important;
-			color: var(--colors-text-muted) !important;
-			cursor: not-allowed;
-			box-shadow: none !important;
-		}
-	}
-	&--text {
-		background: transparent;
-		color: var(--colors-text-muted);
-		font-size: 12px;
-		padding: 4px 8px;
-		&:hover {
-			background: var(--colors-surface-hover);
-		}
-	}
-}
+
 .empty-state {
 	height: 100%;
 	min-height: 400px;

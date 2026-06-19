@@ -1,127 +1,12 @@
-<template>
-	<div class="maintenance-view">
-		<div class="services-view__header">
-			<div class="services-view__title-area">
-				<h1>Customer Directory</h1>
-				<p class="services-view__subtitle">
-					Manage debtors, individual tax identities, and LHDN MyInvois profiles
-				</p>
-			</div>
-			<button class="action-btn action-btn--primary" @click="handleCreateCustomer">
-				<i class="mdi mdi-plus"></i> Add Customer
-			</button>
-		</div>
-
-		<div class="filter-panel">
-			<div class="filter-panel__left" style="align-items: flex-start">
-				<Textbox
-					v-model="searchQuery"
-					placeholder="Search Name, AutoCount No or Tax ID..."
-					style="flex: 1"
-					hide-footer
-				>
-					<template #prefix>
-						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px"></i>
-					</template>
-				</Textbox>
-
-				<FilterPanel show-reset align="right" @reset="resetFilters">
-					<Select v-model="identityFilter" label="Identity Type">
-						<option value="all">All Types</option>
-						<option value="MyKAD">MyKAD (Citizen)</option>
-						<option value="PASSPORT">Passport (Foreigner)</option>
-						<option value="COMPANY">Corporate / BRN</option>
-					</Select>
-
-					<Select v-model="filterStatus" label="Status">
-						<option value="all">All</option>
-						<option value="active">Active</option>
-						<option value="inactive">Disabled</option>
-					</Select>
-
-					<Select v-model="filterEinvoice" label="e-Invoice">
-						<option value="all">All</option>
-						<option value="required">Required</option>
-						<option value="standard">Standard</option>
-					</Select>
-				</FilterPanel>
-			</div>
-		</div>
-
-		<div class="panel-card table-scroll-container">
-			<Table
-				:headers="headers"
-				:items="filteredCustomers"
-				emptyMessage="No customer records matching matrix metrics."
-			>
-				<template #item-customer="{ item: customer }">
-					<div class="employee-cell">
-						<div class="employee-cell__avatar" :style="getAvatarStyle(customer.name)">
-							{{ customer.name[0] }}
-						</div>
-						<div class="employee-cell__info">
-							<span class="employee-cell__name">{{ customer.name }}</span>
-							<span class="employee-cell__title"
-								>System Code: {{ customer.code }}</span
-							>
-						</div>
-					</div>
-				</template>
-				<template #item-autocount="{ item: customer }">
-					<span
-						v-if="customer.accountNo"
-						class="u-font-mono u-font-weight-bold u-text-primary"
-					>
-						{{ countryFormatAccount(customer.accountNo) }}
-					</span>
-					<span v-else class="u-text-muted">—</span>
-				</template>
-				<template #item-tax="{ item: customer }">
-					<div v-if="customer.profile" class="tax-cell">
-						<span class="tax-cell__tin">TIN: {{ customer.profile.tin || "N/A" }}</span>
-						<span class="tax-cell__type"
-							>{{ customer.profile.individualType }} |
-							{{ customer.profile.identityNo || "No ID" }}</span
-						>
-					</div>
-					<span v-else class="u-text-muted">No Profile Registered</span>
-				</template>
-				<template #item-einvoice="{ item: customer }">
-					<Chip
-						:type="customer.requestEinvoice ? 'info' : 'default'"
-						:icon="customer.requestEinvoice ? 'mdi-file-check-outline' : ''"
-					>
-						{{ customer.requestEinvoice ? "Required" : "Standard" }}
-					</Chip>
-				</template>
-				<template #item-status="{ item: customer }">
-					<Chip :type="customer.isActive ? 'success' : 'default'">
-						{{ customer.isActive ? "Active" : "Disabled" }}
-					</Chip>
-				</template>
-				<template #item-actions="{ item: customer }">
-					<button
-						class="icon-action-btn"
-						@click="viewCustomerDetail(customer.code)"
-						title="View Details / Profile"
-					>
-						<i class="mdi mdi-text-box-search-outline"></i>
-					</button>
-				</template>
-			</Table>
-		</div>
-	</div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
-import Chip from "@/components/Chip.vue";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
+import Badge from "@/components/Badge.vue";
 
 const headers: TableHeader[] = [
 	{ key: "customer", label: "Customer / Debtor" },
@@ -144,7 +29,6 @@ function resetFilters() {
 	filterEinvoice.value = "all";
 }
 
-// 依据你的 Response Schema (CustomerDetail) 组装的精细化 Mock 数据
 const customers = ref([
 	{
 		code: "CUST-001",
@@ -235,8 +119,8 @@ function handleCreateCustomer() {
 	router.push("/customer/form");
 }
 
-function viewCustomerDetail(_code: string) {
-	router.push("/customer/profile");
+function viewCustomerDetail(code: string) {
+	router.push(`/customer/profile?code=${code}`);
 }
 
 function getAvatarStyle(name: string) {
@@ -249,6 +133,126 @@ function countryFormatAccount(acc: string) {
 	return acc.toUpperCase();
 }
 </script>
+
+<template>
+	<div class="maintenance-view">
+		<div class="maintenance-view__header">
+			<div class="maintenance-view__title-area">
+				<h1>Customer Directory</h1>
+				<p class="maintenance-view__subtitle">
+					Manage debtors, individual tax identities, and LHDN MyInvois profiles
+				</p>
+			</div>
+			<button class="btn btn--primary" @click="handleCreateCustomer">
+				<i class="mdi mdi-plus"></i> Add Customer
+			</button>
+		</div>
+
+		<div class="filter-panel">
+			<div class="filter-panel__left" style="align-items: flex-start">
+				<Textbox
+					v-model="searchQuery"
+					placeholder="Search Name, AutoCount No or Tax ID..."
+					style="flex: 1"
+					hide-footer
+				>
+					<template #prefix>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px"></i>
+					</template>
+				</Textbox>
+
+				<FilterPanel show-reset align="right" @reset="resetFilters">
+					<Select v-model="identityFilter" label="Identity Type">
+						<option value="all">All Types</option>
+						<option value="MyKAD">MyKAD (Citizen)</option>
+						<option value="PASSPORT">Passport (Foreigner)</option>
+						<option value="COMPANY">Corporate / BRN</option>
+					</Select>
+
+					<Select v-model="filterStatus" label="Status">
+						<option value="all">All</option>
+						<option value="active">Active</option>
+						<option value="inactive">Disabled</option>
+					</Select>
+
+					<Select v-model="filterEinvoice" label="e-Invoice">
+						<option value="all">All</option>
+						<option value="required">Required</option>
+						<option value="standard">Standard</option>
+					</Select>
+				</FilterPanel>
+			</div>
+		</div>
+
+		<div class="panel-card table-scroll-container">
+			<Table
+				paginate
+				hover
+				:headers="headers"
+				:items="filteredCustomers"
+				emptyMessage="No customer records matching matrix metrics."
+				@row-click="(customer) => viewCustomerDetail(customer.code)"
+			>
+				<template #item-customer="{ item: customer }">
+					<div class="employee-cell">
+						<div class="employee-cell__avatar" :style="getAvatarStyle(customer.name)">
+							{{ customer.name[0] }}
+						</div>
+						<div class="employee-cell__info">
+							<span class="employee-cell__name">{{ customer.name }}</span>
+							<span class="employee-cell__title"
+								>System Code: {{ customer.code }}</span
+							>
+						</div>
+					</div>
+				</template>
+				<template #item-autocount="{ item: customer }">
+					<span
+						v-if="customer.accountNo"
+						class="u-font-mono u-font-weight-bold u-text-primary"
+					>
+						{{ countryFormatAccount(customer.accountNo) }}
+					</span>
+					<span v-else class="u-text-muted">—</span>
+				</template>
+				<template #item-tax="{ item: customer }">
+					<div v-if="customer.profile" class="tax-cell">
+						<span class="tax-cell__tin">TIN: {{ customer.profile.tin || "N/A" }}</span>
+						<span class="tax-cell__type"
+							>{{ customer.profile.individualType }} |
+							{{ customer.profile.identityNo || "No ID" }}</span
+						>
+					</div>
+					<span v-else class="u-text-muted">No Profile Registered</span>
+				</template>
+				<template #item-einvoice="{ item: customer }">
+					<Badge
+						:type="customer.requestEinvoice ? 'info' : 'error'"
+						:icon="customer.requestEinvoice ? 'mdi-file-check-outline' : 'mdi-close-circle-outline'"
+					>
+						{{ customer.requestEinvoice ? "Required" : "Not required" }}
+				</Badge>
+				</template>
+				<template #item-status="{ item: customer }">
+					<Badge :type="customer.isActive ? 'success' : 'error'">
+						{{ customer.isActive ? "Active" : "Inactive" }}
+					</Badge>
+				</template>
+				<template #item-actions="{ item: customer }">
+					<button
+						class="btn btn--icon"
+						@click.stop="viewCustomerDetail(customer.code)"
+						title="View Details / Profile"
+					>
+						<i class="mdi mdi-text-box-search-outline"></i>
+					</button>
+				</template>
+			</Table>
+		</div>
+	</div>
+
+
+</template>
 
 <style lang="scss" scoped>
 @mixin flex-row($align: stretch, $gap: 0) {
@@ -298,7 +302,6 @@ function countryFormatAccount(acc: string) {
 	}
 }
 
-// 纵向混合税务元数据
 .tax-cell {
 	display: flex;
 	flex-direction: column;
@@ -306,15 +309,14 @@ function countryFormatAccount(acc: string) {
 	&__tin {
 		font-size: 13px;
 		font-weight: 700;
-		color: #1e293b;
+		color: var(--colors-text-primary);
 	}
 	&__type {
 		font-size: 11px;
-		color: #64748b;
+		color: var(--colors-text-primary);
 	}
 }
 
-// 员工头像骨架项
 .employee-cell {
 	@include flex-row($align: center, $gap: 12px);
 	&__avatar {
@@ -336,15 +338,14 @@ function countryFormatAccount(acc: string) {
 	&__name {
 		font-size: 14px;
 		font-weight: 700;
-		color: #1e293b;
+		color: var(--colors-text-primary);
 	}
 	&__title {
 		font-size: 11px;
-		color: #94a3b8;
+		color: var(--colors-text-muted);
 	}
 }
 
-// 🌟 读写分离联动卡片结构
 .profile-grid {
 	display: grid;
 	grid-template-columns: 3.8fr 8.2fr;
@@ -410,7 +411,6 @@ function countryFormatAccount(acc: string) {
 	}
 }
 
-// MSIC 发票代码卡盒
 .msic-display-box {
 	background-color: #f8fafc;
 	border: 1px solid var(--border-color);
@@ -430,14 +430,12 @@ function countryFormatAccount(acc: string) {
 	}
 }
 
-// 🌟 核心：对应 Zod 动态规则未满足时的“危险拦截状态类”
 .panel-card--disabled-mask {
 	border: 1px dashed var(--colors-state-danger) !important;
 	background: var(--colors-state-danger-light, rgba(239, 68, 68, 0.05)) !important;
 	box-shadow: none !important;
 }
 
-// 只读页网格
 .panel-card--readonly {
 	border-top: 4px solid var(--colors-brand-primary);
 }
@@ -467,7 +465,6 @@ function countryFormatAccount(acc: string) {
 	}
 }
 
-// 公用面板、检索与表格底层
 .panel-card {
 	background: var(--colors-surface-card);
 	border: 1px solid var(--colors-surface-border);
@@ -522,61 +519,8 @@ function countryFormatAccount(acc: string) {
 	padding: 0 !important;
 }
 
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 16px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--primary {
-		background-color: var(--colors-brand-primary);
-		color: white;
-		&:hover {
-			opacity: 0.9;
-		}
-	}
-	&--outlined {
-		background-color: transparent;
-		border: 1px solid var(--colors-surface-border);
-		color: var(--colors-text-primary);
-		&:hover {
-			background-color: var(--colors-surface-hover);
-			border-color: var(--colors-text-muted);
-		}
-	}
-	&--text {
-		background: transparent;
-		color: var(--colors-text-muted);
-		font-size: 12px;
-		padding: 4px 8px;
-		&:hover {
-			background: var(--colors-surface-hover);
-		}
-	}
-}
-.icon-action-btn {
-	background: transparent;
-	border: none;
-	font-size: 18px;
-	color: var(--colors-text-muted);
-	padding: 6px;
-	cursor: pointer;
-	border-radius: 6px;
-	&:hover {
-		background-color: var(--colors-surface-hover);
-		color: var(--colors-brand-primary);
-	}
-	&--danger {
-		&:hover {
-			background-color: var(--colors-state-danger-light, rgba(239, 68, 68, 0.1));
-			color: var(--colors-state-danger, #ef4444);
-		}
-	}
-}
+
+
 
 .mt-xs {
 	margin-top: var(--spacing-xs);

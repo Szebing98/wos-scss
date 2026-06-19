@@ -39,6 +39,12 @@ const routes = [
 				component: () => import("@/views/Dashboard/index.vue"),
 				meta: { requiresAuth: true },
 			},
+			{
+				path: "audit-log",
+				name: "Audit Log",
+				component: () => import("@/views/AuditLog/index.vue"),
+				meta: { requiresAuth: true },
+			}
 		],
 	},
 	{
@@ -109,18 +115,6 @@ const routes = [
 				path: "user-permission",
 				name: "User Permission",
 				component: () => import("@/views/Maintenance/UserPermission.vue"),
-				meta: { requiresAuth: true },
-			},
-		],
-	},
-	{
-		path: "/audit-log",
-		component: MainLayout,
-		children: [
-			{
-				path: "",
-				name: "System Audit Log",
-				component: () => import("@/views/Maintenance/AuditLog.vue"),
 				meta: { requiresAuth: true },
 			},
 		],

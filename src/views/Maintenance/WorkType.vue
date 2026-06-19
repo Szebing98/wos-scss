@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import Card from "@/components/Card.vue";
-import Chip from "@/components/Chip.vue";
+import Badge from "@/components/Badge.vue";
 import Dialog from "@/components/Dialog.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
@@ -232,15 +232,6 @@ function deleteItem(item: WorkTypeItem) {
 					</Textbox>
 
 					<FilterPanel show-reset align="right" @reset="resetTypeFilter">
-						<template #trigger="{ isActive }">
-							<button
-								class="icon-action-btn"
-								:class="{ 'icon-action-btn--active': isActive }"
-								title="Filter"
-							>
-								<i class="mdi mdi-filter-variant"></i>
-							</button>
-						</template>
 
 						<Select v-model="filterActive" label="Status">
 							<option value="all">All</option>
@@ -271,16 +262,16 @@ function deleteItem(item: WorkTypeItem) {
 									<span class="type-card__code">({{ type.code }})</span>
 								</span>
 								<div class="type-card__chips">
-									<Chip :type="type.isActive ? 'success' : 'default'">
+									<Badge :type="type.isActive ? 'success' : 'default'">
 										{{ type.isActive ? "Active" : "Inactive" }}
-									</Chip>
-									<Chip
+									</Badge>
+									<Badge
 										v-if="type.withEquipmentForm"
 										type="warning"
 										icon="mdi-assignment"
 									>
 										With Equipment Form
-									</Chip>
+									</Badge>
 								</div>
 							</div>
 						</div>
@@ -333,9 +324,9 @@ function deleteItem(item: WorkTypeItem) {
 							<div class="detail-view__group">
 								<label>Status</label>
 								<p>
-									<Chip :type="selectedType.isActive ? 'success' : 'default'">
+									<Badge :type="selectedType.isActive ? 'success' : 'default'">
 										{{ selectedType.isActive ? "Active" : "Inactive" }}
-									</Chip>
+									</Badge>
 								</p>
 							</div>
 							<div class="detail-view__group">
@@ -420,15 +411,6 @@ function deleteItem(item: WorkTypeItem) {
 							</Textbox>
 
 							<FilterPanel show-reset align="right" @reset="resetItemFilter">
-								<template #trigger="{ isActive }">
-									<button
-										class="icon-action-btn"
-										:class="{ 'icon-action-btn--active': isActive }"
-										title="Filter"
-									>
-										<i class="mdi mdi-filter-variant"></i>
-									</button>
-								</template>
 
 								<Select v-model="filterItemStatus" label="Status">
 									<option value="all">All</option>
@@ -439,6 +421,7 @@ function deleteItem(item: WorkTypeItem) {
 						</div>
 
 						<Table
+							paginate
 							:headers="itemHeaders"
 							:items="filteredItems"
 							emptyMessage="No work items found under this category."
@@ -456,14 +439,14 @@ function deleteItem(item: WorkTypeItem) {
 							</template>
 							<template #item-actions="{ item }">
 								<button
-									class="icon-action-btn"
+									class="btn btn--icon"
 									@click="editItem(item)"
 									title="Edit"
 								>
 									<i class="mdi mdi-pencil"></i>
 								</button>
 								<button
-									class="icon-action-btn icon-action-btn--danger"
+									class="btn btn--icon-danger"
 									@click="deleteItem(item)"
 									title="Delete"
 								>
@@ -590,26 +573,6 @@ function deleteItem(item: WorkTypeItem) {
 	display: flex;
 	gap: 8px;
 	align-items: center;
-
-	.icon-action-btn {
-		width: 40px;
-		height: 40px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--colors-surface-background);
-		border: 1px solid var(--colors-surface-border);
-		border-radius: 6px;
-		color: var(--colors-text-secondary);
-		cursor: pointer;
-		font-size: 20px;
-
-		&:hover,
-		&--active {
-			background: var(--colors-surface-hover);
-			color: var(--colors-brand-primary);
-		}
-	}
 }
 
 .type-list {
@@ -906,26 +869,6 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-.icon-action-btn {
-	background: transparent;
-	border: none;
-	font-size: 16px;
-	color: #475569;
-	padding: 4px;
-	cursor: pointer;
-	border-radius: 4px;
-	&:hover {
-		background-color: #f1f5f9;
-		color: var(--colors-brand-primary);
-	}
-	&--danger {
-		&:hover {
-			background-color: #fef2f2;
-			color: #ef4444;
-		}
-	}
-}
-
 .empty-state {
 	height: 100%;
 	min-height: 400px;
@@ -948,20 +891,7 @@ function deleteItem(item: WorkTypeItem) {
 	}
 }
 
-.badge {
-	padding: 2px 8px;
-	border-radius: 12px;
-	font-size: 11px;
-	font-weight: 600;
-	&--success {
-		color: #16a34a;
-		background-color: #dcfce7;
-	}
-	&--disabled {
-		color: #64748b;
-		background-color: #f1f5f9;
-	}
-}
+
 
 .mt-lg {
 	margin-top: var(--spacing-lg);

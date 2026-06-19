@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import Chip from "@/components/Chip.vue";
+import Badge from "@/components/Badge.vue";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import Dialog from "@/components/Dialog.vue";
@@ -182,8 +182,8 @@ function syncWithLhdn() {
 				</p>
 			</div>
 			<div class="location-view__actions">
-				<Chip type="info" icon="mdi-public">{{ countries.length }} Countries</Chip>
-				<button class="action-btn action-btn--primary" @click="syncWithLhdn">
+				<Badge type="info" icon="mdi-public">{{ countries.length }} Countries</Badge>
+				<button class="btn btn--primary" @click="syncWithLhdn">
 					<i class="mdi mdi-sync"></i> Sync SDK Codes
 				</button>
 			</div>
@@ -254,7 +254,7 @@ function syncWithLhdn() {
 									{{ country.alpha3Code }} | {{ country.numericCode }}
 								</span>
 							</div>
-							<button class="icon-action-btn" @click.stop="openManagement(country)">
+							<button class="btn btn--icon" @click.stop="openManagement(country)">
 								<i class="mdi mdi-cog-outline"></i>
 							</button>
 						</div>
@@ -266,6 +266,7 @@ function syncWithLhdn() {
 		<div v-else>
 			<Card>
 				<Table
+					paginate
 					:headers="countryHeaders"
 					:items="filteredCountries"
 					emptyMessage="No countries found matching your search."
@@ -287,7 +288,7 @@ function syncWithLhdn() {
 					</template>
 					<template #item-actions="{ item }">
 						<button
-							class="action-btn action-btn--outlined action-btn--sm"
+							class="btn btn--outlined"
 							@click="openManagement(item)"
 						>
 							Manage
@@ -320,7 +321,7 @@ function syncWithLhdn() {
 				</h3>
 				<button
 					v-if="selectedCountry?.alpha3Code !== 'MYS'"
-					class="action-btn action-btn--outlined action-btn--sm"
+					class="btn btn--outlined"
 					@click="addSubNode"
 				>
 					<i class="mdi mdi-plus"></i> Add New
@@ -355,10 +356,10 @@ function syncWithLhdn() {
 			</div>
 
 			<template #footer>
-				<button class="action-btn action-btn--text" @click="isDrawerOpen = false">
+				<button class="btn btn--text" @click="isDrawerOpen = false">
 					Close
 				</button>
-				<button class="action-btn action-btn--primary" @click="saveChanges">
+				<button class="btn btn--primary" @click="saveChanges">
 					Save Changes
 				</button>
 			</template>
@@ -624,56 +625,8 @@ function syncWithLhdn() {
 	outline: none;
 	cursor: pointer;
 }
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 16px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--primary {
-		background-color: var(--colors-brand-primary);
-		color: white;
-		&:hover {
-			opacity: 0.9;
-		}
-	}
-	&--outlined {
-		background-color: transparent;
-		border: 1px solid var(--colors-brand-primary);
-		color: var(--colors-brand-primary);
-		&:hover {
-			background-color: rgba(99, 102, 241, 0.05);
-		}
-	}
-	&--text {
-		background: transparent;
-		color: var(--colors-text-muted);
-		&:hover {
-			background: var(--colors-surface-hover);
-		}
-	}
-	&--sm {
-		padding: 5px 12px;
-		font-size: 12px;
-	}
-}
-.icon-action-btn {
-	background: transparent;
-	border: none;
-	font-size: 16px;
-	color: var(--colors-text-secondary);
-	padding: 6px;
-	cursor: pointer;
-	border-radius: 6px;
-	&:hover {
-		background-color: var(--colors-surface-hover);
-		color: var(--colors-brand-primary);
-	}
-}
+
+
 .u-text-right {
 	text-align: right !important;
 }

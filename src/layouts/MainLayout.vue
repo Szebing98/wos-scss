@@ -54,10 +54,19 @@ function toggleGroup(key: "workOrders" | "maintenance") {
 		isDocked.value = false;
 		isTablet.value = false;
 		isDesktop.value = true;
+		Object.keys(groups).forEach((k) => {
+			groups[k as keyof typeof groups] = false;
+		});
 		groups[key] = true;
 		return;
 	}
-	groups[key] = !groups[key];
+	const isExpanding = !groups[key];
+	if (isExpanding) {
+		Object.keys(groups).forEach((k) => {
+			groups[k as keyof typeof groups] = false;
+		});
+	}
+	groups[key] = isExpanding;
 }
 
 function toggleTheme() {
@@ -105,18 +114,18 @@ onUnmounted(() => {
 
 		<header class="header">
 			<div class="header-left">
-				<button class="icon-btn" @click="toggleSidebar" aria-label="Toggle Menu">
+				<button class="btn btn--icon" @click="toggleSidebar" aria-label="Toggle Menu">
 					<i class="mdi mdi-menu"></i>
 				</button>
 				<img src="../assets/logo.svg" alt="GS TECH" class="header__logo" />
 			</div>
 
 			<div class="header-right">
-				<button class="icon-btn" aria-label="Notifications">
+				<button class="btn btn--icon" aria-label="Notifications">
 					<i class="mdi mdi-bell-outline"></i>
 				</button>
 
-				<button class="icon-btn" @click="toggleTheme" aria-label="Toggle Theme">
+				<button class="btn btn--icon" @click="toggleTheme" aria-label="Toggle Theme">
 					<i
 						class="mdi"
 						:class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'"
@@ -460,6 +469,7 @@ onUnmounted(() => {
 	align-items: center;
 	gap: 16px;
 
+	.btn i,
 	.icon-btn i {
 		font-size: 24px;
 	}

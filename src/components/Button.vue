@@ -1,11 +1,12 @@
 <script setup lang="ts">
 defineProps<{
 	type?: "button" | "submit";
-	variant?: "primary" | "secondary" | "danger";
+	variant?: "primary" | "secondary" | "danger" | "text" | "danger-text" | "icon" | "icon-primary" | "icon-edit" | "icon-danger" | "outlined" | "ghost";
 	size?: "sm" | "md" | "lg";
 	block?: boolean;
 	disabled?: boolean;
 	loading?: boolean;
+	icon?: boolean;
 }>();
 
 const emit = defineEmits<{

@@ -1,187 +1,5 @@
-<template>
-	<div class="services-view">
-		<div class="services-view__header">
-			<div class="services-view__title-area">
-				<h1>Service Catalog</h1>
-				<p class="services-view__subtitle">
-					Manage labor services, technical fees, and standard rates
-				</p>
-			</div>
-			<button class="action-btn action-btn--primary" @click="prepareCreate">
-				<i class="mdi mdi-plus"></i> Add Service
-			</button>
-		</div>
-
-		<Card style="padding: var(--spacing-md);">
-			<div class="filter-bar">
-				<Textbox
-					v-model="searchString"
-					placeholder="Search Service No, Name or Code..."
-					style="flex: 1;"
-					hide-footer
-				>
-					<template #prefix>
-						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
-					</template>
-				</Textbox>
-				<FilterPanel show-reset align="right" @reset="resetFilters">
-					<Select v-model="filterStatus" label="Status">
-						<option value="all">All</option>
-						<option value="active">Active</option>
-						<option value="inactive">Disabled</option>
-					</Select>
-				</FilterPanel>
-			</div>
-		</Card>
-
-		<Card class="table-scroll-container" style="padding: 0">
-			<Table
-				:headers="tableHeaders"
-				:items="filteredServices"
-				emptyMessage="No labor services matching criteria found."
-			>
-				<template #item-code="{ item }">
-					<div class="service-cell">
-						<span class="service-cell__no">{{ item.serviceNo }}</span>
-						<span class="service-cell__code">System ID: {{ item.code }}</span>
-					</div>
-				</template>
-				<template #item-name="{ item }">
-					<span class="u-font-weight-medium">{{ item.name }}</span>
-				</template>
-				<template #item-uom="{ item }">
-					<Chip type="info">{{ item.uom }}</Chip>
-				</template>
-				<template #item-unitPrice="{ item }">
-					<span class="u-font-weight-bold u-text-primary">
-						RM {{ formatPrice(item.unitPrice) }}
-					</span>
-				</template>
-				<template #item-status="{ item }">
-					<Chip :type="item.isActive ? 'success' : 'default'">
-						{{ item.isActive ? "Active" : "Disabled" }}
-					</Chip>
-				</template>
-				<template #item-actions="{ item }">
-					<button
-						class="icon-action-btn"
-						@click="prepareEdit(item)"
-						title="Modify Service"
-					>
-						<i class="mdi mdi-pencil"></i>
-					</button>
-					<button
-						class="icon-action-btn icon-action-btn--danger"
-						@click="deleteService(item)"
-						title="Delete Service"
-					>
-						<i class="mdi mdi-delete"></i>
-					</button>
-				</template>
-			</Table>
-		</Card>
-
-		<Dialog v-model="isDrawerOpen">
-			<template #header>
-				<h2>{{ isNewRecord ? "New Service Entry" : "Modify Service" }}</h2>
-				<p>Configure labor tasks and master rate pricing multiplier</p>
-			</template>
-
-			<div class="form-grid">
-				<div class="form-group form-group--full">
-					<label class="form-group__label"
-						>Service No <span class="u-required">*</span></label
-					>
-					<Textbox
-						v-model="editingService.serviceNo"
-						placeholder="e.g. SVC-GEN-01"
-					/>
-				</div>
-
-				<div class="form-group form-group--full">
-					<label class="form-group__label"
-						>Internal Code <span class="u-required">*</span></label
-					>
-					<Textbox
-						v-model="editingService.code"
-						:disabled="!isNewRecord"
-						placeholder="e.g. LAB-01"
-					/>
-				</div>
-
-				<div class="form-group form-group--full">
-					<label class="form-group__label"
-						>Service Description Name <span class="u-required">*</span></label
-					>
-					<Textbox v-model="editingService.name" />
-				</div>
-
-				<div class="form-group">
-					<label class="form-group__label">Standard Price (RM)</label>
-					<div class="money-input-wrapper">
-						<span class="money-input-wrapper__symbol">$</span>
-						<input
-							v-model.number="editingService.unitPrice"
-							type="number"
-							step="0.01"
-							class="form-group__input u-text-right"
-						/>
-					</div>
-				</div>
-
-				<div class="form-group">
-					<label class="form-group__label">Unit (UOM)</label>
-					<Select v-model="editingService.uom">
-						<option value="HOUR">Per Hour</option>
-						<option value="JOB">Per Job</option>
-						<option value="TRIP">Per Trip</option>
-						<option value="DAY">Per Day</option>
-					</Select>
-				</div>
-
-				<div class="form-group form-group--full">
-					<label class="form-group__label">Efficiency Rate / Multiplier</label>
-					<Textbox
-						v-model.number="editingService.rate"
-						type="number"
-						step="0.1"
-						placeholder="Standard service rate multiplier"
-					/>
-				</div>
-
-				<div class="form-group form-group--checkbox-row">
-					<label class="switch-toggle">
-						<input type="checkbox" v-model="editingService.isActive" />
-						<span class="switch-toggle__slider"></span>
-						<span class="switch-toggle__label">Service Availability</span>
-					</label>
-				</div>
-
-				<div class="form-group form-group--full">
-					<label class="form-group__label">Service Scope / Details</label>
-					<textarea
-						v-model="editingService.description"
-						rows="4"
-						class="form-group__textarea"
-					></textarea>
-				</div>
-			</div>
-
-			<template #footer>
-				<button class="action-btn action-btn--text" @click="isDrawerOpen = false">
-					Dismiss
-				</button>
-				<button class="action-btn action-btn--primary" @click="saveService">
-					Confirm & Save
-				</button>
-			</template>
-		</Dialog>
-	</div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import Chip from "@/components/Chip.vue";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import Dialog from "@/components/Dialog.vue";
@@ -189,6 +7,8 @@ import Card from "@/components/Card.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
+import NumericField from "@/components/NumericField.vue";
+import Badge from "@/components/Badge.vue";
 
 interface ServiceProvided {
 	id: number;
@@ -345,6 +165,185 @@ function formatPrice(value: number) {
 }
 </script>
 
+<template>
+	<div class="services-view">
+		<div class="services-view__header">
+			<div class="services-view__title-area">
+				<h1>Service Catalog</h1>
+				<p class="services-view__subtitle">
+					Manage labor services, technical fees, and standard rates
+				</p>
+			</div>
+			<button class="btn btn--primary" @click="prepareCreate">
+				<i class="mdi mdi-plus"></i> Add Service
+			</button>
+		</div>
+
+		<Card style="padding: var(--spacing-md);">
+			<div class="filter-bar">
+				<Textbox
+					v-model="searchString"
+					placeholder="Search Service No, Name or Code..."
+					style="flex: 1;"
+					hide-footer
+				>
+					<template #prefix>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px;"></i>
+					</template>
+				</Textbox>
+				<FilterPanel show-reset align="right" @reset="resetFilters">
+					<Select v-model="filterStatus" label="Status">
+						<option value="all">All</option>
+						<option value="active">Active</option>
+						<option value="inactive">Disabled</option>
+					</Select>
+				</FilterPanel>
+			</div>
+		</Card>
+
+		<Card class="table-scroll-container" style="padding: 0">
+			<Table
+				paginate
+				:headers="tableHeaders"
+				:items="filteredServices"
+				emptyMessage="No labor services matching criteria found."
+			>
+				<template #item-code="{ item }">
+					<div class="service-cell">
+						<span class="service-cell__no">{{ item.serviceNo }}</span>
+						<span class="service-cell__code">System ID: {{ item.code }}</span>
+					</div>
+				</template>
+				<template #item-name="{ item }">
+					<span class="u-font-weight-medium">{{ item.name }}</span>
+				</template>
+				<template #item-uom="{ item }">
+					<Badge type="info">{{ item.uom }}</Badge>
+				</template>
+				<template #item-unitPrice="{ item }">
+					<span class="u-font-weight-bold u-text-primary">
+						RM {{ formatPrice(item.unitPrice) }}
+					</span>
+				</template>
+				<template #item-status="{ item }">
+					<Badge :type="item.isActive ? 'success' : 'default'">
+						{{ item.isActive ? "Active" : "Disabled" }}
+					</Badge>
+				</template>
+				<template #item-actions="{ item }">
+					<button
+						class="btn btn--icon"
+						@click="prepareEdit(item)"
+						title="Modify Service"
+					>
+						<i class="mdi mdi-pencil"></i>
+					</button>
+					<button
+						class="btn btn--icon-danger"
+						@click="deleteService(item)"
+						title="Delete Service"
+					>
+						<i class="mdi mdi-delete"></i>
+					</button>
+				</template>
+			</Table>
+		</Card>
+
+		<Dialog v-model="isDrawerOpen">
+			<template #header>
+				<h2>{{ isNewRecord ? "New Service Entry" : "Modify Service" }}</h2>
+				<p>Configure labor tasks and master rate pricing multiplier</p>
+			</template>
+
+			<div class="form-grid">
+				<div class="form-group form-group--full">
+					<label class="form-group__label"
+						>Service No <span class="u-required">*</span></label
+					>
+					<Textbox
+						v-model="editingService.serviceNo"
+						placeholder="e.g. SVC-GEN-01"
+					/>
+				</div>
+
+				<div class="form-group form-group--full">
+					<label class="form-group__label"
+						>Internal Code <span class="u-required">*</span></label
+					>
+					<Textbox
+						v-model="editingService.code"
+						:disabled="!isNewRecord"
+						placeholder="e.g. LAB-01"
+					/>
+				</div>
+
+				<div class="form-group form-group--full">
+					<label class="form-group__label"
+						>Service Description Name <span class="u-required">*</span></label
+					>
+					<Textbox v-model="editingService.name" />
+				</div>
+
+				<div class="form-group">
+					<NumericField
+						v-model="editingService.unitPrice"
+						label="Standard Price (RM)"
+						currency-symbol="$"
+						hide-footer
+					/>
+				</div>
+
+				<div class="form-group">
+					<label class="form-group__label">Unit (UOM)</label>
+					<Select v-model="editingService.uom">
+						<option value="HOUR">Per Hour</option>
+						<option value="JOB">Per Job</option>
+						<option value="TRIP">Per Trip</option>
+						<option value="DAY">Per Day</option>
+					</Select>
+				</div>
+
+				<div class="form-group form-group--full">
+					<label class="form-group__label">Efficiency Rate / Multiplier</label>
+					<Textbox
+						v-model.number="editingService.rate"
+						type="number"
+						step="0.1"
+						placeholder="Standard service rate multiplier"
+					/>
+				</div>
+
+				<div class="form-group form-group--checkbox-row">
+					<label class="switch-toggle">
+						<input type="checkbox" v-model="editingService.isActive" />
+						<span class="switch-toggle__slider"></span>
+						<span class="switch-toggle__label">Service Availability</span>
+					</label>
+				</div>
+
+				<div class="form-group form-group--full">
+					<label class="form-group__label">Service Scope / Details</label>
+					<textarea
+						v-model="editingService.description"
+						rows="4"
+						class="form-group__textarea"
+					></textarea>
+				</div>
+			</div>
+
+			<template #footer>
+				<button class="btn btn--text" @click="isDrawerOpen = false">
+					Cancel
+				</button>
+				<button class="btn btn--primary" @click="saveService">
+					Confirm & Save
+				</button>
+			</template>
+		</Dialog>
+	</div>
+</template>
+
+
 <style lang="scss" scoped>
 @mixin flex-row($align: stretch, $gap: 0) {
 	display: flex;
@@ -407,23 +406,6 @@ function formatPrice(value: number) {
 	padding: 0 !important;
 }
 
-.money-input-wrapper {
-	position: relative;
-	display: flex;
-	align-items: center;
-
-	&__symbol {
-		position: absolute;
-		left: 12px;
-		font-size: 14px;
-		font-weight: 700;
-		color: #94a3b8;
-		pointer-events: none;
-	}
-	input {
-		padding-left: 28px !important;
-	}
-}
 
 .form-grid {
 	display: grid;
@@ -506,50 +488,8 @@ function formatPrice(value: number) {
 		color: var(--colors-text-primary);
 	}
 }
-.action-btn {
-	border: none;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 600;
-	padding: 8px 16px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	&--primary {
-		background-color: var(--colors-brand-primary);
-		color: white;
-		&:hover {
-			opacity: 0.9;
-		}
-	}
-	&--text {
-		background: transparent;
-		color: var(--colors-text-muted);
-		&:hover {
-			background: var(--colors-surface-hover);
-		}
-	}
-}
-.icon-action-btn {
-	background: transparent;
-	border: none;
-	font-size: 16px;
-	color: var(--colors-text-secondary);
-	padding: 6px;
-	cursor: pointer;
-	border-radius: 6px;
-	&:hover {
-		background-color: var(--colors-surface-hover);
-		color: var(--colors-brand-primary);
-	}
-	&--danger {
-		&:hover {
-			background-color: rgba(239, 68, 68, 0.1);
-			color: #ef4444;
-		}
-	}
-}
+
+
 
 .u-text-right {
 	text-align: right !important;

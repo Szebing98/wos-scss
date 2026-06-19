@@ -1,3 +1,118 @@
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import Table from "@/components/Table.vue";
+import type { TableHeader } from "@/components/Table.vue";
+import Dialog from "@/components/Dialog.vue";
+import Card from "@/components/Card.vue";
+import Textbox from "@/components/Textbox.vue";
+import Select from "@/components/Select.vue";
+import FilterPanel from "@/components/FilterPanel.vue";
+import Badge from "@/components/Badge.vue";
+
+interface PartReplaced {
+    id: number;
+    code: string;
+    name: string;
+    unitPrice: number;
+    uom: string;
+    rate?: number | null;
+    description: string;
+    partNo: string;
+    isActive: boolean;
+}
+
+const searchString = ref("");
+const filterStatus = ref("all");
+const isDrawerOpen = ref(false);
+const isNewRecord = ref(false);
+
+function resetFilters() {
+    filterStatus.value = "all";
+}
+
+const tableHeaders: TableHeader[] = [
+    { key: "code", label: "Code / Part No", width: "25%" },
+    { key: "name", label: "Part Name", width: "30%" },
+    { key: "uom", label: "UOM", width: "10%" },
+    { key: "unitPrice", label: "Unit Price", align: "right", width: "15%" },
+    { key: "status", label: "Status", width: "10%" },
+    { key: "actions", label: "Actions", align: "right", width: "10%" }
+];
+
+const editingPart = ref<PartReplaced>({
+    id: 0, code: "", name: "", unitPrice: 0, uom: "PCS", rate: null, description: "", partNo: "", isActive: true
+});
+
+// Mock Data
+const parts = ref<PartReplaced[]>([
+    { id: 1, code: "FIL-001", name: "Oil Filter A7", partNo: "P-99201", unitPrice: 45.50, uom: "PCS", rate: null, description: "Standard engine oil filter", isActive: true },
+    { id: 2, code: "BELT-X", name: "V-Belt Heavy Duty", partNo: "BT-1122", unitPrice: 120.00, uom: "UNIT", rate: 15.00, description: "Reinforced rubber drive belt", isActive: true },
+    { id: 3, code: "BRK-09", name: "Brake Pad Set", partNo: "BK-8871", unitPrice: 85.00, uom: "SET", rate: null, description: "Front wheels breakdown pads pack", isActive: false }
+]);
+
+const filteredParts = computed(() => {
+    if (!parts.value) return [];
+    return parts.value.filter(x => {
+        if (!x) return false;
+        
+        const search = searchString.value.toLowerCase();
+        const matchesSearch = !searchString.value ||
+            (x.name && x.name.toLowerCase().includes(search)) ||
+            (x.code && x.code.toLowerCase().includes(search)) ||
+            (x.partNo && x.partNo.toLowerCase().includes(search));
+
+        const matchesActive = 
+            filterStatus.value === "all" || 
+            (filterStatus.value === "active" ? x.isActive : !x.isActive);
+
+        return matchesSearch && matchesActive;
+    });
+});
+
+function prepareCreate() {
+    editingPart.value = {
+        id: 0, code: "", name: "", unitPrice: 0, uom: "PCS", rate: null, description: "", partNo: "", isActive: true
+    };
+    isNewRecord.value = true;
+    isDrawerOpen.value = true;
+}
+
+function prepareEdit(part: PartReplaced) {
+    editingPart.value = { ...part };
+    isNewRecord.value = false;
+    isDrawerOpen.value = true;
+}
+
+function savePart() {
+    if (!editingPart.value.partNo || !editingPart.value.code || !editingPart.value.name) {
+        alert("Please fill in all required fields.");
+        return;
+    }
+
+    if (isNewRecord.value) {
+        editingPart.value.id = Date.now();
+        parts.value.push({ ...editingPart.value });
+    } else {
+        const index = parts.value.findIndex(p => p.code === editingPart.value.code);
+        if (index !== -1) {
+            parts.value[index] = { ...editingPart.value };
+        }
+    }
+    isDrawerOpen.value = false;
+}
+
+function deletePart(part: PartReplaced) {
+    parts.value = parts.value.filter(p => p.code !== part.code);
+}
+
+function formatPrice(value: number) {
+    return new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(value);
+}
+</script>
+
 <template>
     <div class="parts-view">
         <div class="parts-view__header">
@@ -5,7 +120,7 @@
                 <h1>Parts Library</h1>
                 <p class="parts-view__subtitle">Manage replacement parts, pricing, and units of measure</p>
             </div>
-            <button class="action-btn action-btn--primary" @click="prepareCreate">
+            <button class="btn btn--primary" @click="prepareCreate">
                 <i class="mdi mdi-plus"></i> Add Part
             </button>
         </div>
@@ -32,9 +147,8 @@
             </div>
         </Card>
 
-        <!-- 零件数据表格 (带固定高度、条纹与悬浮特效) -->
         <Card class="table-scroll-container" style="padding: 0;">
-            <Table :headers="tableHeaders" :items="filteredParts" emptyMessage="No replacement parts found in the library.">
+            <Table paginate :headers="tableHeaders" :items="filteredParts" emptyMessage="No replacement parts found in the library.">
                 <template #item-code="{ item }">
                     <div class="part-cell">
                         <span class="part-cell__no">{{ item.partNo }}</span>
@@ -53,22 +167,21 @@
                     </span>
                 </template>
                 <template #item-status="{ item }">
-                    <Chip :type="item.isActive ? 'success' : 'default'">
-                        {{ item.isActive ? 'Active' : 'Disabled' }}
-                    </Chip>
+                    <Badge :type="item.isActive ? 'success' : 'error'">
+                        {{ item.isActive ? 'Active' : 'Inactive' }}
+                    </Badge>
                 </template>
                 <template #item-actions="{ item }">
-                    <button class="icon-action-btn" @click="prepareEdit(item)" title="Edit Details">
+                    <button class="btn btn--icon" @click="prepareEdit(item)" title="Edit Details">
                         <i class="mdi mdi-pencil"></i>
                     </button>
-                    <button class="icon-action-btn icon-action-btn--danger" @click="deletePart(item)" title="Delete Part">
+                    <button class="btn btn--icon-danger" @click="deletePart(item)" title="Delete Part">
                         <i class="mdi mdi-delete"></i>
                     </button>
                 </template>
             </Table>
         </Card>
 
-        <!-- 🌟 侧拉滑动式零件控制舱 (Drawer Engine) -->
         <Dialog v-model="isDrawerOpen">
             <template #header>
                 <h2>{{ isNewRecord ? 'Create New Part' : 'Edit Part Details' }}</h2>
@@ -126,130 +239,14 @@
             </div>
 
             <template #footer>
-                <button class="action-btn action-btn--text" @click="isDrawerOpen = false">Cancel</button>
-                <button class="action-btn action-btn--primary" @click="savePart">Save Changes</button>
+                <button class="btn btn--text" @click="isDrawerOpen = false">Cancel</button>
+                <button class="btn btn--primary" @click="savePart">Save Changes</button>
             </template>
         </Dialog>
     </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed } from "vue";
-import Chip from "@/components/Chip.vue";
-import Table from "@/components/Table.vue";
-import type { TableHeader } from "@/components/Table.vue";
-import Dialog from "@/components/Dialog.vue";
-import Card from "@/components/Card.vue";
-import Textbox from "@/components/Textbox.vue";
-import Select from "@/components/Select.vue";
-import FilterPanel from "@/components/FilterPanel.vue";
 
-interface PartReplaced {
-    id: number;
-    code: string;
-    name: string;
-    unitPrice: number;
-    uom: string;
-    rate?: number | null;
-    description: string;
-    partNo: string;
-    isActive: boolean;
-}
-
-const searchString = ref("");
-const filterStatus = ref("all");
-const isDrawerOpen = ref(false);
-const isNewRecord = ref(false);
-
-function resetFilters() {
-    filterStatus.value = "all";
-}
-
-const tableHeaders: TableHeader[] = [
-    { key: "code", label: "Code / Part No", width: "25%" },
-    { key: "name", label: "Part Name", width: "30%" },
-    { key: "uom", label: "UOM", width: "10%" },
-    { key: "unitPrice", label: "Unit Price", align: "right", width: "15%" },
-    { key: "status", label: "Status", width: "10%" },
-    { key: "actions", label: "Actions", align: "right", width: "10%" }
-];
-
-const editingPart = ref<PartReplaced>({
-    id: 0, code: "", name: "", unitPrice: 0, uom: "PCS", rate: null, description: "", partNo: "", isActive: true
-});
-
-// Mock Data
-const parts = ref<PartReplaced[]>([
-    { id: 1, code: "FIL-001", name: "Oil Filter A7", partNo: "P-99201", unitPrice: 45.50, uom: "PCS", rate: null, description: "Standard engine oil filter", isActive: true },
-    { id: 2, code: "BELT-X", name: "V-Belt Heavy Duty", partNo: "BT-1122", unitPrice: 120.00, uom: "UNIT", rate: 15.00, description: "Reinforced rubber drive belt", isActive: true },
-    { id: 3, code: "BRK-09", name: "Brake Pad Set", partNo: "BK-8871", unitPrice: 85.00, uom: "SET", rate: null, description: "Front wheels breakdown pads pack", isActive: false }
-]);
-
-// 多维度综合过滤器
-const filteredParts = computed(() => {
-    if (!parts.value) return [];
-    return parts.value.filter(x => {
-        if (!x) return false;
-        
-        const search = searchString.value.toLowerCase();
-        const matchesSearch = !searchString.value ||
-            (x.name && x.name.toLowerCase().includes(search)) ||
-            (x.code && x.code.toLowerCase().includes(search)) ||
-            (x.partNo && x.partNo.toLowerCase().includes(search));
-
-        const matchesActive = 
-            filterStatus.value === "all" || 
-            (filterStatus.value === "active" ? x.isActive : !x.isActive);
-
-        return matchesSearch && matchesActive;
-    });
-});
-
-function prepareCreate() {
-    editingPart.value = {
-        id: 0, code: "", name: "", unitPrice: 0, uom: "PCS", rate: null, description: "", partNo: "", isActive: true
-    };
-    isNewRecord.value = true;
-    isDrawerOpen.value = true;
-}
-
-function prepareEdit(part: PartReplaced) {
-    // 采用展开运算符浅拷贝隔离，防止修改未保存的数据
-    editingPart.value = { ...part };
-    isNewRecord.value = false;
-    isDrawerOpen.value = true;
-}
-
-function savePart() {
-    if (!editingPart.value.partNo || !editingPart.value.code || !editingPart.value.name) {
-        alert("Please fill in all required fields.");
-        return;
-    }
-
-    if (isNewRecord.value) {
-        editingPart.value.id = Date.now();
-        parts.value.push({ ...editingPart.value });
-    } else {
-        const index = parts.value.findIndex(p => p.code === editingPart.value.code);
-        if (index !== -1) {
-            parts.value[index] = { ...editingPart.value };
-        }
-    }
-    isDrawerOpen.value = false;
-}
-
-function deletePart(part: PartReplaced) {
-    parts.value = parts.value.filter(p => p.code !== part.code);
-}
-
-// 金额千分位本地化格式化辅助
-function formatPrice(value: number) {
-    return new Intl.NumberFormat("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(value);
-}
-</script>
 
 <style lang="scss" scoped>
 @mixin flex-row($align: stretch, $gap: 0) {
@@ -328,8 +325,8 @@ function formatPrice(value: number) {
 }
 
 .switch-toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; input { display: none; } &__slider { width: 34px; height: 18px; background-color: var(--colors-surface-border); border-radius: 20px; position: relative; transition: background-color 0.2s; &::before { content: ''; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; background-color: var(--colors-text-primary); border-radius: 50%; transition: transform 0.2s; } } input:checked + &__slider { background-color: var(--status-completed); &::before { transform: translateX(16px); background-color: #ffffff; } } &__label { font-size: 13px; font-weight: 600; color: var(--colors-text-primary); } }
-.action-btn { border: none; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 8px 16px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; &--primary { background-color: var(--colors-brand-primary); color: white; &:hover { opacity: 0.9; } } &--text { background: transparent; color: var(--colors-text-muted); &:hover { background: var(--colors-surface-hover); } } }
-.icon-action-btn { background: transparent; border: none; font-size: 16px; color: var(--colors-text-secondary); padding: 6px; cursor: pointer; border-radius: 6px; &:hover { background-color: var(--colors-surface-hover); color: var(--colors-brand-primary); } &--danger { &:hover { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; } } }
+
+
 
 .u-text-right { text-align: right !important; }
 .u-text-primary { color: var(--colors-brand-primary) !important; }
