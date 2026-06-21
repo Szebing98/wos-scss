@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import Card from "@/components/Card.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
+import MultiSelect from "@/components/MultiSelect.vue";
 import Button from "@/components/Button.vue";
 import Badge from "@/components/Badge.vue";
 import DatePicker from "@/components/DatePicker.vue";
@@ -160,6 +161,12 @@ function submitChanges() {
     console.log("Changes Saved", formData.value);
 }
 
+function toggleAssistantEngineer(code: string) {
+    const index = formData.value.assistantEngineers.indexOf(code as never);
+    if (index > -1) formData.value.assistantEngineers.splice(index, 1);
+    else formData.value.assistantEngineers.push(code as never);
+}
+
 function cancel() {
     router.back();
 }
@@ -235,12 +242,20 @@ function cancel() {
                         <div class="col-12">
                             <Select v-model="formData.leadEngineerCode" label="Lead Engineer *" :error="formErrors.leadEngineerCode">
                                 <option value="" disabled>Select Lead Engineer</option>
-                                <option v-for="user in users" :key="user.code" :value="user.code" :disabled="user.code === formData.personInChargeCode">
+                                <option v-for="user in users" :key="user.code" :value="user.code" :disabled="user.code === formData.personInChargeCode || formData.assistantEngineers.includes(user.code as never)">
                                     {{ user.name }} ({{ user.code }})
                                 </option>
                             </Select>
                         </div>
                         <div class="col-12 textbox-field">
+                            <MultiSelect 
+                                v-model="formData.assistantEngineers" 
+                                :options="users.filter(u => u.code !== formData.leadEngineerCode && u.code !== formData.personInChargeCode)" 
+                                label="Assistant Engineers" 
+                                placeholder="Search to add engineers..." 
+                            />
+                        </div>
+                        <div class="col-12 textbox-field" style="margin-top: 8px;">
                             <label class="custom-label">Work Description *</label>
                             <textarea v-model="formData.description" class="custom-textarea" :class="{'custom-textarea--error': formErrors.description}" placeholder="Enter Description" rows="4"></textarea>
                             <div class="textbox-field__footer" v-if="formErrors.description">
@@ -484,6 +499,9 @@ function cancel() {
     text-transform: uppercase;
     margin-bottom: 4px;
 }
+
+.checkbox-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; border: 1px solid var(--colors-surface-border); border-radius: 8px; background: var(--colors-surface-background); }
+.checkbox-list-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
 
 .custom-textarea {
     width: 100%;

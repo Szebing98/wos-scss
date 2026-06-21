@@ -1,0 +1,226 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+
+const props = defineProps<{
+    modelValue: string[];
+    options: { code: string; name: string }[];
+    label?: string;
+    placeholder?: string;
+    disabled?: boolean;
+}>();
+
+const emit = defineEmits(['update:modelValue']);
+
+const searchQuery = ref('');
+const isDropdownOpen = ref(false);
+const containerRef = ref<HTMLElement | null>(null);
+
+const filteredOptions = computed(() => {
+    return props.options.filter(opt => 
+        !props.modelValue.includes(opt.code) && 
+        (opt.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+         opt.code.toLowerCase().includes(searchQuery.value.toLowerCase()))
+    );
+});
+
+const selectedOptions = computed(() => {
+    return props.modelValue.map(code => props.options.find(opt => opt.code === code) || { code, name: code });
+});
+
+function selectOption(code: string) {
+    if (props.disabled) return;
+    emit('update:modelValue', [...props.modelValue, code]);
+    searchQuery.value = '';
+    isDropdownOpen.value = false;
+}
+
+function removeOption(code: string) {
+    if (props.disabled) return;
+    emit('update:modelValue', props.modelValue.filter(c => c !== code));
+}
+
+function handleClickOutside(event: MouseEvent) {
+    if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
+        isDropdownOpen.value = false;
+    }
+}
+
+onMounted(() => document.addEventListener('click', handleClickOutside));
+onUnmounted(() => document.removeEventListener('click', handleClickOutside));
+</script>
+
+<template>
+    <div class="multi-select" ref="containerRef">
+        <label v-if="label" class="custom-label">{{ label }}</label>
+        <div class="select-container" :class="{ 'is-disabled': disabled, 'is-open': isDropdownOpen }" @click="!disabled && (isDropdownOpen = true)">
+            <div class="selected-chips">
+                <div v-for="opt in selectedOptions" :key="opt.code" class="chip">
+                    <span>{{ opt.name }}</span>
+                    <i class="mdi mdi-close" v-if="!disabled" @click.stop="removeOption(opt.code)"></i>
+                </div>
+                <input 
+                    type="text" 
+                    v-model="searchQuery" 
+                    :placeholder="selectedOptions.length === 0 ? (placeholder || 'Search...') : ''"
+                    @focus="isDropdownOpen = true"
+                    :disabled="disabled"
+                />
+            </div>
+            <i class="mdi mdi-chevron-down toggle-icon" @click.stop="!disabled && (isDropdownOpen = !isDropdownOpen)"></i>
+        </div>
+        
+        <div class="dropdown-menu" v-if="isDropdownOpen && filteredOptions.length > 0">
+            <div 
+                v-for="opt in filteredOptions" 
+                :key="opt.code" 
+                class="dropdown-item"
+                @click="selectOption(opt.code)"
+            >
+                {{ opt.name }} <span class="opt-code">({{ opt.code }})</span>
+            </div>
+        </div>
+        <div class="dropdown-menu empty-msg" v-else-if="isDropdownOpen">
+            No matching options.
+        </div>
+    </div>
+</template>
+
+<style lang="scss" scoped>
+.multi-select {
+    position: relative;
+    width: 100%;
+}
+
+.custom-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--colors-text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.select-container {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--colors-surface-border);
+    background: var(--colors-surface-card);
+    transition: all 0.2s ease;
+    cursor: text;
+
+    &:hover:not(.is-disabled) {
+        border-color: var(--colors-brand-primary);
+    }
+    
+    &.is-open {
+        border-color: var(--colors-brand-primary);
+        box-shadow: 0 0 0 3px rgba(var(--colors-brand-primary-rgb), 0.1);
+    }
+
+    &.is-disabled {
+        background: var(--colors-surface-background);
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+}
+
+.selected-chips {
+    flex-grow: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+
+    input {
+        border: none;
+        outline: none;
+        background: transparent;
+        flex-grow: 1;
+        min-width: 60px;
+        font-size: 14px;
+        color: var(--colors-text-primary);
+        padding: 4px 0;
+        font-family: inherit;
+
+        &::placeholder {
+            color: var(--colors-text-muted);
+        }
+    }
+}
+
+.chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--colors-surface-background);
+    border: 1px solid var(--colors-surface-border);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--colors-text-primary);
+    
+    i {
+        font-size: 14px;
+        color: var(--colors-text-muted);
+        cursor: pointer;
+        
+        &:hover {
+            color: var(--colors-danger);
+        }
+    }
+}
+
+.toggle-icon {
+    font-size: 18px;
+    color: var(--colors-text-muted);
+    cursor: pointer;
+    margin-left: 8px;
+    
+    &:hover {
+        color: var(--colors-text-primary);
+    }
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--colors-surface-card);
+    border: 1px solid var(--colors-surface-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    padding: 4px 0;
+}
+
+.dropdown-item {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--colors-text-primary);
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+        background: rgba(var(--colors-brand-primary-rgb), 0.05);
+        color: var(--colors-brand-primary);
+    }
+
+    .opt-code {
+        font-size: 12px;
+        color: var(--colors-text-muted);
+    }
+}
+
+.empty-msg {
+    padding: 12px;
+    font-size: 13px;
+    color: var(--colors-text-muted);
+    text-align: center;
+}
+</style>

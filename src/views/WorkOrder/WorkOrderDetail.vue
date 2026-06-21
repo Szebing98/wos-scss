@@ -10,6 +10,7 @@ import DatePicker from '@/components/DatePicker.vue';
 import Table from '@/components/Table.vue';
 import Dialog from '@/components/Dialog.vue';
 import NumericField from '@/components/NumericField.vue';
+import MultiSelect from '@/components/MultiSelect.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -332,7 +333,7 @@ const activityLogs = [
                         <div class="col-6">
                             <Select v-model="workOrder.leadEngineer" label="Lead Engineer" :disabled="!isEditing">
                                 <option value="">Select Lead Engineer</option>
-                                <option v-for="u in users" :key="u.code" :value="u.code">{{ u.name }}</option>
+                                <option v-for="u in users" :key="u.code" :value="u.code" :disabled="workOrder.assistantEngineers.includes(u.code)">{{ u.name }}</option>
                             </Select>
                         </div>
                         <div class="col-6">
@@ -350,16 +351,13 @@ const activityLogs = [
                             </Textbox>
                         </div>
                         <div class="col-12">
-                            <label class="custom-label">Assistant Engineers</label>
-                            <div class="checkbox-list">
-                                <label v-for="user in users" :key="user.code" class="checkbox-list-item" :class="{ 'is-disabled': !isEditing }">
-                                    <Checkbox 
-                                        :modelValue="workOrder.assistantEngineers.includes(user.code)" 
-                                        @update:modelValue="isEditing && toggleAssistantEngineer(user.code)" 
-                                    />
-                                    <span>{{ user.name }} ({{ user.code }})</span>
-                                </label>
-                            </div>
+                            <MultiSelect 
+                                v-model="workOrder.assistantEngineers" 
+                                :options="users.filter(u => u.code !== workOrder.leadEngineer && u.code !== workOrder.projectPersonInCharge)" 
+                                label="Assistant Engineers" 
+                                placeholder="Search to add engineers..." 
+                                :disabled="!isEditing"
+                            />
                         </div>
 
                         <div class="col-12"><h4 class="section-title" style="margin-top: 16px;">Customer & Equipment (Read-Only)</h4></div>

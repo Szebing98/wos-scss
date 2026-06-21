@@ -6,6 +6,7 @@ import Button from "@/components/Button.vue";
 import { useRouter } from "vue-router";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
+import MultiSelect from "@/components/MultiSelect.vue";
 import DatePicker from "@/components/DatePicker.vue";
 import Checkbox from "@/components/Checkbox.vue";
 
@@ -274,22 +275,18 @@ function toggleAssistantEngineer(code: string) {
 
                     <Select v-model="editData.leadEngineer" label="Lead Engineer">
                         <option value="" disabled>Select Lead Engineer</option>
-                        <option v-for="user in users" :key="user.code" :value="user.code">
+                        <option v-for="user in users" :key="user.code" :value="user.code" :disabled="editData.assistantEngineers?.includes(user.code)">
                             {{ user.name }} ({{ user.code }})
                         </option>
                     </Select>
 
                     <div class="textbox-field">
-                        <label class="custom-label">Assistant Engineers</label>
-                        <div class="checkbox-list">
-                            <label v-for="user in users" :key="user.code" class="checkbox-list-item">
-                                <Checkbox 
-                                    :modelValue="editData.assistantEngineers?.includes(user.code) || false" 
-                                    @update:modelValue="toggleAssistantEngineer(user.code)" 
-                                />
-                                <span>{{ user.name }} ({{ user.code }})</span>
-                            </label>
-                        </div>
+                        <MultiSelect 
+                            v-model="editData.assistantEngineers" 
+                            :options="users.filter(u => u.code !== editData.leadEngineer && u.code !== editData.personInCharge)" 
+                            label="Assistant Engineers" 
+                            placeholder="Search to add engineers..." 
+                        />
                     </div>
                 </div>
             </div>
