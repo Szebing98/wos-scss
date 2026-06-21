@@ -3,11 +3,12 @@
 		<div @click="toggle" class="filter-trigger">
 			<slot name="trigger" :isActive="isOpen">
 				<Button 
-					variant="icon" 
-					:class="{ 'btn--icon-active': isOpen }" 
+					variant="outlined" 
+					:class="{ 'btn--active': isOpen }" 
 					title="Filter"
+                    style="display: inline-flex; align-items: center; gap: 6px;"
 				>
-					<i class="mdi mdi-filter-variant"></i>
+					<i class="mdi mdi-filter-variant" style="font-size: 18px;"></i> Filter
 				</Button>
 			</slot>
 		</div>

@@ -91,7 +91,9 @@ const paginationText = computed(() => {
 						:class="`u-text-${header.align || 'left'}`"
 						:style="{ width: header.width }"
 					>
-						{{ header.label }}
+						<slot :name="`header-${header.key}`" :header="header">
+							{{ header.label }}
+						</slot>
 					</th>
 				</tr>
 			</thead>

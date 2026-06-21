@@ -1,6 +1,6 @@
 <template>
 	<div class="modal-mask" v-if="modelValue">
-		<div class="modal-box">
+		<div class="modal-box" :style="{ maxWidth: maxWidth || '460px' }">
 			<div v-if="title || $slots.header" class="modal-box__header">
 				<div class="modal-box__title">
 					<slot name="header">
@@ -25,6 +25,7 @@
 defineProps<{
 	modelValue: boolean;
 	title?: string;
+    maxWidth?: string;
 }>();
 
 defineEmits<{
@@ -47,7 +48,7 @@ defineEmits<{
 	background: var(--colors-surface-card);
 	border-radius: 12px;
 	width: 100%;
-	max-width: 460px;
+	max-height: 90vh;
 	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 	display: flex;
 	flex-direction: column;
@@ -68,11 +69,12 @@ defineEmits<{
 	&__title {
 		flex-grow: 1;
 	}
-&__body {
+	&__body {
 		padding: var(--spacing-lg);
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-md);
+		overflow-y: auto;
 	}
 	&__footer {
 		padding: var(--spacing-md) var(--spacing-lg);

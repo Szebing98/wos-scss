@@ -135,6 +135,30 @@ const routes = [
 			},
 		],
 	},
+	{
+		path: "/work-order",
+		component: MainLayout,
+		children: [
+			{
+				path: "",
+				name: "Work Orders",
+				component: () => import("@/views/WorkOrder/WorkOrderList.vue"),
+				meta: { requiresAuth: true },
+			},
+			{
+				path: "form/:id?",
+				name: "Work Order Form",
+				component: () => import("@/views/WorkOrder/WorkOrderForm.vue"),
+				meta: { requiresAuth: true },
+			},
+			{
+				path: "detail/:id",
+				name: "Work Order Detail",
+				component: () => import("@/views/WorkOrder/WorkOrderDetail.vue"),
+				meta: { requiresAuth: true },
+			},
+		],
+	},
 ];
 
 const router = createRouter({

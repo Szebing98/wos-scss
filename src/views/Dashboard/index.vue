@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useThemeStore } from "@/stores/theme.store";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
+import WorkOrderList from "@/views/WorkOrder/WorkOrderList.vue";
 
 const themeStore = useThemeStore();
 
@@ -254,6 +255,16 @@ function refreshData() {
 						</template>
 					</Table>
 				</div>
+			</div>
+
+			<div class="dashboard__panel" style="margin-top: 24px;">
+                <div class="dashboard__panel-header">
+                    <h2 class="dashboard__panel-title">All Work Orders</h2>
+                    <button class="btn btn--primary" @click="console.log('Create new work order')">
+                        <i class="mdi mdi-plus"></i> Create New Work Order
+                    </button>
+                </div>
+				<WorkOrderList status="All" hideHeader />
 			</div>
 		</div>
 	</div>

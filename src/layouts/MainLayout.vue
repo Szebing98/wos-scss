@@ -200,12 +200,13 @@ onUnmounted(() => {
 					</router-link>
 
 					<div class="nav__group" :class="{ 'nav__group--expanded': groups.workOrders }">
-						<button
+						<router-link
+							to="/work-order"
 							class="nav__item"
 							:class="{
 								'nav__item--active-parent': route.path.startsWith('/work-order'),
 							}"
-							@click="toggleGroup('workOrders')"
+							@click="groups.workOrders = true"
 							title="Work Orders"
 						>
 							<i class="mdi mdi-clipboard-text-clock nav__icon"></i>
@@ -214,74 +215,76 @@ onUnmounted(() => {
 								v-show="!((isDesktop && isDocked) || isTablet)"
 								class="mdi nav__tail"
 								:class="groups.workOrders ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                                @click.prevent.stop="toggleGroup('workOrders')"
 							></i>
-						</button>
+						</router-link>
 
 						<ul
 							class="nav__children"
 							v-show="!((isDesktop && isDocked) || isTablet) && groups.workOrders"
 						>
+
 							<li>
 								<router-link
-									to="/work-order/new"
+									to="/work-order?status=New"
 									class="nav__child"
-									active-class="nav__child-active"
+									:class="{ 'nav__child-active': route.query.status === 'New' }"
 									><span>New</span></router-link
 								>
 							</li>
 							<li>
 								<router-link
-									to="/work-order/pending"
+									to="/work-order?status=PendingApproval"
 									class="nav__child"
-									active-class="nav__child-active"
+									:class="{ 'nav__child-active': route.query.status === 'PendingApproval' }"
 									><span>Pending Approval</span></router-link
 								>
 							</li>
 							<li>
 								<router-link
-									to="/work-order/progress"
+									to="/work-order?status=InProgress"
 									class="nav__child"
-									active-class="nav__child-active"
+									:class="{ 'nav__child-active': route.query.status === 'InProgress' }"
 									><span>In Progress</span></router-link
 								>
 							</li>
 							<li>
 								<router-link
-									to="/work-order/done"
+									to="/work-order?status=Done"
 									class="nav__child"
-									active-class="nav__child-active"
+									:class="{ 'nav__child-active': route.query.status === 'Done' }"
 									><span>Done</span></router-link
 								>
 							</li>
 							<li>
 								<router-link
-									to="/work-order/completed"
+									to="/work-order?status=Completed"
 									class="nav__child"
-									active-class="nav__child-active"
+									:class="{ 'nav__child-active': route.query.status === 'Completed' }"
 									><span>Completed</span></router-link
 								>
 							</li>
 							<li>
 								<router-link
-									to="/work-order/claimed"
+									to="/work-order?status=Claimed"
 									class="nav__child"
-									active-class="nav__child-active"
+									:class="{ 'nav__child-active': route.query.status === 'Claimed' }"
 									><span>Claimed</span></router-link
 								>
 							</li>
 							<li>
 								<router-link
-									to="/work-order/closed"
+									to="/work-order?status=Closed"
 									class="nav__child"
-									active-class="nav__child-active"
+									:class="{ 'nav__child-active': route.query.status === 'Closed' }"
 									><span>Closed</span></router-link
 								>
 							</li>
 							<li>
 								<router-link
-									to="/work-order/cancelled"
+									to="/work-order?status=Cancelled"
 									class="nav__child"
-									active-class="nav__child-active"
+									:class="{ 'nav__child-active': route.query.status === 'Cancelled' }"
 									><span>Cancelled</span></router-link
 								>
 							</li>
