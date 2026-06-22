@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps<{
-    modelValue: string[];
+    modelValue?: string[];
     options: { code: string; name: string }[];
     label?: string;
     placeholder?: string;
@@ -16,27 +16,31 @@ const isDropdownOpen = ref(false);
 const containerRef = ref<HTMLElement | null>(null);
 
 const filteredOptions = computed(() => {
+    const val = props.modelValue || [];
     return props.options.filter(opt => 
-        !props.modelValue.includes(opt.code) && 
+        !val.includes(opt.code) && 
         (opt.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
          opt.code.toLowerCase().includes(searchQuery.value.toLowerCase()))
     );
 });
 
 const selectedOptions = computed(() => {
-    return props.modelValue.map(code => props.options.find(opt => opt.code === code) || { code, name: code });
+    const val = props.modelValue || [];
+    return val.map(code => props.options.find(opt => opt.code === code) || { code, name: code });
 });
 
 function selectOption(code: string) {
     if (props.disabled) return;
-    emit('update:modelValue', [...props.modelValue, code]);
+    const val = props.modelValue || [];
+    emit('update:modelValue', [...val, code]);
     searchQuery.value = '';
     isDropdownOpen.value = false;
 }
 
 function removeOption(code: string) {
     if (props.disabled) return;
-    emit('update:modelValue', props.modelValue.filter(c => c !== code));
+    const val = props.modelValue || [];
+    emit('update:modelValue', val.filter(c => c !== code));
 }
 
 function handleClickOutside(event: MouseEvent) {

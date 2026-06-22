@@ -1,6 +1,21 @@
+<script setup lang="ts">
+defineProps<{
+	modelValue?: string | number;
+	label?: string;
+	disabled?: boolean;
+	error?: string;
+}>();
+
+defineEmits<{
+	(e: "update:modelValue", value: string): void;
+}>();
+</script>
+
 <template>
 	<div class="select-field">
-		<label v-if="label" class="select-field__label">{{ label }}</label>
+		<label v-if="label || $slots.label" class="select-field__label">
+            <slot name="label">{{ label }}</slot>
+        </label>
 		<div class="select-wrapper">
 			<select 
 				:value="modelValue" 
@@ -22,31 +37,19 @@
 	</div>
 </template>
 
-<script setup lang="ts">
-defineProps<{
-	modelValue?: string | number;
-	label?: string;
-	disabled?: boolean;
-	error?: string;
-}>();
-
-defineEmits<{
-	(e: "update:modelValue", value: string): void;
-}>();
-</script>
 
 <style lang="scss" scoped>
 .select-field {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--spacing-xs);
+	line-height: 20px;
 	width: 100%;
 
 	&__label {
-		font-size: 11px;
-		font-weight: 600;
+		font-size: var(--typography-fontSize-sm);
+		font-weight: var(--typography-fontWeight-medium);
 		color: var(--colors-text-secondary);
-		text-transform: uppercase;
 	}
 }
 

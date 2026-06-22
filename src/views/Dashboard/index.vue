@@ -6,6 +6,7 @@ import type { TableHeader } from "@/components/Table.vue";
 import WorkOrderList from "@/views/WorkOrder/WorkOrderList.vue";
 
 const themeStore = useThemeStore();
+const workOrderListRef = ref<InstanceType<typeof WorkOrderList> | null>(null);
 
 const draftHeaders: TableHeader[] = [
 	{ key: "woNumber", label: "WO #" },
@@ -165,6 +166,12 @@ function getBtnActionStyle(color: string) {
 function refreshData() {
 	console.log("Refreshing dashboard data via...");
 }
+
+function handleCreateClick() {
+    if (workOrderListRef.value) {
+        workOrderListRef.value.handleCreateWorkOrder();
+    }
+}
 </script>
 
 <template>
@@ -257,14 +264,14 @@ function refreshData() {
 				</div>
 			</div>
 
-			<div class="dashboard__panel" style="margin-top: 24px;">
+            <div class="dashboard__panel" style="margin-top: 24px;">
                 <div class="dashboard__panel-header">
                     <h2 class="dashboard__panel-title">All Work Orders</h2>
-                    <button class="btn btn--primary" @click="console.log('Create new work order')">
+                    <button class="btn btn--primary" @click="handleCreateClick">
                         <i class="mdi mdi-plus"></i> Create New Work Order
                     </button>
                 </div>
-				<WorkOrderList status="All" hideHeader />
+				<WorkOrderList ref="workOrderListRef" status="All" hideHeader />
 			</div>
 		</div>
 	</div>
