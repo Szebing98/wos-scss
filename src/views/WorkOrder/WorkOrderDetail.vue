@@ -84,6 +84,7 @@ const workOrder = ref({
 	woNumber: woNumber || "WO-00032",
 	title: "Test OCR",
 	status: "InProgress",
+	workType:"Piping",
 	workTypeItem: "New Assembly",
 	salesAgent: "",
 	projectPersonInCharge: "usr-3",
@@ -103,7 +104,15 @@ const workOrder = ref({
 	},
 	servicesProvided: [] as LineItem[],
 	partsReplaced: [] as LineItem[],
-	images: [] as ImageRecord[],
+	images: [
+		{ id: 1, category: "Before", url: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=500&h=300&fit=crop", name: "IMG_Before_1.jpg" },
+		{ id: 2, category: "In Progress", url: "https://images.unsplash.com/photo-1504307651254-35680f356f12?w=500&h=300&fit=crop", name: "IMG_InProg_1.jpg" },
+		{ id: 3, category: "In Progress", url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&h=300&fit=crop", name: "IMG_InProg_2.jpg" },
+		{ id: 4, category: "After", url: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500&h=300&fit=crop", name: "IMG_After_1.jpg" },
+		{ id: 5, category: "After", url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=500&h=300&fit=crop", name: "IMG_After_2.jpg" },
+		{ id: 6, category: "After", url: "https://images.unsplash.com/photo-1541888279401-20963335db05?w=500&h=300&fit=crop", name: "IMG_After_3.jpg" },
+		{ id: 7, category: "After", url: "https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0?w=500&h=300&fit=crop", name: "IMG_After_4.jpg" },
+	] as ImageRecord[],
 	cusRefNo: "12381A",
 	remarks: "",
 });
@@ -1491,63 +1500,81 @@ onUnmounted(() => {
 
 					<div class="report-document">
 						<div class="report-table">
-							<div class="rt-row">
-								<div class="rt-label">CUSTOMER NAME:</div>
-								<div class="rt-value">{{ workOrder.customer.name || 'James Bond' }}</div>
-								<div class="rt-label">WORK ORDER:</div>
-								<div class="rt-value">{{ workOrder.woNumber }}</div>
-							</div>
-							<div class="rt-row">
-								<div class="rt-label">REPORT TYPE:</div>
-								<div class="rt-value">{{ workOrder.workTypeItem || 'Work Type Item' }}</div>
-								<div class="rt-label">CUS REF NO:</div>
-								<div class="rt-value">{{ workOrder.cusRefNo || '12381A' }}</div>
-							</div>
-							<div class="rt-row">
-								<div class="rt-label">LOCATION:</div>
-								<div class="rt-value" style="width: 85%;">{{ workOrder.location || 'No.40F, Lot 9737, Seksyen 64, Jalan Mendu, Kampung Simpang Tiga, 93200 Kuching, Sarawak, Malaysia' }}</div>
-							</div>
-							<div class="rt-row">
-								<div class="rt-label">START DATE:</div>
-								<div class="rt-value">{{ workOrder.startDate || '2026-04-13' }}</div>
-								<div class="rt-label">COMPLETE DATE:</div>
-								<div class="rt-value">{{ workOrder.estimatedEndDate || '2026-04-13' }}</div>
-							</div>
+							<template v-if="workOrder.workType && workOrder.workType.toLowerCase() !== 'piping'">
+								<div class="rt-row">
+									<div class="rt-logo">
+										<img src="@/assets/logo.svg" alt="GS-TECH" />
+									</div>
+									<div class="rt-company-info">
+										<strong style="font-size: 13px;">GS-TECH Engineering Sdn. Bhd (853477-A)</strong><br />
+										1009, Jalan 7, Demak Laut Industrial Park, 93050 Kuching,<br />
+										Sarawak. Tel: 082-439863; Fax: 082- 439862<br />
+										Email: <a href="mailto:kch@gstech.com.my" style="color: #0ea5e9; text-decoration: none;">kch@gstech.com.my</a>; Website: www.gstech.com.my
+									</div>
+									<div class="rt-label">WORK ORDER:</div>
+									<div class="rt-value">{{ workOrder.woNumber }}</div>
+								</div>
+								<div class="rt-row">
+									<div class="rt-label">CUSTOMER NAME:</div>
+									<div class="rt-value">{{ workOrder.customer.name || 'James Bond' }}</div>
+									<div class="rt-label">CUSTOMER REF NO:</div>
+									<div class="rt-value">{{ workOrder.cusRefNo || '12381A' }}</div>
+								</div>
+								<div class="rt-row">
+									<div class="rt-label">REPORT TYPE:</div>
+									<div class="rt-value">{{ workOrder.workTypeItem || 'Work Type Item' }}</div>
+									<div class="rt-label">START DATE:</div>
+									<div class="rt-value">{{ workOrder.startDate || '2026-04-13' }}</div>
+								</div>
+								<div class="rt-row">
+									<div class="rt-label">LOCATION:</div>
+									<div class="rt-value">{{ workOrder.location || 'No.40F, Lot 9737, Seksyen 64, Jalan Mendu, Kampung Simpang Tiga, 93200 Kuching, Sarawak, Malaysia' }}</div>
+									<div class="rt-label">COMPLETE DATE:</div>
+									<div class="rt-value">{{ workOrder.estimatedEndDate || '2026-04-13' }}</div>
+								</div>
+							</template>
+							<template v-else>
+								<div class="rt-row">
+									<div class="rt-label">CUSTOMER NAME:</div>
+									<div class="rt-value">{{ workOrder.customer.name || 'James Bond' }}</div>
+									<div class="rt-label">WORK ORDER:</div>
+									<div class="rt-value">{{ workOrder.woNumber }}</div>
+								</div>
+								<div class="rt-row">
+									<div class="rt-label">REPORT TYPE:</div>
+									<div class="rt-value">{{ workOrder.workTypeItem || 'Work Type Item' }}</div>
+									<div class="rt-label">CUS REF NO:</div>
+									<div class="rt-value">{{ workOrder.cusRefNo || '12381A' }}</div>
+								</div>
+								<div class="rt-row">
+									<div class="rt-label">LOCATION:</div>
+									<div class="rt-value" style="width: 85%;">{{ workOrder.location || 'No.40F, Lot 9737, Seksyen 64, Jalan Mendu, Kampung Simpang Tiga, 93200 Kuching, Sarawak, Malaysia' }}</div>
+								</div>
+								<div class="rt-row">
+									<div class="rt-label">START DATE:</div>
+									<div class="rt-value">{{ workOrder.startDate || '2026-04-13' }}</div>
+									<div class="rt-label">COMPLETE DATE:</div>
+									<div class="rt-value">{{ workOrder.estimatedEndDate || '2026-04-13' }}</div>
+								</div>
+							</template>
 							
 							<div class="rt-header">WORK DESCRIPTION</div>
-							<div class="rt-content" style="min-height: 250px;">
+							<div class="rt-content work-desc-content" style="min-height: 250px;">
 								{{ workOrder.description || 'to be discussed with client on availability scope: rainwater pipe + gutter install location: Jalan Mendu (near Masjid) contact: 012836382' }}
 							</div>
 							
 							<div class="rt-header">REMARK(S)</div>
-							<div class="rt-content" style="min-height: 40px;">
+							<div class="rt-content" style="min-height: 100px;">
 								{{ workOrder.remarks || '' }}
 							</div>
 							
 							<div class="rt-header">WORK PROGRESS PHOTO(S)</div>
 							<div class="rt-content">
 								<div class="report-photos">
-									<div class="photo-category">
-										<strong>BEFORE:</strong>
+									<div class="photo-category" v-for="cat in ['Before', 'In Progress', 'After']" :key="cat">
+										<strong>{{ cat.toUpperCase() }}:</strong>
 										<div class="photo-row">
-											<img src="https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=500&h=300&fit=crop" class="report-img" alt="Before 1" />
-											<img src="https://images.unsplash.com/photo-1541888087545-090bb337a6b4?w=500&h=300&fit=crop" class="report-img" alt="Before 2" />
-											<img src="https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0?w=500&h=300&fit=crop" class="report-img" alt="Before 3" />
-										</div>
-									</div>
-									<div class="photo-category">
-										<strong>DURING:</strong>
-										<div class="photo-row">
-											<img src="https://images.unsplash.com/photo-1504307651254-35680f356f12?w=500&h=300&fit=crop" class="report-img" alt="During 1" />
-											<img src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&h=300&fit=crop" class="report-img" alt="During 2" />
-										</div>
-									</div>
-									<div class="photo-category">
-										<strong>AFTER:</strong>
-										<div class="photo-row">
-											<img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500&h=300&fit=crop" class="report-img" alt="After 1" />
-											<img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=500&h=300&fit=crop" class="report-img" alt="After 2" />
-											<img src="https://images.unsplash.com/photo-1541888279401-20963335db05?w=500&h=300&fit=crop" class="report-img" alt="After 3" />
+											<img v-for="img in workOrder.images.filter((i) => i.category === cat)" :key="img.id" :src="img.url" class="report-img" :alt="img.name" />
 										</div>
 									</div>
 								</div>
@@ -2921,7 +2948,8 @@ onUnmounted(() => {
 }
 
 .rt-label {
-	width: 15%;
+	flex: 0 0 15%;
+	box-sizing: border-box;
 	background: #e5e7eb;
 	font-weight: bold;
 	padding: 6px 8px;
@@ -2934,7 +2962,8 @@ onUnmounted(() => {
 }
 
 .rt-value {
-	width: 35%;
+	flex: 0 0 35%;
+	box-sizing: border-box;
 	padding: 6px 8px;
 	border-right: 1px solid #999;
 	display: flex;
@@ -2951,6 +2980,29 @@ onUnmounted(() => {
 	padding: 6px;
 	border-bottom: 1px solid #999;
 	text-transform: uppercase;
+}
+
+.rt-logo {
+	flex: 0 0 15%;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-right: 1px solid #999;
+	padding: 10px;
+}
+.rt-logo img {
+	max-height: 50px;
+	max-width: 100%;
+}
+
+.rt-company-info {
+	flex: 0 0 35%;
+	box-sizing: border-box;
+	padding: 10px;
+	border-right: 1px solid #999;
+	font-size: 11px;
+	line-height: 1.3;
 }
 
 .rt-content {
@@ -2977,9 +3029,10 @@ onUnmounted(() => {
 	display: flex;
 	gap: 12px;
 	flex-wrap: wrap;
+	min-height: 140px;
 }
 .report-img {
-	width: calc(33.333% - 8px);
+	width: calc(25% - 9px);
 	height: 140px;
 	object-fit: cover;
 	border: 1px solid #ccc;
@@ -3000,7 +3053,23 @@ onUnmounted(() => {
 }
 
 @media print {
-	.page-header, .tabs-horizontal, .header-actions, .stepper-horizontal, .no-print {
+	:global(.header), :global(.side-menu), :global(.app-footer) {
+		display: none !important;
+	}
+	:global(.app-main), :global(.app-container) {
+		margin: 0 !important;
+		padding: 0 !important;
+		overflow: visible !important;
+	}
+	:global(.card), :global(.content-card), :global(.panel-card) {
+		border: none !important;
+		box-shadow: none !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		padding: 0 !important;
+		margin: 0 !important;
+	}
+	.page-header, .tabs-horizontal, .header-actions, .stepper-horizontal, .no-print, .finance-summary-box, .payment-section, .alert-box {
 		display: none !important;
 	}
 	.wo-detail-page {
@@ -3015,24 +3084,51 @@ onUnmounted(() => {
 	.report-document {
 		border: none !important;
 		box-shadow: none !important;
+		outline: none !important;
+		background: transparent !important;
 		padding: 0 !important;
 		margin: 0 !important;
+		page-break-inside: avoid;
 	}
 	.report-table {
 		border: 1px solid #000 !important;
+		font-size: 11px !important;
 	}
-	.rt-row, .rt-header, .rt-content, .rt-label, .rt-value {
+	.rt-row, .rt-header, .rt-content, .rt-label, .rt-value, .rt-logo, .rt-company-info {
 		border-color: #000 !important;
 	}
 	.rt-label, .rt-header {
 		background-color: #e5e7eb !important;
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
+		padding: 4px !important;
+	}
+	.rt-value {
+		padding: 4px !important;
+	}
+	.rt-content {
+		padding: 6px !important;
+	}
+	.photo-row {
+		min-height: 95px !important;
+	}
+	.report-photos {
+		gap: 8px !important;
+	}
+	.report-img {
+		height: 95px !important;
 	}
 	.signature-row {
 		background-color: #f3f4f6 !important;
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
+	}
+	.work-desc-content {
+		min-height: 80px !important;
+	}
+	@page {
+		size: A4 portrait;
+		margin: 5mm;
 	}
 	body {
 		background: white;

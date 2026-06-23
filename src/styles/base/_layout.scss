@@ -141,7 +141,7 @@
 	justify-content: space-between;
 	padding: 0 var(--spacing-md);
 	flex-shrink: 0;
-	z-index: 50;
+	z-index: 100;
 	box-sizing: border-box;
 	transition:
 		background-color 0.25s,
@@ -151,6 +151,11 @@
 		@include flex-row($align: center, $gap: 12px);
 		height: 100%;
 		transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+		.btn i,
+		.icon-btn i {
+			font-size: 24px;
+		}
 	}
 
 	&__logo {
@@ -159,11 +164,167 @@
 		transition: opacity 0.2s;
 	}
 
+	&-right {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+
+		.btn i,
+		.icon-btn i {
+			font-size: 24px;
+		}
+	}
+
 	@media (max-width: 767px) {
 		padding: 0 var(--spacing-sm);
 
 		&__logo {
 			height: 28px;
+		}
+	}
+
+	.account-dropdown {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		width: 240px;
+		background: var(--colors-surface-card);
+		border: 1px solid var(--colors-surface-border);
+		border-radius: 12px;
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+		z-index: 100;
+		overflow: hidden;
+		animation: slideDown 0.2s ease;
+
+		&__header {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 16px;
+			background: var(--colors-surface-background);
+		}
+
+		&__avatar {
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
+			background: var(--colors-brand-primary);
+			color: white;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 20px;
+
+			img {
+				width: 100%;
+				height: 100%;
+				border-radius: 50%;
+				object-fit: cover;
+			}
+		}
+
+		&__info {
+			display: flex;
+			flex-direction: column;
+		}
+
+		&__name {
+			margin: 0;
+			font-size: 14px;
+			font-weight: 700;
+			color: var(--colors-text-primary);
+		}
+
+		&__email {
+			margin: 0;
+			font-size: 12px;
+			color: var(--colors-text-muted);
+		}
+
+		&__divider {
+			height: 1px;
+			background: var(--colors-surface-border);
+			margin: 4px 0;
+		}
+
+		&__item {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 12px 16px;
+			font-size: 14px;
+			font-weight: 500;
+			color: var(--colors-text-primary);
+			text-decoration: none;
+			background: transparent;
+			border: none;
+			width: 100%;
+			cursor: pointer;
+			text-align: left;
+			transition: background-color 0.2s;
+
+			i {
+				font-size: 18px;
+				color: var(--colors-text-muted);
+			}
+
+			&:hover,
+			&.router-link-active {
+				background: var(--colors-surface-hover);
+				color: var(--colors-brand-primary);
+
+				i {
+					color: var(--colors-brand-primary);
+				}
+			}
+
+			&--danger {
+				&:hover {
+					background: var(--colors-state-danger-light, rgba(239, 68, 68, 0.05));
+					color: var(--colors-state-danger, #ef4444);
+
+					i {
+						color: var(--colors-state-danger, #ef4444);
+					}
+				}
+			}
+		}
+	}
+
+	.account-menu-wrapper {
+		position: relative;
+	}
+
+	@media (max-width: 767px) {
+		.account-dropdown {
+			position: fixed !important;
+			top: auto !important;
+			right: 0 !important;
+			bottom: 0 !important;
+			left: 0 !important;
+			width: 100% !important;
+			max-width: 100% !important;
+			border-radius: 20px 20px 0 0 !important;
+			border: none !important;
+			border-top: 1px solid var(--colors-surface-border);
+			box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15);
+			z-index: 120;
+
+			animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+			&__item {
+				padding: 16px 24px !important;
+				font-size: 16px !important;
+			}
+		}
+	}
+
+	@keyframes slideUp {
+		from {
+			transform: translateY(100%);
+		}
+		to {
+			transform: translateY(0);
 		}
 	}
 }
@@ -220,8 +381,8 @@
 	}
 
 	font-size: 13px;
-	position: absolute;
-	inset: 0 auto 0 0;
+	position: relative;
+	flex-shrink: 0;
 	width: var(--sidebar-w);
 	height: 100%;
 	z-index: 30;
@@ -230,8 +391,9 @@
 	border-right: var(--sm-border);
 	display: grid;
 	grid-template-rows: auto 1fr;
-	transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-	transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+	transition:
+		width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+		transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
 	&.is-rail {
 		width: var(--rail-w);
@@ -283,13 +445,16 @@
 
 	&.is-mobile {
 		position: fixed;
+		left: 0;
+		top: var(--topbar-h);
+		bottom: 0;
 		transform: translateX(-100%);
 		width: var(--sidebar-w);
-		box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
 		z-index: 60;
 
 		&.is-open {
 			transform: translateX(0);
+			box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
 		}
 	}
 
@@ -433,13 +598,12 @@
 	height: 100%;
 	overflow-y: auto;
 	box-sizing: border-box;
+	min-width: 0;
 
-	padding-left: var(--sidebar-w);
-	transition: padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+	// No padding-left needed — sidebar is a flex sibling and takes its own space.
+	// padding-left was causing double-spacing in rail mode.
 
 	&--rail {
-		padding-left: var(--rail-w);
-
 		:global(.header-left) {
 			width: calc(var(--rail-w) - var(--spacing-md)) !important;
 			justify-content: center !important;
@@ -450,10 +614,6 @@
 			}
 		}
 	}
-
-	@media (max-width: 1024px) {
-		padding-left: 0 !important;
-	}
 }
 
 .app-content {
@@ -461,9 +621,6 @@
 	padding: var(--spacing-lg);
 	width: 100%;
 	box-sizing: border-box;
-
-	max-width: 1600px;
-	margin: 0 auto;
 
 	@media (max-width: 767px) {
 		padding: var(--spacing-md);
@@ -489,8 +646,49 @@
 
 .overlay {
 	position: fixed;
-	inset: 0;
+	top: var(--topbar-h);
+	left: 0;
+	right: 0;
+	bottom: 0;
 	background: rgba(15, 23, 42, 0.4);
 	backdrop-filter: blur(2px);
 	z-index: 55;
+}
+
+.logout-dialog-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 8px;
+	padding: 20px 0;
+
+	.logout-dialog-icon {
+		font-size: 48px;
+		color: var(--colors-state-warning, #f59e0b);
+		margin-bottom: 8px;
+	}
+
+	p {
+		font-size: 16px;
+		font-weight: 700;
+		color: var(--colors-text-primary);
+		margin: 0;
+	}
+
+	.logout-dialog-sub {
+		font-size: 13px;
+		color: var(--colors-text-muted);
+	}
+}
+
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }

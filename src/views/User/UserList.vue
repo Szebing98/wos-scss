@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
 import Table from "@/components/Table.vue";
@@ -7,7 +7,7 @@ import type { TableHeader } from "@/components/Table.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
-import Card from "@/components/Card.vue";
+import { userApi } from "@/api/user/user.api";
 
 const headers: TableHeader[] = [
 	{ key: "employee", label: "Employee" },
@@ -19,6 +19,7 @@ const headers: TableHeader[] = [
 ];
 
 interface UserModel {
+	guid: string;
 	code: string;
 	name: string;
 	email: string;
@@ -31,69 +32,62 @@ const searchQuery = ref("");
 const roleFilter = ref("all");
 const filterStatus = ref("all");
 
+const users = ref<UserModel[]>([]);
+const loading = ref(false);
+
+async function fetchUsers() {
+	loading.value = true;
+	try {
+		const query: any = {
+			pageIndex: 1,
+			pageSize: 10, // Fetch up to 100 users for now, handle table pagination later
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+		};
+
+		if (searchQuery.value) query.q = searchQuery.value;
+		// If you have actual group codes like 'SA' or 'ENG', map them accordingly.
+		if (roleFilter.value !== "all") query.userGroupCode = roleFilter.value;
+		
+		if (filterStatus.value === "active") query.isActive = "true";
+		else if (filterStatus.value === "inactive") query.isActive = "false";
+
+		const { data, error } = await userApi.getUsers(query);
+		
+		if (data && data.data) {
+			users.value = data.data.map((u: any) => ({
+				guid: u.guid,
+				code: u.displayCode || u.guid.substring(0, 8).toUpperCase(),
+				name: u.displayName || "Unknown",
+				email: u.email,
+				role: u.groups && u.groups.length > 0 ? u.groups[0].name : "Unassigned",
+				isActive: u.isActive,
+			}));
+		} else if (error) {
+			console.error("Failed to load users:", error);
+		}
+	} catch (e) {
+		console.error(e);
+	} finally {
+		loading.value = false;
+	}
+}
+
+// Re-fetch users whenever filters change
+watch([searchQuery, roleFilter, filterStatus], () => {
+	fetchUsers();
+});
+
+onMounted(() => {
+	fetchUsers();
+});
+
 function resetFilters() {
 	roleFilter.value = "all";
 	filterStatus.value = "all";
+	searchQuery.value = "";
 }
 
-const users = ref<UserModel[]>([
-	{
-		code: "USR-001",
-		name: "Alice Johnson",
-		email: "alice@gstech.com",
-		role: "Superadmin",
-		isActive: true,
-	},
-	{
-		code: "USR-002",
-		name: "Bob Smith",
-		email: "bob@gstech.com",
-		role: "Engineer",
-		isActive: true,
-	},
-	{
-		code: "USR-003",
-		name: "Charlie Davis",
-		email: "charlie@gstech.com",
-		role: "Manager",
-		isActive: true,
-	},
-	{
-		code: "USR-004",
-		name: "Derrick Rose",
-		email: "derrick@gstech.com",
-		role: "Engineer",
-		isActive: false,
-	},
-	{
-		code: "USR-005",
-		name: "Emma Watson",
-		email: "emma@gstech.com",
-		role: "Administrator",
-		isActive: true,
-	},
-]);
-
-const filteredUsers = computed(() => {
-	return users.value.filter((u) => {
-		const search = searchQuery.value.toLowerCase();
-		const matchesSearch =
-			!searchQuery.value ||
-			u.name.toLowerCase().includes(search) ||
-			u.email.toLowerCase().includes(search) ||
-			u.code.toLowerCase().includes(search);
-
-		const matchesRole = roleFilter.value === "all" || u.role === roleFilter.value;
-		const matchesActive =
-			filterStatus.value === "all" ||
-			(filterStatus.value === "active" ? u.isActive : !u.isActive);
-
-		return matchesSearch && matchesRole && matchesActive;
-	});
-});
-
 function handleCreateUser() {
-	// router.push("/maintenance/user-profile?mode=new");
 	router.push("/user/form");
 }
 
@@ -101,8 +95,18 @@ function viewUserProfile(code: string) {
 	router.push(`/user/profile?code=${code}`);
 }
 
-function toggleUserStatus(user: UserModel) {
-	user.isActive = !user.isActive;
+async function toggleUserStatus(user: UserModel) {
+	try {
+		if (user.isActive) {
+			await userApi.deactivateUser(user.guid);
+		} else {
+			await userApi.activateUser(user.guid);
+		}
+		// Refresh list after toggling status
+		fetchUsers();
+	} catch (e) {
+		console.error("Failed to update user status:", e);
+	}
 }
 
 function getRoleChipType(role: string) {
@@ -175,7 +179,8 @@ function getRandomAvatarBg(name: string) {
 				paginate
 				hover
 				:headers="headers"
-				:items="filteredUsers"
+				:items="users"
+				:loading="loading"
 				emptyMessage="No employees found matching the search matrix."
 				@row-click="(user) => viewUserProfile(user.code)"
 			>
@@ -396,10 +401,6 @@ function getRandomAvatarBg(name: string) {
 	overflow-y: auto;
 	padding: 0 !important;
 }
-
-
-
-
 
 .mt-xs {
 	margin-top: var(--spacing-xs);

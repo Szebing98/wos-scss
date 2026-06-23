@@ -178,7 +178,7 @@ export interface paths {
         get?: never;
         /**
          * Update Profile Image
-         * @description Update the current user's profile image URL. Pass null to remove the profile image.
+         * @description Upload a new profile image or document for the current user. Accepts multipart file upload.
          */
         put: operations["putApiUserMeProfile-image"];
         post?: never;
@@ -220,7 +220,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/user/{guid}/status": {
+    "/api/user/{guid}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Activate User
+         * @description Activate a user account.
+         */
+        put: operations["putApiUserByGuidActivate"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/user/{guid}/deactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -234,10 +254,10 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Update User Status
-         * @description Activate or deactivate a user. Pass isActive: true to activate, false to deactivate.
+         * Deactivate User
+         * @description Deactivate a user account.
          */
-        patch: operations["patchApiUserByGuidStatus"];
+        patch: operations["patchApiUserByGuidDeactivate"];
         trace?: never;
     };
     "/api/user/{guid}/group": {
@@ -327,10 +347,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get paginated list of customers. */
+        /**
+         * Customer List
+         * @description Get a paginated list of customers. Filter by isActive and/or individualType.
+         */
         get: operations["getApiCustomers"];
         put?: never;
-        /** @description Create a new customer. */
+        /**
+         * Create Customer
+         * @description Create a new customer record with optional profile and e-invoice metadata.
+         */
         post: operations["postApiCustomers"];
         delete?: never;
         options?: never;
@@ -345,12 +371,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get full customer details by GUID. */
+        /**
+         * Customer Details
+         * @description Get full customer details by GUID, including profile and e-invoice metadata.
+         */
         get: operations["getApiCustomersByGuid"];
-        /** @description Update customer details by GUID. */
+        /**
+         * Update Customer
+         * @description Update customer details by GUID, including profile and e-invoice metadata.
+         */
         put: operations["putApiCustomersByGuid"];
         post?: never;
-        /** @description Soft-delete a customer by GUID. */
+        /**
+         * Delete Customer (Soft Delete)
+         * @description Soft-delete a customer by GUID.
+         */
         delete: operations["deleteApiCustomersByGuid"];
         options?: never;
         head?: never;
@@ -370,7 +405,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Activate customer by GUID. */
+        /**
+         * Activate Customer
+         * @description Activate a customer account by GUID.
+         */
         patch: operations["patchApiCustomersActivateByGuid"];
         trace?: never;
     };
@@ -387,7 +425,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Deactivate customer by GUID. */
+        /**
+         * Deactivate Customer
+         * @description Deactivate a customer account by GUID.
+         */
         patch: operations["patchApiCustomersDeactivateByGuid"];
         trace?: never;
     };
@@ -398,10 +439,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description List all document number formats with pagination */
+        /**
+         * Doc No Format List
+         * @description Get a paginated list of document number formats used for auto-generating document numbers.
+         */
         get: operations["getApiDoc-no-format"];
         put?: never;
-        /** @description Create a new document number format */
+        /**
+         * Create Doc No Format
+         * @description Create a new document number format for auto-generating document numbers.
+         */
         post: operations["postApiDoc-no-format"];
         delete?: never;
         options?: never;
@@ -416,12 +463,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get a document number format by ID */
+        /**
+         * Doc No Format Details
+         * @description Get full details of a document number format by its ID.
+         */
         get: operations["getApiDoc-no-formatById"];
-        /** @description Update a document number format by ID */
+        /**
+         * Update Doc No Format
+         * @description Update an existing document number format by its ID.
+         */
         put: operations["putApiDoc-no-formatById"];
         post?: never;
-        /** @description Delete a document number format by ID */
+        /**
+         * Delete Doc No Format
+         * @description Delete a document number format by its ID.
+         */
         delete: operations["deleteApiDoc-no-formatById"];
         options?: never;
         head?: never;
@@ -435,10 +491,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description List all parts replaced with pagination */
+        /**
+         * Part Replaced List
+         * @description Get a paginated list of parts replaced. Filter by isActive status.
+         */
         get: operations["getApiPart-replaced"];
         put?: never;
-        /** @description Create a new part replaced record */
+        /**
+         * Create Part Replaced
+         * @description Create a new part replaced master data record.
+         */
         post: operations["postApiPart-replaced"];
         delete?: never;
         options?: never;
@@ -453,12 +515,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get a part replaced record by GUID */
+        /**
+         * Part Replaced Details
+         * @description Get full details of a part replaced record by its GUID.
+         */
         get: operations["getApiPart-replacedByGuid"];
-        /** @description Update a part replaced record by GUID */
+        /**
+         * Update Part Replaced
+         * @description Update an existing part replaced record by its GUID.
+         */
         put: operations["putApiPart-replacedByGuid"];
         post?: never;
-        /** @description Delete a part replaced record by GUID */
+        /**
+         * Delete Part Replaced (Soft Delete)
+         * @description Soft-delete a part replaced record by its GUID.
+         */
         delete: operations["deleteApiPart-replacedByGuid"];
         options?: never;
         head?: never;
@@ -478,7 +549,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Activate a part replaced record by GUID */
+        /**
+         * Activate Part Replaced
+         * @description Activate a part replaced record by its GUID.
+         */
         patch: operations["patchApiPart-replacedActivateByGuid"];
         trace?: never;
     };
@@ -495,7 +569,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Deactivate a part replaced record by GUID */
+        /**
+         * Deactivate Part Replaced
+         * @description Deactivate a part replaced record by its GUID.
+         */
         patch: operations["patchApiPart-replacedDeactivateByGuid"];
         trace?: never;
     };
@@ -506,10 +583,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description List all services provided with pagination */
+        /**
+         * Service Provided List
+         * @description Get a paginated list of services provided. Filter by isActive status.
+         */
         get: operations["getApiServices-provided"];
         put?: never;
-        /** @description Create a new service provided record */
+        /**
+         * Create Service Provided
+         * @description Create a new service provided master data record.
+         */
         post: operations["postApiServices-provided"];
         delete?: never;
         options?: never;
@@ -524,12 +607,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get a service provided record by GUID */
+        /**
+         * Service Provided Details
+         * @description Get full details of a service provided record by its GUID.
+         */
         get: operations["getApiServices-providedByGuid"];
-        /** @description Update a service provided record by GUID */
+        /**
+         * Update Service Provided
+         * @description Update an existing service provided record by its GUID.
+         */
         put: operations["putApiServices-providedByGuid"];
         post?: never;
-        /** @description Delete a service provided record by GUID */
+        /**
+         * Delete Service Provided (Soft Delete)
+         * @description Soft-delete a service provided record by its GUID.
+         */
         delete: operations["deleteApiServices-providedByGuid"];
         options?: never;
         head?: never;
@@ -549,7 +641,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Activate a service provided record by GUID */
+        /**
+         * Activate Service Provided
+         * @description Activate a service provided record by its GUID.
+         */
         patch: operations["patchApiServices-providedActivateByGuid"];
         trace?: never;
     };
@@ -566,7 +661,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Deactivate a service provided record by GUID */
+        /**
+         * Deactivate Service Provided
+         * @description Deactivate a service provided record by its GUID.
+         */
         patch: operations["patchApiServices-providedDeactivateByGuid"];
         trace?: never;
     };
@@ -577,10 +675,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Retrieve a paginated list of work types. */
+        /**
+         * Work Type List
+         * @description Get a paginated list of work types. Filter by isActive and withEquipmentForm.
+         */
         get: operations["getApiWork-type"];
         put?: never;
-        /** @description Create a new work type. */
+        /**
+         * Create Work Type
+         * @description Create a new work type master data record.
+         */
         post: operations["postApiWork-type"];
         delete?: never;
         options?: never;
@@ -595,12 +699,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get a work type by its GUID, including its items. */
+        /**
+         * Work Type Details
+         * @description Get a work type by its GUID, including its child items.
+         */
         get: operations["getApiWork-typeByGuid"];
-        /** @description Update an existing work type by its GUID. */
+        /**
+         * Update Work Type
+         * @description Update an existing work type by its GUID.
+         */
         put: operations["putApiWork-typeByGuid"];
         post?: never;
-        /** @description Delete a work type by its GUID. */
+        /**
+         * Delete Work Type (Soft Delete)
+         * @description Soft-delete a work type by its GUID.
+         */
         delete: operations["deleteApiWork-typeByGuid"];
         options?: never;
         head?: never;
@@ -614,7 +727,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get all items belonging to a work type identified by its GUID. */
+        /**
+         * Work Type Items by Work Type
+         * @description Get all child items belonging to a work type identified by its GUID.
+         */
         get: operations["getApiWork-typeByGuidItems"];
         put?: never;
         post?: never;
@@ -637,7 +753,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Activate a work type by its GUID. */
+        /**
+         * Activate Work Type
+         * @description Activate a work type by its GUID.
+         */
         patch: operations["patchApiWork-typeActivateByGuid"];
         trace?: never;
     };
@@ -654,7 +773,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Deactivate a work type by its GUID. */
+        /**
+         * Deactivate Work Type
+         * @description Deactivate a work type by its GUID.
+         */
         patch: operations["patchApiWork-typeDeactivateByGuid"];
         trace?: never;
     };
@@ -665,12 +787,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get a work type item by its GUID. */
+        /**
+         * Work Type Item Details
+         * @description Get full details of a work type item by its GUID.
+         */
         get: operations["getApiWork-type-itemByGuid"];
-        /** @description Update an existing work type item by its GUID. */
+        /**
+         * Update Work Type Item
+         * @description Update an existing work type item by its GUID.
+         */
         put: operations["putApiWork-type-itemByGuid"];
         post?: never;
-        /** @description Delete a work type item by its GUID. */
+        /**
+         * Delete Work Type Item (Soft Delete)
+         * @description Soft-delete a work type item by its GUID.
+         */
         delete: operations["deleteApiWork-type-itemByGuid"];
         options?: never;
         head?: never;
@@ -686,7 +817,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Create a new work type item. */
+        /**
+         * Create Work Type Item
+         * @description Create a new work type item under a specified work type.
+         */
         post: operations["postApiWork-type-item"];
         delete?: never;
         options?: never;
@@ -707,7 +841,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Activate a work type item by its GUID. */
+        /**
+         * Activate Work Type Item
+         * @description Activate a work type item by its GUID.
+         */
         patch: operations["patchApiWork-type-itemActivateByGuid"];
         trace?: never;
     };
@@ -724,7 +861,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Deactivate a work type item by its GUID. */
+        /**
+         * Deactivate Work Type Item
+         * @description Deactivate a work type item by its GUID.
+         */
         patch: operations["patchApiWork-type-itemDeactivateByGuid"];
         trace?: never;
     };
@@ -1250,6 +1390,294 @@ export interface paths {
         post?: never;
         /** @description Remove a single override ability from a user (soft-delete). */
         delete: operations["deleteApiAbilitiesUsersByUserCodeRemove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-order"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuid"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWork-orderDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/new": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWork-orderNew"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWork-orderPending"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/new": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidNew"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidPending"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidProgress"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/submit-new": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidSubmit-new"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/submit-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidSubmit-approval"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidApprove"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidReject"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidClaim"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidComplete"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidClose"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidCancel"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderByGuidReopen"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2241,22 +2669,17 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** @description Profile image URL — pass null to remove */
-                    profileImage: string | null;
-                };
-                "application/x-www-form-urlencoded": {
-                    /** @description Profile image URL — pass null to remove */
-                    profileImage: string | null;
-                };
                 "multipart/form-data": {
-                    /** @description Profile image URL — pass null to remove */
-                    profileImage: string | null;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    image: string;
                 };
             };
         };
         responses: {
-            /** @description Profile image updated. */
+            /** @description Profile image uploaded. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2264,6 +2687,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         message: string;
+                        url: string;
                     };
                 };
             };
@@ -2498,40 +2922,34 @@ export interface operations {
                 "application/json": {
                     /**
                      * Format: email
-                     * @description User's login email
+                     * @description User's login email - omit if not updating
                      */
                     email?: string;
                     profile?: {
                         /** @description User's display name */
                         displayName?: string;
-                        /** @description Profile image */
-                        profileImage?: string | null;
                     };
                 };
                 "application/x-www-form-urlencoded": {
                     /**
                      * Format: email
-                     * @description User's login email
+                     * @description User's login email - omit if not updating
                      */
                     email?: string;
                     profile?: {
                         /** @description User's display name */
                         displayName?: string;
-                        /** @description Profile image */
-                        profileImage?: string | null;
                     };
                 };
                 "multipart/form-data": {
                     /**
                      * Format: email
-                     * @description User's login email
+                     * @description User's login email - omit if not updating
                      */
                     email?: string;
                     profile?: {
                         /** @description User's display name */
                         displayName?: string;
-                        /** @description Profile image */
-                        profileImage?: string | null;
                     };
                 };
             };
@@ -2750,7 +3168,7 @@ export interface operations {
             };
         };
     };
-    patchApiUserByGuidStatus: {
+    putApiUserByGuidActivate: {
         parameters: {
             query?: never;
             header?: never;
@@ -2759,24 +3177,121 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description true = activate, false = deactivate */
-                    isActive: boolean;
+        requestBody?: never;
+        responses: {
+            /** @description User activated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
                 };
-                "application/x-www-form-urlencoded": {
-                    /** @description true = activate, false = deactivate */
-                    isActive: boolean;
+                content: {
+                    "application/json": {
+                        message: string;
+                    };
                 };
-                "multipart/form-data": {
-                    /** @description true = activate, false = deactivate */
-                    isActive: boolean;
+            };
+            /** @description Validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Insufficient permissions. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description User not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
                 };
             };
         };
+    };
+    patchApiUserByGuidDeactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
-            /** @description Status updated successfully. */
+            /** @description User deactivated successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3361,7 +3876,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3383,7 +3898,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3638,7 +4153,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3660,7 +4175,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3682,7 +4197,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3704,7 +4219,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 409 */
+            /** @description Duplicate record — customer already exists. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3739,7 +4254,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Full customer details with profile and metadata. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3834,7 +4349,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3856,7 +4371,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3878,7 +4393,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Customer not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4135,7 +4650,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4157,7 +4672,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4179,7 +4694,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4201,7 +4716,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Customer not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4236,7 +4751,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Customer deleted successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4247,7 +4762,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4269,7 +4784,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4291,7 +4806,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 409 */
+            /** @description Cannot delete — customer is referenced by other records. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4326,7 +4841,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4348,7 +4863,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4383,7 +4898,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4405,7 +4920,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4444,7 +4959,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4466,7 +4981,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4586,7 +5101,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 200 */
+            /** @description Document number format created successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4627,7 +5142,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 400 */
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4649,7 +5164,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4671,7 +5186,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4706,7 +5221,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Full document number format details. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4747,7 +5262,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4769,7 +5284,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4791,7 +5306,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Document number format not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4913,7 +5428,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 200 */
+            /** @description Document number format updated successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4954,7 +5469,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 400 */
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4976,7 +5491,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4998,7 +5513,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5020,7 +5535,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Document number format not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5055,7 +5570,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Document number format deleted successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5066,7 +5581,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5088,7 +5603,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5128,7 +5643,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5150,7 +5665,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5249,86 +5764,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Response for status 401 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Response for status 403 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "getApiPart-replacedByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Response for status 200 */
+            /** @description Part replaced record created successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5372,7 +5808,29 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5394,7 +5852,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5416,7 +5874,108 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+        };
+    };
+    "getApiPart-replacedByGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full part replaced details. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Unique part replaced code */
+                        code: string;
+                        /** @description Part replaced name / description */
+                        name: string;
+                        /** @description Unit selling price of part replaced */
+                        unitPrice: number;
+                        /** @description Unit of measurement */
+                        uom: string | null;
+                        /** @description Markup rate applied */
+                        rate: number | null;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Original manufacturer part number (OEM reference) */
+                        partNo: string | null;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Not authenticated. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Insufficient permissions. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Part replaced not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5517,7 +6076,51 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
+            /** @description Part replaced updated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Unique part replaced code */
+                        code: string;
+                        /** @description Part replaced name / description */
+                        name: string;
+                        /** @description Unit selling price of part replaced */
+                        unitPrice: number;
+                        /** @description Unit of measurement */
+                        uom: string | null;
+                        /** @description Markup rate applied */
+                        rate: number | null;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Original manufacturer part number (OEM reference) */
+                        partNo: string | null;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5539,7 +6142,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5561,7 +6164,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5583,7 +6186,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Part replaced not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5618,7 +6221,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Part replaced deleted successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5629,7 +6232,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5651,7 +6254,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5686,7 +6289,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Part replaced activated successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5697,7 +6300,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5719,7 +6322,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5754,7 +6357,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Part replaced deactivated successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5765,7 +6368,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5787,7 +6390,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5827,7 +6430,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5849,7 +6452,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5948,86 +6551,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Response for status 401 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Response for status 403 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "getApiServices-providedByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Response for status 200 */
+            /** @description Service provided record created successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6071,7 +6595,29 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6093,7 +6639,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6115,7 +6661,108 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+        };
+    };
+    "getApiServices-providedByGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full service provided details. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Unique service provided code */
+                        code: string;
+                        /** @description Service provided name */
+                        name: string;
+                        /** @description Unit selling price of service provided */
+                        unitPrice: number;
+                        /** @description Unit of measurement */
+                        uom: string | null;
+                        /** @description Markup rate applied */
+                        rate: number | null;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Original service provided number (OEM reference) */
+                        serviceNo: string | null;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Not authenticated. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Insufficient permissions. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Service provided not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6216,7 +6863,51 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
+            /** @description Service provided updated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Unique service provided code */
+                        code: string;
+                        /** @description Service provided name */
+                        name: string;
+                        /** @description Unit selling price of service provided */
+                        unitPrice: number;
+                        /** @description Unit of measurement */
+                        uom: string | null;
+                        /** @description Markup rate applied */
+                        rate: number | null;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Original service provided number (OEM reference) */
+                        serviceNo: string | null;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6238,7 +6929,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6260,7 +6951,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6282,7 +6973,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Service provided not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6317,7 +7008,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Service provided deleted successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6328,7 +7019,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6350,7 +7041,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6385,7 +7076,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Service provided activated successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6396,7 +7087,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6418,7 +7109,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6453,7 +7144,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Service provided deactivated successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6464,7 +7155,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6486,7 +7177,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6518,8 +7209,8 @@ export interface operations {
                 sort?: string;
                 q?: string;
                 timezone: "UTC" | string;
-                isActive?: boolean;
-                withEquipmentForm?: boolean;
+                isActive?: "true" | "false";
+                withEquipmentForm?: "true" | "false";
             };
             header?: never;
             path?: never;
@@ -6527,7 +7218,35 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Paginated list of work types. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** Format: uuid */
+                            guid: string;
+                            code: string;
+                            name: string;
+                            description: string | null;
+                            withEquipmentForm: boolean;
+                            isActive: boolean;
+                            createdAt: string;
+                            modifiedAt: string;
+                        }[];
+                        pageIndex: number;
+                        pageSize: number;
+                        total: number;
+                        pages: number;
+                        hasNextPage: boolean;
+                        hasPreviousPage: boolean;
+                        timestamp: string;
+                    };
+                };
+            };
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6549,7 +7268,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6639,7 +7358,50 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
+            /** @description Work type created successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Work type's unique guid
+                         */
+                        guid: string;
+                        /** @description Unique work type code */
+                        code: string;
+                        /** @description Work type name */
+                        name: string;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Whether work type is with equipment form */
+                        withEquipmentForm: boolean;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6661,7 +7423,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6683,7 +7445,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6718,13 +7480,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Full work type details with child items. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Work type's unique guid
+                         */
+                        guid: string;
                         /** @description Unique work type code */
                         code: string;
                         /** @description Work type name */
@@ -6756,6 +7523,11 @@ export interface operations {
                         items: {
                             /** @description Linked work type (reference relationship) */
                             workTypeCode: string;
+                            /**
+                             * Format: uuid
+                             * @description Work type item's unique guid
+                             */
+                            guid: string;
                             /** @description Unique work type item code */
                             code: string;
                             /** @description Work type item name */
@@ -6786,7 +7558,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6808,7 +7580,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6830,7 +7602,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Work type not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6866,8 +7638,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Unique work type code */
-                    code?: string;
                     /** @description Work type name */
                     name?: string;
                     /** @description Additional notes */
@@ -6884,8 +7654,6 @@ export interface operations {
                     isActive?: boolean;
                 };
                 "application/x-www-form-urlencoded": {
-                    /** @description Unique work type code */
-                    code?: string;
                     /** @description Work type name */
                     name?: string;
                     /** @description Additional notes */
@@ -6902,8 +7670,6 @@ export interface operations {
                     isActive?: boolean;
                 };
                 "multipart/form-data": {
-                    /** @description Unique work type code */
-                    code?: string;
                     /** @description Work type name */
                     name?: string;
                     /** @description Additional notes */
@@ -6922,7 +7688,50 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
+            /** @description Work type updated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Work type's unique guid
+                         */
+                        guid: string;
+                        /** @description Unique work type code */
+                        code: string;
+                        /** @description Work type name */
+                        name: string;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Whether work type is with equipment form */
+                        withEquipmentForm: boolean;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6944,7 +7753,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6966,7 +7775,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6988,7 +7797,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Work type not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7023,7 +7832,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Work type deleted successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -7034,7 +7843,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7056,7 +7865,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7091,7 +7900,52 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description List of work type items for the specific work type. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** @description Linked work type (reference relationship) */
+                            workTypeCode: string;
+                            /**
+                             * Format: uuid
+                             * @description Work type item's unique guid
+                             */
+                            guid: string;
+                            /** @description Unique work type item code */
+                            code: string;
+                            /** @description Work type item name */
+                            name: string;
+                            /** @description Additional notes */
+                            description: string | null;
+                            /** @description Active status for selection */
+                            isActive: boolean;
+                            /**
+                             * Format: date-time
+                             * @description Record creation timestamp
+                             */
+                            createdAt: string;
+                            /**
+                             * Format: date-time
+                             * @description Record last update timestamp
+                             */
+                            modifiedAt: string;
+                            /** @description Soft delete timestamp (if any) */
+                            deletedAt: string | null;
+                            /** @description User who created this record */
+                            createdBy: string | null;
+                            /** @description User who last updated this record */
+                            modifiedBy: string | null;
+                            /** @description User who deleted this record */
+                            deletedBy: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7113,7 +7967,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7135,7 +7989,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Work type not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7170,7 +8024,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Work type activated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                    };
+                };
+            };
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7192,7 +8057,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7227,7 +8092,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Work type deactivated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                    };
+                };
+            };
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7249,7 +8125,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7284,7 +8160,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Full work type item details. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -7293,6 +8169,11 @@ export interface operations {
                     "application/json": {
                         /** @description Linked work type (reference relationship) */
                         workTypeCode: string;
+                        /**
+                         * Format: uuid
+                         * @description Work type item's unique guid
+                         */
+                        guid: string;
                         /** @description Unique work type item code */
                         code: string;
                         /** @description Work type item name */
@@ -7322,7 +8203,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7344,7 +8225,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7366,7 +8247,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Work type item not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7402,10 +8283,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Linked work type (reference relationship) */
-                    workTypeCode?: string;
-                    /** @description Unique work type item code */
-                    code?: string;
                     /** @description Work type item name */
                     name?: string;
                     /** @description Additional notes */
@@ -7417,10 +8294,6 @@ export interface operations {
                     isActive?: boolean;
                 };
                 "application/x-www-form-urlencoded": {
-                    /** @description Linked work type (reference relationship) */
-                    workTypeCode?: string;
-                    /** @description Unique work type item code */
-                    code?: string;
                     /** @description Work type item name */
                     name?: string;
                     /** @description Additional notes */
@@ -7432,10 +8305,6 @@ export interface operations {
                     isActive?: boolean;
                 };
                 "multipart/form-data": {
-                    /** @description Linked work type (reference relationship) */
-                    workTypeCode?: string;
-                    /** @description Unique work type item code */
-                    code?: string;
                     /** @description Work type item name */
                     name?: string;
                     /** @description Additional notes */
@@ -7449,7 +8318,50 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
+            /** @description Work type item updated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Linked work type (reference relationship) */
+                        workTypeCode: string;
+                        /**
+                         * Format: uuid
+                         * @description Work type item's unique guid
+                         */
+                        guid: string;
+                        /** @description Unique work type item code */
+                        code: string;
+                        /** @description Work type item name */
+                        name: string;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7471,7 +8383,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7493,7 +8405,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7515,7 +8427,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 404 */
+            /** @description Work type item not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7550,7 +8462,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
+            /** @description Work type item deleted successfully. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -7561,7 +8473,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7583,7 +8495,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7664,7 +8576,50 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Response for status 400 */
+            /** @description Work type item created successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Linked work type (reference relationship) */
+                        workTypeCode: string;
+                        /**
+                         * Format: uuid
+                         * @description Work type item's unique guid
+                         */
+                        guid: string;
+                        /** @description Unique work type item code */
+                        code: string;
+                        /** @description Work type item name */
+                        name: string;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7686,7 +8641,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 401 */
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7708,7 +8663,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7743,7 +8698,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Work type item activated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                    };
+                };
+            };
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7765,7 +8731,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7800,7 +8766,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 401 */
+            /** @description Work type item deactivated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                    };
+                };
+            };
+            /** @description Not authenticated. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7822,7 +8799,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Response for status 403 */
+            /** @description Insufficient permissions. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8312,7 +9289,7 @@ export interface operations {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
                         /** @enum {string} */
-                        orderStatus: "new" | "pendingApproval" | "inProgress" | "done" | "completed" | "claimed" | "closed" | "cancelled";
+                        orderStatus: "draft" | "new" | "pending" | "progress" | "done" | "completed" | "claimed" | "closed" | "cancelled" | "rejected";
                         customerCode?: string;
                         workType?: string;
                         leadEngineerCode?: string;
@@ -8330,7 +9307,7 @@ export interface operations {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
                         /** @enum {string} */
-                        orderStatus: "new" | "pendingApproval" | "inProgress" | "done" | "completed" | "claimed" | "closed" | "cancelled";
+                        orderStatus: "draft" | "new" | "pending" | "progress" | "done" | "completed" | "claimed" | "closed" | "cancelled" | "rejected";
                         customerCode?: string;
                         workType?: string;
                         leadEngineerCode?: string;
@@ -8348,7 +9325,7 @@ export interface operations {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
                         /** @enum {string} */
-                        orderStatus: "new" | "pendingApproval" | "inProgress" | "done" | "completed" | "claimed" | "closed" | "cancelled";
+                        orderStatus: "draft" | "new" | "pending" | "progress" | "done" | "completed" | "claimed" | "closed" | "cancelled" | "rejected";
                         customerCode?: string;
                         workType?: string;
                         leadEngineerCode?: string;
@@ -8460,7 +9437,7 @@ export interface operations {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
                         /** @enum {string} */
-                        orderStatus: "new" | "pendingApproval" | "inProgress" | "done" | "completed" | "claimed" | "closed" | "cancelled";
+                        orderStatus: "draft" | "new" | "pending" | "progress" | "done" | "completed" | "claimed" | "closed" | "cancelled" | "rejected";
                         customerCode?: string;
                         workType?: string;
                         leadEngineerCode?: string;
@@ -8478,7 +9455,7 @@ export interface operations {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
                         /** @enum {string} */
-                        orderStatus: "new" | "pendingApproval" | "inProgress" | "done" | "completed" | "claimed" | "closed" | "cancelled";
+                        orderStatus: "draft" | "new" | "pending" | "progress" | "done" | "completed" | "claimed" | "closed" | "cancelled" | "rejected";
                         customerCode?: string;
                         workType?: string;
                         leadEngineerCode?: string;
@@ -8496,7 +9473,7 @@ export interface operations {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
                         /** @enum {string} */
-                        orderStatus: "new" | "pendingApproval" | "inProgress" | "done" | "completed" | "claimed" | "closed" | "cancelled";
+                        orderStatus: "draft" | "new" | "pending" | "progress" | "done" | "completed" | "claimed" | "closed" | "cancelled" | "rejected";
                         customerCode?: string;
                         workType?: string;
                         leadEngineerCode?: string;
@@ -8607,7 +9584,7 @@ export interface operations {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
                         /** @enum {string} */
-                        orderStatus: "new" | "pendingApproval" | "inProgress" | "done" | "completed" | "claimed" | "closed" | "cancelled";
+                        orderStatus: "draft" | "new" | "pending" | "progress" | "done" | "completed" | "claimed" | "closed" | "cancelled" | "rejected";
                         customerCode?: string;
                         workType?: string;
                         leadEngineerCode?: string;
@@ -8625,7 +9602,7 @@ export interface operations {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
                         /** @enum {string} */
-                        orderStatus: "new" | "pendingApproval" | "inProgress" | "done" | "completed" | "claimed" | "closed" | "cancelled";
+                        orderStatus: "draft" | "new" | "pending" | "progress" | "done" | "completed" | "claimed" | "closed" | "cancelled" | "rejected";
                         customerCode?: string;
                         workType?: string;
                         leadEngineerCode?: string;
@@ -8643,7 +9620,7 @@ export interface operations {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
                         /** @enum {string} */
-                        orderStatus: "new" | "pendingApproval" | "inProgress" | "done" | "completed" | "claimed" | "closed" | "cancelled";
+                        orderStatus: "draft" | "new" | "pending" | "progress" | "done" | "completed" | "claimed" | "closed" | "cancelled" | "rejected";
                         customerCode?: string;
                         workType?: string;
                         leadEngineerCode?: string;
@@ -10477,5 +11454,1137 @@ export interface operations {
                 };
             };
         };
+    };
+    "getApiWork-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderByGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "postApiWork-orderDraft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                    description: string;
+                    workType: string;
+                    workTypeItem: string;
+                    customerCode: string;
+                    contractNo?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode?: string | null;
+                    personInChargeCode?: string | null;
+                    assistantEngineerCodes?: string[];
+                    startDate?: string | null;
+                    estimatedEndDate?: string | null;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "application/x-www-form-urlencoded": {
+                    title: string;
+                    description: string;
+                    workType: string;
+                    workTypeItem: string;
+                    customerCode: string;
+                    contractNo?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode?: string | null;
+                    personInChargeCode?: string | null;
+                    assistantEngineerCodes?: string[];
+                    startDate?: string | null;
+                    estimatedEndDate?: string | null;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "multipart/form-data": {
+                    title: string;
+                    description: string;
+                    workType: string;
+                    workTypeItem: string;
+                    customerCode: string;
+                    contractNo?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode?: string | null;
+                    personInChargeCode?: string | null;
+                    assistantEngineerCodes?: string[];
+                    startDate?: string | null;
+                    estimatedEndDate?: string | null;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+            };
+        };
+        responses: never;
+    };
+    "postApiWork-orderNew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                    description: string;
+                    workType: string;
+                    workTypeItem: string;
+                    customerCode: string;
+                    contractNo: string;
+                    location: string;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode: string;
+                    salesAgentCode?: string | null;
+                    personInChargeCode: string;
+                    assistantEngineerCodes?: string[];
+                    /** Format: date-time */
+                    startDate: string;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "application/x-www-form-urlencoded": {
+                    title: string;
+                    description: string;
+                    workType: string;
+                    workTypeItem: string;
+                    customerCode: string;
+                    contractNo: string;
+                    location: string;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode: string;
+                    salesAgentCode?: string | null;
+                    personInChargeCode: string;
+                    assistantEngineerCodes?: string[];
+                    /** Format: date-time */
+                    startDate: string;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "multipart/form-data": {
+                    title: string;
+                    description: string;
+                    workType: string;
+                    workTypeItem: string;
+                    customerCode: string;
+                    contractNo: string;
+                    location: string;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode: string;
+                    salesAgentCode?: string | null;
+                    personInChargeCode: string;
+                    assistantEngineerCodes?: string[];
+                    /** Format: date-time */
+                    startDate: string;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+            };
+        };
+        responses: never;
+    };
+    "postApiWork-orderPending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                    description: string;
+                    workType: string;
+                    workTypeItem: string;
+                    customerCode: string;
+                    contractNo: string;
+                    location: string;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode: string;
+                    salesAgentCode?: string | null;
+                    personInChargeCode: string;
+                    assistantEngineerCodes?: string[];
+                    /** Format: date-time */
+                    startDate: string;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "application/x-www-form-urlencoded": {
+                    title: string;
+                    description: string;
+                    workType: string;
+                    workTypeItem: string;
+                    customerCode: string;
+                    contractNo: string;
+                    location: string;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode: string;
+                    salesAgentCode?: string | null;
+                    personInChargeCode: string;
+                    assistantEngineerCodes?: string[];
+                    /** Format: date-time */
+                    startDate: string;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "multipart/form-data": {
+                    title: string;
+                    description: string;
+                    workType: string;
+                    workTypeItem: string;
+                    customerCode: string;
+                    contractNo: string;
+                    location: string;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode: string;
+                    salesAgentCode?: string | null;
+                    personInChargeCode: string;
+                    assistantEngineerCodes?: string[];
+                    /** Format: date-time */
+                    startDate: string;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderByGuidDraft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    description?: string;
+                    workType?: string;
+                    workTypeItem?: string | null;
+                    customerCode?: string;
+                    contractNo?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode?: string | null;
+                    personInChargeCode?: string | null;
+                    assistantEngineerCodes?: string[];
+                    startDate?: string | null;
+                    estimatedEndDate?: string | null;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "application/x-www-form-urlencoded": {
+                    title?: string;
+                    description?: string;
+                    workType?: string;
+                    workTypeItem?: string | null;
+                    customerCode?: string;
+                    contractNo?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode?: string | null;
+                    personInChargeCode?: string | null;
+                    assistantEngineerCodes?: string[];
+                    startDate?: string | null;
+                    estimatedEndDate?: string | null;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "multipart/form-data": {
+                    title?: string;
+                    description?: string;
+                    workType?: string;
+                    workTypeItem?: string | null;
+                    customerCode?: string;
+                    contractNo?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode?: string | null;
+                    personInChargeCode?: string | null;
+                    assistantEngineerCodes?: string[];
+                    startDate?: string | null;
+                    estimatedEndDate?: string | null;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderByGuidNew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    description?: string;
+                    workType: string;
+                    workTypeItem: string | null;
+                    customerCode: string;
+                    contractNo?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode?: string | null;
+                    personInChargeCode?: string | null;
+                    assistantEngineerCodes?: string[];
+                    startDate?: string | null;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "application/x-www-form-urlencoded": {
+                    title?: string;
+                    description?: string;
+                    workType: string;
+                    workTypeItem: string | null;
+                    customerCode: string;
+                    contractNo?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode?: string | null;
+                    personInChargeCode?: string | null;
+                    assistantEngineerCodes?: string[];
+                    startDate?: string | null;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+                "multipart/form-data": {
+                    title?: string;
+                    description?: string;
+                    workType: string;
+                    workTypeItem: string | null;
+                    customerCode: string;
+                    contractNo?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    extraFields?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode?: string | null;
+                    personInChargeCode?: string | null;
+                    assistantEngineerCodes?: string[];
+                    startDate?: string | null;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    equipment?: {
+                        /** @description Equipment name / description */
+                        name?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Equipment brand / manufacturer */
+                        brand?: string;
+                        /** @description Equipment model number */
+                        model?: string;
+                        /** @description Equipment classification type (e.g. motor, pump, compressor) */
+                        equipmentType?: string;
+                    }[];
+                    technical?: {
+                        /** @description Flow head / equipment identifier */
+                        flowHead?: string;
+                        /** @description Additional custom technical field (free text) */
+                        extraField?: string;
+                        /** @description Equipment brand / manufacturer name */
+                        brandName?: string;
+                        /** @description Equipment serial number */
+                        serialNo?: string;
+                        /** @description Motor / equipment frame size */
+                        frameSize?: string;
+                        /** @description Electrical phase configuration (e.g. 1-phase / 3-phase) */
+                        phase?: string;
+                        /** @description Rated voltage specification */
+                        ratedVoltage?: string;
+                        /** @description Rated rotational speed (RPM) */
+                        ratedSpeed?: string;
+                        /** @description Rated current (Ampere) */
+                        ratedCurrent?: string;
+                        /** @description Rated power output (kW / HP) */
+                        ratedPower?: string;
+                    };
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderByGuidPending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    description?: string;
+                    leadEngineerCode?: string;
+                    assistantEngineerCodes?: string[];
+                };
+                "application/x-www-form-urlencoded": {
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    description?: string;
+                    leadEngineerCode?: string;
+                    assistantEngineerCodes?: string[];
+                };
+                "multipart/form-data": {
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    description?: string;
+                    leadEngineerCode?: string;
+                    assistantEngineerCodes?: string[];
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderByGuidProgress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    description?: string;
+                    location?: string;
+                    latitude?: number;
+                    longitude?: number;
+                    personInChargeCode?: string;
+                    leadEngineerCode?: string;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    assistantEngineerCodes?: string[];
+                };
+                "application/x-www-form-urlencoded": {
+                    description?: string;
+                    location?: string;
+                    latitude?: number;
+                    longitude?: number;
+                    personInChargeCode?: string;
+                    leadEngineerCode?: string;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    assistantEngineerCodes?: string[];
+                };
+                "multipart/form-data": {
+                    description?: string;
+                    location?: string;
+                    latitude?: number;
+                    longitude?: number;
+                    personInChargeCode?: string;
+                    leadEngineerCode?: string;
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                    assistantEngineerCodes?: string[];
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderByGuidSubmit-new": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                };
+                "multipart/form-data": {
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderByGuidSubmit-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                };
+                "multipart/form-data": {
+                    /** Format: date-time */
+                    estimatedEndDate: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderByGuidApprove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "putApiWork-orderByGuidReject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    rejectedReason: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    rejectedReason: string;
+                };
+                "multipart/form-data": {
+                    rejectedReason: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderByGuidClaim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    invoiceAmount: number;
+                };
+                "application/x-www-form-urlencoded": {
+                    invoiceAmount: number;
+                };
+                "multipart/form-data": {
+                    invoiceAmount: number;
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderByGuidComplete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "putApiWork-orderByGuidClose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "putApiWork-orderByGuidCancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "putApiWork-orderByGuidReopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
     };
 }
