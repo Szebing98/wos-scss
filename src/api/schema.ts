@@ -1683,6 +1683,246 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-order/{guid}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuidActivities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuidNotes"];
+        put?: never;
+        post: operations["postApiWork-orderByGuidNotes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/notes/{noteGuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderNotesByNoteGuid"];
+        post?: never;
+        delete: operations["deleteApiWork-orderNotesByNoteGuid"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/parts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuidParts"];
+        put?: never;
+        post: operations["postApiWork-orderByGuidParts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/parts/{partGuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderPartsByPartGuid"];
+        post?: never;
+        delete: operations["deleteApiWork-orderPartsByPartGuid"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuidServices"];
+        put?: never;
+        post: operations["postApiWork-orderByGuidServices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/services/{serviceGuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderServicesByServiceGuid"];
+        post?: never;
+        delete: operations["deleteApiWork-orderServicesByServiceGuid"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/engineers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuidEngineers"];
+        put?: never;
+        post: operations["postApiWork-orderByGuidEngineers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/engineers/{engineerGuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiWork-orderEngineersByEngineerGuid"];
+        post?: never;
+        delete: operations["deleteApiWork-orderEngineersByEngineerGuid"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuidFiles"];
+        put?: never;
+        post: operations["postApiWork-orderByGuidFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/files/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWork-orderByGuidFilesUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/files/upload-bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWork-orderByGuidFilesUpload-bulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/files/{fileGuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderFilesByFileGuidDownload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/files/{fileGuid}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderFilesByFileGuidPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/files/{fileGuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderFilesByFileGuid"];
+        put: operations["putApiWork-orderFilesByFileGuid"];
+        post?: never;
+        delete: operations["deleteApiWork-orderFilesByFileGuid"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5041,6 +5281,8 @@ export interface operations {
                      * @default true
                      */
                     isActive: boolean;
+                    /** @description Linked customer code for customer-specific format */
+                    customerCode?: string | null;
                 };
                 "application/x-www-form-urlencoded": {
                     /** @description Document module identifier [INV | QT | WO] */
@@ -5069,6 +5311,8 @@ export interface operations {
                      * @default true
                      */
                     isActive: boolean;
+                    /** @description Linked customer code for customer-specific format */
+                    customerCode?: string | null;
                 };
                 "multipart/form-data": {
                     /** @description Document module identifier [INV | QT | WO] */
@@ -5097,11 +5341,13 @@ export interface operations {
                      * @default true
                      */
                     isActive: boolean;
+                    /** @description Linked customer code for customer-specific format */
+                    customerCode?: string | null;
                 };
             };
         };
         responses: {
-            /** @description Document number format created successfully. */
+            /** @description Response for status 200 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5139,6 +5385,8 @@ export interface operations {
                         modifiedBy: string | null;
                         /** @description User who deleted the document numbering format */
                         deletedBy: string | null;
+                        /** @description Linked customer code */
+                        customerCode: string | null;
                     };
                 };
             };
@@ -5221,7 +5469,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Full document number format details. */
+            /** @description Response for status 200 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5259,6 +5507,8 @@ export interface operations {
                         modifiedBy: string | null;
                         /** @description User who deleted the document numbering format */
                         deletedBy: string | null;
+                        /** @description Linked customer code */
+                        customerCode: string | null;
                     };
                 };
             };
@@ -5368,6 +5618,8 @@ export interface operations {
                      * @default true
                      */
                     isActive?: boolean;
+                    /** @description Linked customer code for customer-specific format */
+                    customerCode?: string | null;
                 };
                 "application/x-www-form-urlencoded": {
                     /** @description Document module identifier [INV | QT | WO] */
@@ -5396,6 +5648,8 @@ export interface operations {
                      * @default true
                      */
                     isActive?: boolean;
+                    /** @description Linked customer code for customer-specific format */
+                    customerCode?: string | null;
                 };
                 "multipart/form-data": {
                     /** @description Document module identifier [INV | QT | WO] */
@@ -5424,11 +5678,13 @@ export interface operations {
                      * @default true
                      */
                     isActive?: boolean;
+                    /** @description Linked customer code for customer-specific format */
+                    customerCode?: string | null;
                 };
             };
         };
         responses: {
-            /** @description Document number format updated successfully. */
+            /** @description Response for status 200 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5466,6 +5722,8 @@ export interface operations {
                         modifiedBy: string | null;
                         /** @description User who deleted the document numbering format */
                         deletedBy: string | null;
+                        /** @description Linked customer code */
+                        customerCode: string | null;
                     };
                 };
             };
@@ -12581,6 +12839,876 @@ export interface operations {
             header?: never;
             path: {
                 guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderByGuidActivities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderByGuidNotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "postApiWork-orderByGuidNotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Note content */
+                    content: string;
+                    /** @description Visibility level of work order note */
+                    viewLevel?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Note content */
+                    content: string;
+                    /** @description Visibility level of work order note */
+                    viewLevel?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Note content */
+                    content: string;
+                    /** @description Visibility level of work order note */
+                    viewLevel?: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderNotesByNoteGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noteGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Note content */
+                    content?: string;
+                    /** @description Visibility level of work order note */
+                    viewLevel?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Note content */
+                    content?: string;
+                    /** @description Visibility level of work order note */
+                    viewLevel?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Note content */
+                    content?: string;
+                    /** @description Visibility level of work order note */
+                    viewLevel?: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "deleteApiWork-orderNotesByNoteGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noteGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderByGuidParts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "postApiWork-orderByGuidParts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Referenced part replaced code */
+                    partReplacedCode: string;
+                    /** @description Part replaced name */
+                    name: string;
+                    /** @description Quantity of service provided used */
+                    quantity: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice: number;
+                    /** @description Unit of measurement */
+                    uom: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Referenced part replaced code */
+                    partReplacedCode: string;
+                    /** @description Part replaced name */
+                    name: string;
+                    /** @description Quantity of service provided used */
+                    quantity: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice: number;
+                    /** @description Unit of measurement */
+                    uom: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+                "multipart/form-data": {
+                    /** @description Referenced part replaced code */
+                    partReplacedCode: string;
+                    /** @description Part replaced name */
+                    name: string;
+                    /** @description Quantity of service provided used */
+                    quantity: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice: number;
+                    /** @description Unit of measurement */
+                    uom: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderPartsByPartGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Referenced part replaced code */
+                    partReplacedCode?: string;
+                    /** @description Part replaced name */
+                    name?: string;
+                    /** @description Quantity of service provided used */
+                    quantity?: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice?: number;
+                    /** @description Unit of measurement */
+                    uom?: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Referenced part replaced code */
+                    partReplacedCode?: string;
+                    /** @description Part replaced name */
+                    name?: string;
+                    /** @description Quantity of service provided used */
+                    quantity?: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice?: number;
+                    /** @description Unit of measurement */
+                    uom?: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+                "multipart/form-data": {
+                    /** @description Referenced part replaced code */
+                    partReplacedCode?: string;
+                    /** @description Part replaced name */
+                    name?: string;
+                    /** @description Quantity of service provided used */
+                    quantity?: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice?: number;
+                    /** @description Unit of measurement */
+                    uom?: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+            };
+        };
+        responses: never;
+    };
+    "deleteApiWork-orderPartsByPartGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderByGuidServices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "postApiWork-orderByGuidServices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Referenced service provided code */
+                    serviceProvidedCode: string;
+                    /** @description Service provided name */
+                    name: string;
+                    /** @description Quantity of service provided used */
+                    quantity: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice: number;
+                    /** @description Unit of measurement */
+                    uom: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Referenced service provided code */
+                    serviceProvidedCode: string;
+                    /** @description Service provided name */
+                    name: string;
+                    /** @description Quantity of service provided used */
+                    quantity: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice: number;
+                    /** @description Unit of measurement */
+                    uom: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+                "multipart/form-data": {
+                    /** @description Referenced service provided code */
+                    serviceProvidedCode: string;
+                    /** @description Service provided name */
+                    name: string;
+                    /** @description Quantity of service provided used */
+                    quantity: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice: number;
+                    /** @description Unit of measurement */
+                    uom: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderServicesByServiceGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serviceGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Referenced service provided code */
+                    serviceProvidedCode?: string;
+                    /** @description Service provided name */
+                    name?: string;
+                    /** @description Quantity of service provided used */
+                    quantity?: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice?: number;
+                    /** @description Unit of measurement */
+                    uom?: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Referenced service provided code */
+                    serviceProvidedCode?: string;
+                    /** @description Service provided name */
+                    name?: string;
+                    /** @description Quantity of service provided used */
+                    quantity?: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice?: number;
+                    /** @description Unit of measurement */
+                    uom?: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+                "multipart/form-data": {
+                    /** @description Referenced service provided code */
+                    serviceProvidedCode?: string;
+                    /** @description Service provided name */
+                    name?: string;
+                    /** @description Quantity of service provided used */
+                    quantity?: number;
+                    /** @description Unit price of service provided at transaction time */
+                    unitPrice?: number;
+                    /** @description Unit of measurement */
+                    uom?: string;
+                    /** @description Markup rate */
+                    rate?: number;
+                };
+            };
+        };
+        responses: never;
+    };
+    "deleteApiWork-orderServicesByServiceGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serviceGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderByGuidEngineers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "postApiWork-orderByGuidEngineers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Assigned engineer code */
+                    engineerCode: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment start date (if scheduled or backdated assignment)
+                     */
+                    dateFrom?: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment end date (if temporary assignment or replacement)
+                     */
+                    dateTo?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Assigned engineer code */
+                    engineerCode: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment start date (if scheduled or backdated assignment)
+                     */
+                    dateFrom?: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment end date (if temporary assignment or replacement)
+                     */
+                    dateTo?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Assigned engineer code */
+                    engineerCode: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment start date (if scheduled or backdated assignment)
+                     */
+                    dateFrom?: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment end date (if temporary assignment or replacement)
+                     */
+                    dateTo?: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "putApiWork-orderEngineersByEngineerGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engineerGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Assigned engineer code */
+                    engineerCode?: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment start date (if scheduled or backdated assignment)
+                     */
+                    dateFrom?: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment end date (if temporary assignment or replacement)
+                     */
+                    dateTo?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Assigned engineer code */
+                    engineerCode?: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment start date (if scheduled or backdated assignment)
+                     */
+                    dateFrom?: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment end date (if temporary assignment or replacement)
+                     */
+                    dateTo?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Assigned engineer code */
+                    engineerCode?: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment start date (if scheduled or backdated assignment)
+                     */
+                    dateFrom?: string;
+                    /**
+                     * Format: date-time
+                     * @description Assignment end date (if temporary assignment or replacement)
+                     */
+                    dateTo?: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "deleteApiWork-orderEngineersByEngineerGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engineerGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Reason for removing engineer from work order */
+                    reason?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Reason for removing engineer from work order */
+                    reason?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Reason for removing engineer from work order */
+                    reason?: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "getApiWork-orderByGuidFiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "postApiWork-orderByGuidFiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description File category (e.g. invoice, receipt, image, quotation) */
+                    category: string;
+                    /** @description Image category */
+                    subcategory?: string;
+                    /** @description File name */
+                    fileName: string;
+                    /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                    mimeType?: string;
+                    /** @description Internal storage path or object key */
+                    storagePath: string;
+                    /** @description Public or signed URL for accessing uploaded file */
+                    storageUrl?: string | null;
+                    /** @description Uploaded file size in bytes */
+                    fileSize?: number;
+                    /** @description Additional remarks or notes related to uploaded file */
+                    notes?: string;
+                    /** @description Document number extracted from uploaded file */
+                    docNo?: string;
+                    /**
+                     * Format: date-time
+                     * @description Document date extracted from uploaded file
+                     */
+                    docDate?: string;
+                    /** @description Document amount extracted or linked from uploaded file */
+                    docAmount?: number;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description File category (e.g. invoice, receipt, image, quotation) */
+                    category: string;
+                    /** @description Image category */
+                    subcategory?: string;
+                    /** @description File name */
+                    fileName: string;
+                    /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                    mimeType?: string;
+                    /** @description Internal storage path or object key */
+                    storagePath: string;
+                    /** @description Public or signed URL for accessing uploaded file */
+                    storageUrl?: string | null;
+                    /** @description Uploaded file size in bytes */
+                    fileSize?: number;
+                    /** @description Additional remarks or notes related to uploaded file */
+                    notes?: string;
+                    /** @description Document number extracted from uploaded file */
+                    docNo?: string;
+                    /**
+                     * Format: date-time
+                     * @description Document date extracted from uploaded file
+                     */
+                    docDate?: string;
+                    /** @description Document amount extracted or linked from uploaded file */
+                    docAmount?: number;
+                };
+                "multipart/form-data": {
+                    /** @description File category (e.g. invoice, receipt, image, quotation) */
+                    category: string;
+                    /** @description Image category */
+                    subcategory?: string;
+                    /** @description File name */
+                    fileName: string;
+                    /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                    mimeType?: string;
+                    /** @description Internal storage path or object key */
+                    storagePath: string;
+                    /** @description Public or signed URL for accessing uploaded file */
+                    storageUrl?: string | null;
+                    /** @description Uploaded file size in bytes */
+                    fileSize?: number;
+                    /** @description Additional remarks or notes related to uploaded file */
+                    notes?: string;
+                    /** @description Document number extracted from uploaded file */
+                    docNo?: string;
+                    /**
+                     * Format: date-time
+                     * @description Document date extracted from uploaded file
+                     */
+                    docDate?: string;
+                    /** @description Document amount extracted or linked from uploaded file */
+                    docAmount?: number;
+                };
+            };
+        };
+        responses: never;
+    };
+    "postApiWork-orderByGuidFilesUpload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    fileName?: string;
+                    category: string;
+                    subcategory?: string;
+                    notes?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    fileName?: string;
+                    category: string;
+                    subcategory?: string;
+                    notes?: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    fileName?: string;
+                    category: string;
+                    subcategory?: string;
+                    notes?: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "postApiWork-orderByGuidFilesUpload-bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @default Files */
+                    files: string[];
+                    fileNames?: string[];
+                    category: string;
+                    subcategory?: string;
+                    notes?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @default Files */
+                    files: string[];
+                    fileNames?: string[];
+                    category: string;
+                    subcategory?: string;
+                    notes?: string;
+                };
+                "multipart/form-data": {
+                    /** @default Files */
+                    files: string[];
+                    fileNames?: string[];
+                    category: string;
+                    subcategory?: string;
+                    notes?: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "getApiWork-orderFilesByFileGuidDownload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderFilesByFileGuidPreview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderFilesByFileGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "putApiWork-orderFilesByFileGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description File category (e.g. invoice, receipt, image, quotation) */
+                    category?: string;
+                    /** @description Image category */
+                    subcategory?: string;
+                    /** @description File name */
+                    fileName?: string;
+                    /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                    mimeType?: string;
+                    /** @description Internal storage path or object key */
+                    storagePath?: string;
+                    /** @description Public or signed URL for accessing uploaded file */
+                    storageUrl?: string | null;
+                    /** @description Uploaded file size in bytes */
+                    fileSize?: number;
+                    /** @description Additional remarks or notes related to uploaded file */
+                    notes?: string;
+                    /** @description Document number extracted from uploaded file */
+                    docNo?: string;
+                    /**
+                     * Format: date-time
+                     * @description Document date extracted from uploaded file
+                     */
+                    docDate?: string;
+                    /** @description Document amount extracted or linked from uploaded file */
+                    docAmount?: number;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description File category (e.g. invoice, receipt, image, quotation) */
+                    category?: string;
+                    /** @description Image category */
+                    subcategory?: string;
+                    /** @description File name */
+                    fileName?: string;
+                    /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                    mimeType?: string;
+                    /** @description Internal storage path or object key */
+                    storagePath?: string;
+                    /** @description Public or signed URL for accessing uploaded file */
+                    storageUrl?: string | null;
+                    /** @description Uploaded file size in bytes */
+                    fileSize?: number;
+                    /** @description Additional remarks or notes related to uploaded file */
+                    notes?: string;
+                    /** @description Document number extracted from uploaded file */
+                    docNo?: string;
+                    /**
+                     * Format: date-time
+                     * @description Document date extracted from uploaded file
+                     */
+                    docDate?: string;
+                    /** @description Document amount extracted or linked from uploaded file */
+                    docAmount?: number;
+                };
+                "multipart/form-data": {
+                    /** @description File category (e.g. invoice, receipt, image, quotation) */
+                    category?: string;
+                    /** @description Image category */
+                    subcategory?: string;
+                    /** @description File name */
+                    fileName?: string;
+                    /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                    mimeType?: string;
+                    /** @description Internal storage path or object key */
+                    storagePath?: string;
+                    /** @description Public or signed URL for accessing uploaded file */
+                    storageUrl?: string | null;
+                    /** @description Uploaded file size in bytes */
+                    fileSize?: number;
+                    /** @description Additional remarks or notes related to uploaded file */
+                    notes?: string;
+                    /** @description Document number extracted from uploaded file */
+                    docNo?: string;
+                    /**
+                     * Format: date-time
+                     * @description Document date extracted from uploaded file
+                     */
+                    docDate?: string;
+                    /** @description Document amount extracted or linked from uploaded file */
+                    docAmount?: number;
+                };
+            };
+        };
+        responses: never;
+    };
+    "deleteApiWork-orderFilesByFileGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileGuid: string;
             };
             cookie?: never;
         };

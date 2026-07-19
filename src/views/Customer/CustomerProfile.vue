@@ -2,46 +2,37 @@
 import Badge from "@/components/Badge.vue";
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { customerApi } from "@/api/customer/customer.api";
 
 const route = useRoute();
 const router = useRouter();
 const customer = ref<any>(null);
+const loading = ref(false);
 
-onMounted(() => {
+onMounted(async () => {
 	const code = route.query.code;
-	customer.value = {
-		code: code || "CUST-001",
-		accountNo: "300-A0001",
-		name: "Asiasoft Tech Sdn Bhd",
-		licenseNo: "L-9901",
-		isActive: true,
-		requestEinvoice: true,
-		addressCode: "ADDR-KL",
-		profile: {
-			email: "finance@asiasoft.com",
-			phone: "+603-88889999",
-			tin: "T2100992010",
-			brn: "200801030089",
-			individualType: "COMPANY",
-			identityNo: "831418-H",
-			msicCode: "62010",
-			msicDesc: "Computer programming activities",
-		},
-		metadata: {
-			currencyCode: "MYR",
-			creditLimit: "50,000.00",
-			overdueLimit: "10,000.00",
-			controlAccount: "200-DEBTOR",
-			taxExemptNo: "TX-EX-992A",
-			exemptExpiryDate: "2027-12-31 00:00:00",
-			deliveryAddressCode: "DEL-HQ-KL",
-			attention: "Mr. Tan Boon",
-		},
-	};
+	if (!code || typeof code !== "string") {
+		router.back();
+		return;
+	}
+
+	loading.value = true;
+	try {
+		const { data, error } = await customerApi.getCustomerByGuid(code);
+		if (data && data.data) {
+			customer.value = data.data;
+		} else if (error) {
+			console.error("Failed to load customer profile:", error);
+		}
+	} catch (e) {
+		console.error("Error loading customer profile:", e);
+	} finally {
+		loading.value = false;
+	}
 });
 
 function handleEditCustomer() {
-	router.push(`/customer/form?code=${customer.value.code}`);
+	router.push(`/customer/form?code=${customer.value.guid}`);
 }
 </script>
 
@@ -297,7 +288,7 @@ function handleEditCustomer() {
 		width: 36px;
 		height: 36px;
 		border-radius: 50%;
-		color: var();
+		color: white;
 		font-weight: 700;
 		font-size: 14px;
 		display: flex;

@@ -2,15 +2,16 @@
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useThemeStore } from "@/stores/theme.store";
-import { authApi } from "@/api/auth/auth.api";
-import type { MeResponse } from "@/api/auth/auth.types";
+import { useAuthStore } from "@/stores/auth.store";
 
 import AppHeader from "./AppHeader.vue";
 import AppSidebar from "./AppSidebar.vue";
 import AppFooter from "./AppFooter.vue";
 import LogoutDialog from "./LogoutDialog.vue";
+import Snackbar from "@/components/Snackbar.vue";
 
 const themeStore = useThemeStore();
+const authStore = useAuthStore();
 
 const isDocked = ref(false);
 const isMobile = ref(false);
@@ -24,16 +25,15 @@ const isLogoutDialogOpen = ref(false);
 const route = useRoute();
 const router = useRouter();
 
-const currentUser = ref<MeResponse | null>(null);
-
-async function loadUser() {
-	const { data, error } = await authApi.me();
-	if (data) {
-		currentUser.value = data;
-	} else if (error) {
-		console.error("Failed to load user profile:", error);
+// Fetch once on mount and cache in store — Header will react to store changes automatically
+onMounted(async () => {
+	if (!authStore.currentUser) {
+		await authStore.fetchMe();
 	}
-}
+	handleResize();
+	window.addEventListener("resize", handleResize);
+	document.addEventListener("click", handleClickOutside);
+});
 
 function handleLogout() {
 	localStorage.removeItem("authToken");
@@ -86,13 +86,6 @@ function handleResize() {
 	}
 }
 
-onMounted(() => {
-	loadUser();
-	handleResize();
-	window.addEventListener("resize", handleResize);
-	document.addEventListener("click", handleClickOutside);
-});
-
 onUnmounted(() => {
 	window.removeEventListener("resize", handleResize);
 	document.removeEventListener("click", handleClickOutside);
@@ -112,7 +105,7 @@ onUnmounted(() => {
 		<AppHeader
 			v-model:isAccountOpenMobile="isAccountOpenMobile"
 			:dark-theme="themeStore.dark"
-			:current-user="currentUser"
+			:current-user="authStore.currentUser"
 			@toggle-sidebar="toggleSidebar"
 			@toggle-theme="themeStore.toggleTheme()"
 			@open-logout="isLogoutDialogOpen = true"
@@ -145,5 +138,6 @@ onUnmounted(() => {
 		</div>
 
 		<LogoutDialog v-model="isLogoutDialogOpen" @confirm="handleLogout" />
+		<Snackbar />
 	</div>
 </template>

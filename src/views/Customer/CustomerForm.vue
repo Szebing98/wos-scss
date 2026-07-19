@@ -184,13 +184,15 @@ import { useRoute, useRouter } from "vue-router";
 import Chip from "@/components/Chip.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
+import { customerApi } from "@/api/customer/customer.api";
 
 const route = useRoute();
 const router = useRouter();
-const isNewMode = ref(false);
+const isNewMode = ref(true);
+const customerGuid = ref<string | null>(null);
+const loading = ref(false);
 
-// 深度对齐 Zod 级基础结构
-const form = ref({
+const form = ref<any>({
 	accountNo: "",
 	name: "",
 	licenseNo: "",
@@ -208,50 +210,67 @@ const form = ref({
 	},
 });
 
-onMounted(() => {
+onMounted(async () => {
 	const code = route.query.code;
-	if (route.query.mode === "new") {
+	if (route.query.mode === "new" || !code) {
 		isNewMode.value = true;
-	} else if (code) {
+	} else {
 		isNewMode.value = false;
-		// 编辑态数据反填
-		form.value = {
-			accountNo: "300-A0001",
-			name: "Asiasoft Tech Sdn Bhd",
-			licenseNo: "L-9901",
-			isActive: true,
-			requestEinvoice: true,
-			addressCode: "ADDR-KL",
-			profile: {
-				email: "finance@asiasoft.com",
-				phone: "+603-88889999",
-				tin: "T2100992010",
-				brn: "200801030089",
-				individualType: "COMPANY",
-				identityNo: "831418-H",
-			},
-			metadata: {
-				currencyCode: "MYR",
-				creditLimit: "50,000.00",
-				overdueLimit: "10,000.00",
-				controlAccount: "200-DEBTOR",
-				taxExemptNo: "TX-EX-992A",
-				exemptExpiryDate: "2027-12-31",
-			},
-		};
+		customerGuid.value = code as string;
+		loading.value = true;
+		try {
+			const { data, error } = await customerApi.getCustomerByGuid(code as string);
+			if (data && data.data) {
+				const c = data.data as any;
+				form.value = {
+					accountNo: c.accountNo || "",
+					name: c.name || "",
+					licenseNo: c.licenseNo || "",
+					isActive: c.isActive ?? true,
+					requestEinvoice: c.requestEinvoice ?? false,
+					addressCode: c.addressCode || "",
+					profile: c.profile ? {
+						email: c.profile.email || "",
+						phone: c.profile.phone || "",
+						tin: c.profile.tin || "",
+						brn: c.profile.brn || "",
+						individualType: c.profile.individualType || "COMPANY",
+						identityNo: c.profile.identityNo || "",
+					} : { email: "", phone: "", tin: "", brn: "", individualType: "COMPANY", identityNo: "" },
+					metadata: c.metadata ? {
+						currencyCode: c.metadata.currencyCode || "MYR",
+						creditLimit: c.metadata.creditLimit || "",
+						overdueLimit: c.metadata.overdueLimit || "",
+						controlAccount: c.metadata.controlAccount || "",
+						taxExemptNo: c.metadata.taxExemptNo || "",
+						exemptExpiryDate: c.metadata.exemptExpiryDate || "",
+					} : {
+						currencyCode: "MYR",
+						creditLimit: "",
+						overdueLimit: "",
+						controlAccount: "",
+						taxExemptNo: "",
+						exemptExpiryDate: "",
+					},
+				};
+			} else if (error) {
+				console.error("Failed to load customer details:", error);
+			}
+		} catch (e) {
+			console.error(e);
+		} finally {
+			loading.value = false;
+		}
 	}
 });
 
-// 🌟 全量复刻后端 Zod 的 validateCustomerLogic 验证规则
 function validateSchemaLogic(): boolean {
-	// 规则 1：如果有 accountNo，必须绑定 profile 档案
 	if (form.value.accountNo && (!form.value.profile || !form.value.profile.email)) {
 		alert(
 			"Validation Fail: Profile schema details are required when AutoCount accountNo is provided.",
 		);
 		return false;
 	}
-	// 规则 2：如果启用了电子发票，必须配置对应的 metadata
 	if (form.value.requestEinvoice && (!form.value.metadata || !form.value.metadata.currencyCode)) {
 		alert("Validation Fail: Metadata schema required when e-Invoice engine is requested.");
 		return false;
@@ -259,17 +278,37 @@ function validateSchemaLogic(): boolean {
 	return true;
 }
 
-function handleSubmitForm() {
+async function handleSubmitForm() {
 	if (!form.value.name) {
 		alert("Customer Name is strictly mandatory.");
 		return;
 	}
 
-	// 执行逻辑拦截
 	if (!validateSchemaLogic()) return;
 
-	alert("Zod Schema Schema compliance pass! Transmitting payload to NestJS backend server...");
-	router.back();
+	try {
+		loading.value = true;
+		if (isNewMode.value) {
+			const { error } = await customerApi.createCustomer(form.value);
+			if (error) {
+				alert(`Failed to create customer: ${error.error.message}`);
+				return;
+			}
+			alert("Customer registered successfully!");
+		} else if (customerGuid.value) {
+			const { error } = await customerApi.updateCustomer(customerGuid.value, form.value);
+			if (error) {
+				alert(`Failed to update customer: ${error.error.message}`);
+				return;
+			}
+			alert("Customer configuration updated successfully!");
+		}
+		router.back();
+	} catch (e) {
+		console.error("Error submitting customer form:", e);
+	} finally {
+		loading.value = false;
+	}
 }
 </script>
 

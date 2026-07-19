@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { auditApi } from "@/api/audit/audit.api";
 import Card from "@/components/Card.vue";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
@@ -93,9 +94,11 @@ function getActionTypeClass(type: string): "success" | "warning" | "error" | "in
 
 async function loadModules() {
 	try {
-		const res = await fetch("/api/audit/modules");
-		if (res.ok) {
-			modules.value = await res.json();
+		const { data, error } = await auditApi.getAuditModules();
+		if (data) {
+			modules.value = data as string[];
+		} else if (error) {
+			throw new Error(error.error.message);
 		}
 	} catch {
 		modules.value = ["WorkOrder", "Customer", "User", "System"];
@@ -104,13 +107,27 @@ async function loadModules() {
 
 async function loadLogs() {
 	try {
-		// Mock query if backend isn't mapped
-		const res = await fetch("/api/audit");
-		if (res.ok) {
-			const data = await res.json();
-			logs.value = data.items || [];
-		} else {
-			throw new Error();
+		const query: any = {
+			pageIndex: 0,
+			pageSize: 100,
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+		};
+		if (searchQuery.value) query.q = searchQuery.value;
+		if (filterModule.value !== "all") query.module = filterModule.value;
+		if (filterType.value !== "all") query.auditType = filterType.value.toLowerCase() as any;
+
+		const { data, error } = await auditApi.getAudits(query);
+		if (data && data.data) {
+			logs.value = data.data.map((item: any) => ({
+				guid: item.guid,
+				module: item.module,
+				moduleCode: item.moduleCode,
+				auditType: item.auditType,
+				createdAt: item.createdAt,
+				createdBy: item.createdBy,
+			}));
+		} else if (error) {
+			throw new Error(error.error.message);
 		}
 	} catch {
 		// Fallback mock data
@@ -129,12 +146,15 @@ async function viewDetails(log: AuditLog) {
 	logChanges.value = [];
 
 	try {
-		const res = await fetch(`/api/audit/${log.guid}`);
-		if (res.ok) {
-			const data = await res.json();
-			logChanges.value = data.changes || [];
-		} else {
-			throw new Error();
+		const { data, error } = await auditApi.getAuditByGuid(log.guid);
+		if (data && data.changes) {
+			logChanges.value = data.changes.map((c: any) => ({
+				changedField: c.changedField,
+				old: c.old,
+				new: c.new,
+			}));
+		} else if (error) {
+			throw new Error(error.error.message);
 		}
 	} catch {
 		// Mock changes based on action

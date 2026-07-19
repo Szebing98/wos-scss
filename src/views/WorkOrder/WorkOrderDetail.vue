@@ -10,6 +10,7 @@ import Table from "@/components/Table.vue";
 import Dialog from "@/components/Dialog.vue";
 import NumericField from "@/components/NumericField.vue";
 import MultiSelect from "@/components/MultiSelect.vue";
+import { workOrderApi } from "@/api/work-order/work-order.api";
 
 const route = useRoute();
 const router = useRouter();
@@ -80,42 +81,86 @@ interface PaymentRecord {
 	fileName: string;
 }
 
-const workOrder = ref({
+const workOrder = ref<any>({
 	woNumber: woNumber || "WO-00032",
-	title: "Test OCR",
+	title: "Loading...",
 	status: "InProgress",
-	workType:"Piping",
+	workType: "Piping",
 	workTypeItem: "New Assembly",
 	salesAgent: "",
-	projectPersonInCharge: "usr-3",
-	startDate: "2026-06-20T09:00",
-	estimatedEndDate: "2026-06-25T17:00",
-	description: "Testing the OCR scanning functionality.",
-	location: "Building A, Floor 3",
-	leadEngineer: "usr-3",
-	assistantEngineers: ["usr-4"] as string[],
-	customer: { name: "Globex Corp", email: "support@globex.com", phone: "555-1234" },
+	projectPersonInCharge: "",
+	startDate: "",
+	estimatedEndDate: "",
+	description: "",
+	location: "",
+	leadEngineer: "",
+	assistantEngineers: [] as string[],
+	customer: { name: "", email: "", phone: "" },
 	equipment: {
-		name: "Conveyor Motor",
-		serialNo: "SN-998877",
-		brand: "Siemens",
-		model: "M-1000",
-		equipmentType: "Motor",
+		name: "",
+		serialNo: "",
+		brand: "",
+		model: "",
+		equipmentType: "",
 	},
 	servicesProvided: [] as LineItem[],
 	partsReplaced: [] as LineItem[],
-	images: [
-		{ id: 1, category: "Before", url: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=500&h=300&fit=crop", name: "IMG_Before_1.jpg" },
-		{ id: 2, category: "In Progress", url: "https://images.unsplash.com/photo-1504307651254-35680f356f12?w=500&h=300&fit=crop", name: "IMG_InProg_1.jpg" },
-		{ id: 3, category: "In Progress", url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&h=300&fit=crop", name: "IMG_InProg_2.jpg" },
-		{ id: 4, category: "After", url: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500&h=300&fit=crop", name: "IMG_After_1.jpg" },
-		{ id: 5, category: "After", url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=500&h=300&fit=crop", name: "IMG_After_2.jpg" },
-		{ id: 6, category: "After", url: "https://images.unsplash.com/photo-1541888279401-20963335db05?w=500&h=300&fit=crop", name: "IMG_After_3.jpg" },
-		{ id: 7, category: "After", url: "https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0?w=500&h=300&fit=crop", name: "IMG_After_4.jpg" },
-	] as ImageRecord[],
-	cusRefNo: "12381A",
+	images: [] as ImageRecord[],
+	cusRefNo: "",
 	remarks: "",
 });
+
+const loading = ref(false);
+
+async function fetchWorkOrderDetails() {
+	if (!woNumber) return;
+	loading.value = true;
+	try {
+		const { data, error } = await workOrderApi.getWorkOrderByGuid(woNumber);
+		if (data && data.data) {
+			const w = data.data as any;
+			workOrder.value = {
+				guid: w.guid,
+				woNumber: w.docNo || w.guid.substring(0, 8).toUpperCase(),
+				title: w.title || "",
+				status: w.status || "InProgress",
+				workType: w.workType || "",
+				workTypeItem: w.workTypeItem || "",
+				salesAgent: w.salesAgentCode || "",
+				projectPersonInCharge: w.projectPicCode || "",
+				startDate: w.startDate || "",
+				estimatedEndDate: w.estimatedEndDate || "",
+				description: w.description || "",
+				location: w.locationName || "",
+				leadEngineer: w.leadEngineerCode || "",
+				assistantEngineers: w.assistantEngineers || [],
+				customer: {
+					name: w.customerName || "",
+					email: w.customerEmail || "",
+					phone: w.customerPhone || "",
+				},
+				equipment: w.equipment ? {
+					name: w.equipment.name || "",
+					serialNo: w.equipment.serialNo || "",
+					brand: w.equipment.brand || "",
+					model: w.equipment.model || "",
+					equipmentType: w.equipment.equipmentType || "",
+				} : { name: "", serialNo: "", brand: "", model: "", equipmentType: "" },
+				servicesProvided: w.servicesProvided || [],
+				partsReplaced: w.partsReplaced || [],
+				images: w.images || [],
+				cusRefNo: w.cusRefNo || "",
+				remarks: w.remarks || "",
+			};
+		} else if (error) {
+			console.error("Failed to load work order detail:", error);
+		}
+	} catch (e) {
+		console.error(e);
+	} finally {
+		loading.value = false;
+	}
+}
 
 const users = [
 	{ code: "usr-1", name: "Alice Admin" },
@@ -179,7 +224,7 @@ function openItemDialog(type: "service" | "part") {
 function editItem(type: "service" | "part", id: number) {
 	const targetList =
 		type === "service" ? workOrder.value.servicesProvided : workOrder.value.partsReplaced;
-	const found = targetList.find((x) => x.id === id);
+	const found = targetList.find((x: any) => x.id === id);
 	if (found) {
 		itemDialogType.value = type;
 		editingItemId.value = id;
@@ -211,7 +256,7 @@ function addItem() {
 			: workOrder.value.partsReplaced;
 
 	if (editingItemId.value) {
-		const found = targetList.find((x) => x.id === editingItemId.value);
+		const found = targetList.find((x: any) => x.id === editingItemId.value);
 		if (found) {
 			found.code = itemForm.value.code;
 			found.name = itemForm.value.name;
@@ -236,21 +281,21 @@ function addItem() {
 function removeItem(type: "service" | "part", id: number) {
 	const targetList =
 		type === "service" ? workOrder.value.servicesProvided : workOrder.value.partsReplaced;
-	const idx = targetList.findIndex((x) => x.id === id);
+	const idx = targetList.findIndex((x: any) => x.id === id);
 	if (idx > -1) targetList.splice(idx, 1);
 }
 
 const totalServicesCost = computed(() =>
-	workOrder.value.servicesProvided.reduce((sum, item) => sum + item.subtotal, 0),
+	workOrder.value.servicesProvided.reduce((sum: number, item: any) => sum + item.subtotal, 0),
 );
 const totalPartsCost = computed(() =>
-	workOrder.value.partsReplaced.reduce((sum, item) => sum + item.subtotal, 0),
+	workOrder.value.partsReplaced.reduce((sum: number, item: any) => sum + item.subtotal, 0),
 );
 const totalCost = computed(() => totalServicesCost.value + totalPartsCost.value);
 
 // Image Logic
 function addDummyImage(category: string) {
-	const count = workOrder.value.images.filter((img) => img.category === category).length;
+	const count = workOrder.value.images.filter((img: any) => img.category === category).length;
 	if (count >= 4) {
 		alert("Maximum 4 images allowed for " + category);
 		return;
@@ -263,12 +308,22 @@ function addDummyImage(category: string) {
 	});
 }
 function removeImage(id: number) {
-	const idx = workOrder.value.images.findIndex((img) => img.id === id);
+	const idx = workOrder.value.images.findIndex((img: any) => img.id === id);
 	if (idx > -1) workOrder.value.images.splice(idx, 1);
 }
 
-function markAsDone() {
-	alert("Work order marked as done!");
+async function markAsDone() {
+	try {
+		const { error } = await workOrderApi.complete(woNumber);
+		if (error) {
+			alert(`Failed to mark as done: ${error.error.message}`);
+		} else {
+			alert("Work order marked as done!");
+			fetchWorkOrderDetails();
+		}
+	} catch (e) {
+		console.error(e);
+	}
 }
 
 const tableHeaders = [
@@ -512,22 +567,32 @@ function removePayment(id: number) {
 
 const isClaimed = ref(false);
 
-function markAsClaimed() {
+async function markAsClaimed() {
 	if (!isFullyPaid.value) return;
-	isClaimed.value = true;
-	activeTab.value = "payment";
+	try {
+		const { error } = await workOrderApi.claim(woNumber, { invoiceAmount: totalInvoiceIssued.value });
+		if (error) {
+			alert(`Failed to mark as claimed: ${error.error.message}`);
+		} else {
+			alert("Work order marked as claimed!");
+			fetchWorkOrderDetails();
+		}
+	} catch (e) {
+		console.error(e);
+	}
 }
 
 function printReport() {
 	window.print();
 }
 
-onMounted(() => {
+onMounted(async () => {
 	nextTick(() => updateTabArrows());
 	window.addEventListener("resize", updateTabArrows);
 	if (tabsWrapperRef.value) {
 		tabsWrapperRef.value.addEventListener("scroll", updateTabArrows);
 	}
+	await fetchWorkOrderDetails();
 });
 
 onUnmounted(() => {
@@ -925,7 +990,7 @@ onUnmounted(() => {
 								{{ cat }}
 								<small class="text-muted"
 									>({{
-										workOrder.images.filter((i) => i.category === cat).length
+										workOrder.images.filter((i: any) => i.category === cat).length
 									}}/4)</small
 								>
 							</h4>
@@ -933,7 +998,7 @@ onUnmounted(() => {
 								<div
 									class="image-card"
 									v-for="img in workOrder.images.filter(
-										(i) => i.category === cat,
+										(i: any) => i.category === cat,
 									)"
 									:key="img.id"
 								>
@@ -961,7 +1026,7 @@ onUnmounted(() => {
 									class="image-placeholder"
 									v-if="
 										isEditing &&
-										workOrder.images.filter((i) => i.category === cat).length <
+										workOrder.images.filter((i: any) => i.category === cat).length <
 											4
 									"
 									@click="addDummyImage(cat)"
@@ -1574,7 +1639,7 @@ onUnmounted(() => {
 									<div class="photo-category" v-for="cat in ['Before', 'In Progress', 'After']" :key="cat">
 										<strong>{{ cat.toUpperCase() }}:</strong>
 										<div class="photo-row">
-											<img v-for="img in workOrder.images.filter((i) => i.category === cat)" :key="img.id" :src="img.url" class="report-img" :alt="img.name" />
+											<img v-for="img in workOrder.images.filter((i: any) => i.category === cat)" :key="img.id" :src="img.url" class="report-img" :alt="img.name" />
 										</div>
 									</div>
 								</div>

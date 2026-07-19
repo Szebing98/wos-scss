@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
@@ -7,6 +7,7 @@ import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Badge from "@/components/Badge.vue";
+import { customerApi } from "@/api/customer/customer.api";
 
 const headers: TableHeader[] = [
 	{ key: "status", label: "Status" },
@@ -29,90 +30,64 @@ function resetFilters() {
 	filterEinvoice.value = "all";
 }
 
-const customers = ref([
-	{
-		code: "CUST-001",
-		accountNo: "300-A0001",
-		name: "Asiasoft Tech Sdn Bhd",
-		licenseNo: "L-9901",
-		isActive: true,
-		requestEinvoice: true,
-		addressCode: "ADDR-KL",
-		profile: {
-			customerCode: "CUST-001",
-			email: "finance@asiasoft.com",
-			phone: "+603-88889999",
-			tin: "T2100992010",
-			brn: "200801030089",
-			individualType: "COMPANY",
-			identityNo: "831418-H",
-			msicCode: "62010",
-			msicDesc: "Computer programming activities",
-		},
-	},
-	{
-		code: "CUST-002",
-		accountNo: "300-C0002",
-		name: "Tan Boon Hock",
-		licenseNo: null,
-		isActive: true,
-		requestEinvoice: false,
-		addressCode: "ADDR-SWK",
-		profile: {
-			customerCode: "CUST-002",
-			email: "boonhock@gmail.com",
-			phone: "+6016-5551234",
-			tin: null,
-			brn: null,
-			individualType: "MyKAD",
-			identityNo: "850101-13-5555",
-			msicCode: "00000",
-			msicDesc: "NOT APPLICABLE",
-		},
-	},
-	{
-		code: "CUST-003",
-		accountNo: null,
-		name: "Global Aircond Parts Ltd",
-		licenseNo: "L-1102",
-		isActive: false,
-		requestEinvoice: true,
-		addressCode: null,
-		profile: {
-			customerCode: "CUST-003",
-			email: "shipping@globalparts.sg",
-			phone: "+65-67772231",
-			tin: "T9920110231",
-			brn: "SG-992011",
-			individualType: "PASSPORT",
-			identityNo: "E992011A",
-			msicCode: "46590",
-			msicDesc: "Wholesale of other machinery and equipment",
-		},
-	},
-]);
+const customers = ref<any[]>([]);
+const loading = ref(false);
+
+async function fetchCustomers() {
+	loading.value = true;
+	try {
+		const query: any = {
+			pageIndex: 0,
+			pageSize: 100,
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+		};
+		if (searchQuery.value) query.q = searchQuery.value;
+		if (filterStatus.value === "active") query.isActive = true;
+		else if (filterStatus.value === "inactive") query.isActive = false;
+		if (identityFilter.value !== "all") query.individualType = identityFilter.value;
+
+		const { data, error } = await customerApi.getCustomers(query);
+		if (data && data.data) {
+			customers.value = data.data.map((c: any) => ({
+				code: c.code,
+				accountNo: c.accountNo,
+				name: c.name,
+				licenseNo: c.licenseNo,
+				isActive: c.isActive,
+				requestEinvoice: c.requestEinvoice,
+				addressCode: c.addressCode,
+				profile: c.profile ? {
+					customerCode: c.profile.customerCode,
+					email: c.profile.email,
+					phone: c.profile.phone,
+					tin: c.profile.tin,
+					brn: c.profile.brn,
+					individualType: c.profile.individualType,
+					identityNo: c.profile.identityNo,
+					msicCode: c.profile.msicCode,
+					msicDesc: c.profile.msicDesc,
+				} : null,
+			}));
+		} else if (error) {
+			console.error("Failed to load customers:", error);
+		}
+	} catch (e) {
+		console.error(e);
+	} finally {
+		loading.value = false;
+	}
+}
+
+onMounted(() => {
+	fetchCustomers();
+});
+
+watch([searchQuery, filterStatus, identityFilter, filterEinvoice], () => {
+	fetchCustomers();
+});
 
 const filteredCustomers = computed(() => {
-	return customers.value.filter((c) => {
-		const search = searchQuery.value.toLowerCase();
-		const matchesSearch =
-			!searchQuery.value ||
-			c.name.toLowerCase().includes(search) ||
-			(c.accountNo && c.accountNo.toLowerCase().includes(search)) ||
-			(c.profile && c.profile.tin && c.profile.tin.toLowerCase().includes(search));
-
-		const matchesIdentity =
-			identityFilter.value === "all" ||
-			(c.profile && c.profile.individualType === identityFilter.value);
-		const matchesStatus =
-			filterStatus.value === "all" ||
-			(filterStatus.value === "active" ? c.isActive : !c.isActive);
-		const matchesEinvoice =
-			filterEinvoice.value === "all" ||
-			(filterEinvoice.value === "required" ? c.requestEinvoice : !c.requestEinvoice);
-
-		return matchesSearch && matchesIdentity && matchesStatus && matchesEinvoice;
-	});
+	return customers.value;
 });
 
 function handleCreateCustomer() {
@@ -190,6 +165,7 @@ function countryFormatAccount(acc: string) {
 				hover
 				:headers="headers"
 				:items="filteredCustomers"
+				:loading="loading"
 				emptyMessage="No customer records matching matrix metrics."
 				@row-click="(customer) => viewCustomerDetail(customer.code)"
 			>

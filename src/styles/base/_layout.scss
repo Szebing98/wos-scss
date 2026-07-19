@@ -161,7 +161,11 @@
 	&__logo {
 		height: 32px;
 		width: auto;
-		transition: opacity 0.2s;
+		transition: opacity 0.2s, filter 0.25s;
+
+		[data-theme="dark"] & {
+			filter: brightness(0) invert(1) drop-shadow(0 4px 8px rgba(99, 102, 241, 0.12));
+		}
 	}
 
 	&-right {

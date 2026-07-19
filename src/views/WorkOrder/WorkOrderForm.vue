@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
@@ -8,6 +8,10 @@ import Button from "@/components/Button.vue";
 import Badge from "@/components/Badge.vue";
 import DatePicker from "@/components/DatePicker.vue";
 import { useRouter, useRoute } from "vue-router";
+import { customerApi } from "@/api/customer/customer.api";
+import { userApi } from "@/api/user/user.api";
+import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
+import { workOrderApi } from "@/api/work-order/work-order.api";
 
 const router = useRouter();
 const route = useRoute();
@@ -66,25 +70,99 @@ const formData = ref({
 	longitude: 0,
 });
 
-// Mock Options
-const workTypeItems = [
-	{ code: "wt-01", name: "Installation" },
-	{ code: "wt-02", name: "Maintenance" },
-	{ code: "wt-03", name: "Repair" },
-];
+const workTypeItems = ref<any[]>([]);
+const users = ref<any[]>([]);
+const customers = ref<any[]>([]);
+const loading = ref(false);
 
-const users = [
-	{ code: "usr-1", name: "Alice Smith", role: "Manager" },
-	{ code: "usr-2", name: "Bob Jones", role: "Sales" },
-	{ code: "usr-3", name: "Charlie Davis", role: "Engineer" },
-	{ code: "usr-4", name: "Diana Prince", role: "Engineer" },
-];
+async function loadOptions() {
+	try {
+		// Fetch Customers
+		const custRes = await customerApi.getCustomers({ pageIndex: 0, pageSize: 100, timezone: "UTC" });
+		if (custRes.data && custRes.data.data) {
+			customers.value = custRes.data.data.map((c: any) => ({
+				code: c.code,
+				name: c.name,
+			}));
+		}
 
-const customers = [
-	{ code: "cust-1", name: "Acme Corp" },
-	{ code: "cust-2", name: "Stark Industries" },
-	{ code: "cust-3", name: "Wayne Enterprises" },
-];
+		// Fetch Users
+		const userRes = await userApi.getUsers({ pageIndex: 0, pageSize: 100, timezone: "UTC" });
+		if (userRes.data && userRes.data.data) {
+			users.value = userRes.data.data.map((u: any) => ({
+				code: u.displayCode || u.guid.substring(0, 8).toUpperCase(),
+				name: u.displayName || "Unknown",
+			}));
+		}
+
+		// Fetch Work Types
+		const wtRes = await workTypeApi.getWorkTypes({ pageIndex: 0, pageSize: 100, timezone: "UTC" });
+		if (wtRes.data && wtRes.data.data) {
+			workTypeItems.value = wtRes.data.data.map((wt: any) => ({
+				code: wt.code,
+				name: wt.name,
+			}));
+		}
+	} catch (e) {
+		console.error("Failed to load select options:", e);
+	}
+}
+
+onMounted(async () => {
+	await loadOptions();
+	
+	const id = route.params.id;
+	if (id && typeof id === "string") {
+		try {
+			loading.value = true;
+			const { data } = await workOrderApi.getWorkOrderByGuid(id);
+			if (data && data.data) {
+				const w = data.data as any;
+				formData.value = {
+					status: w.status || "Draft",
+					workType: w.workType || "Maintenance",
+					orderTypeCode: w.orderTypeCode || "mechanical",
+					orderTypeItemCode: w.workTypeItem || "",
+					title: w.title || "",
+					description: w.description || "",
+					customerCode: w.customerCode || "",
+					salesAgent: w.salesAgentCode || "",
+					personInChargeCode: w.projectPicCode || "",
+					startDate: w.startDate || todayStr,
+					estimatedEndDate: w.estimatedEndDate || nextWeekStr,
+					leadEngineerCode: w.leadEngineerCode || "",
+					assistantEngineers: w.assistantEngineers || [],
+					equipment: w.equipment ? {
+						name: w.equipment.name || "",
+						serialNo: w.equipment.serialNo || "",
+						brand: w.equipment.brand || "",
+						model: w.equipment.model || "",
+						equipmentType: w.equipment.equipmentType || "",
+					} : { name: "", serialNo: "", brand: "", model: "", equipmentType: "" },
+					technical: w.technical ? {
+						flowHead: w.technical.flowHead || "",
+						brandName: w.technical.brandName || "",
+						serialNo: w.technical.serialNo || "",
+						ratedVoltage: w.technical.ratedVoltage || "",
+						ratedSpeed: w.technical.ratedSpeed || "",
+						ratedCurrent: w.technical.ratedCurrent || "",
+						ratedPower: w.technical.ratedPower || "",
+						phase: w.technical.phase || "",
+						frameSize: w.technical.frameSize || "",
+					} : { flowHead: "", brandName: "", serialNo: "", ratedVoltage: "", ratedSpeed: "", ratedCurrent: "", ratedPower: "", phase: "", frameSize: "" },
+					contractNo: w.contractNo || "",
+					location: w.locationName || "",
+					latitude: w.latitude || 0,
+					longitude: w.longitude || 0,
+				};
+			}
+		} catch (e) {
+			console.error("Failed to load work order edit data:", e);
+		} finally {
+			loading.value = false;
+		}
+	}
+});
 
 const phases = [
 	{ id: "1", name: "Single Phase" },
@@ -213,31 +291,96 @@ function validateForm() {
 	return isValid;
 }
 
-function submitForm() {
-	formErrors.value = {}; // Clear errors when saving as draft
-	console.log("Form Saved as Draft", formData.value);
+async function submitForm() {
+	formErrors.value = {};
+	try {
+		loading.value = true;
+		const id = route.params.id;
+		if (id && typeof id === "string") {
+			const { error } = await workOrderApi.updateDraft(id, formData.value as any);
+			if (error) {
+				alert(`Failed to update draft: ${error.error.message}`);
+				return;
+			}
+			alert("Work order draft updated successfully!");
+		} else {
+			const { error } = await workOrderApi.createDraft(formData.value as any);
+			if (error) {
+				alert(`Failed to save draft: ${error.error.message}`);
+				return;
+			}
+			alert("Work order draft created successfully!");
+		}
+		router.back();
+	} catch (e) {
+		console.error(e);
+	} finally {
+		loading.value = false;
+	}
 }
 
-function submitAndRequestApproval() {
+async function submitAndRequestApproval() {
 	if (!validateForm()) {
 		console.error("Validation failed", formErrors.value);
 		return;
 	}
-	console.log("Submitted and requested approval", formData.value);
+	try {
+		loading.value = true;
+		const id = route.params.id;
+		if (id && typeof id === "string") {
+			const { error } = await workOrderApi.updateNew(id, formData.value as any);
+			if (error) {
+				alert(`Failed to update and submit: ${error.error.message}`);
+				return;
+			}
+			alert("Work order submitted successfully!");
+		} else {
+			const { error } = await workOrderApi.createNew(formData.value as any);
+			if (error) {
+				alert(`Failed to submit: ${error.error.message}`);
+				return;
+			}
+			alert("Work order submitted successfully!");
+		}
+		router.back();
+	} catch (e) {
+		console.error(e);
+	} finally {
+		loading.value = false;
+	}
 }
 
-function submitChanges() {
+async function submitChanges() {
 	if (!validateForm()) {
 		console.error("Validation failed", formErrors.value);
 		return;
 	}
-	console.log("Changes Saved", formData.value);
-}
-
-function toggleAssistantEngineer(code: string) {
-	const index = formData.value.assistantEngineers.indexOf(code as never);
-	if (index > -1) formData.value.assistantEngineers.splice(index, 1);
-	else formData.value.assistantEngineers.push(code as never);
+	try {
+		loading.value = true;
+		const id = route.params.id;
+		if (id && typeof id === "string") {
+			let res;
+			if (formData.value.status === "Draft") {
+				res = await workOrderApi.updateDraft(id, formData.value as any);
+			} else if (formData.value.status === "New") {
+				res = await workOrderApi.updateNew(id, formData.value as any);
+			} else if (formData.value.status === "PendingApproval") {
+				res = await workOrderApi.updatePending(id, formData.value as any);
+			} else {
+				res = await workOrderApi.updateProgress(id, formData.value as any);
+			}
+			if (res && res.error) {
+				alert(`Failed to save changes: ${res.error.error.message}`);
+				return;
+			}
+			alert("Work order updated successfully!");
+		}
+		router.back();
+	} catch (e) {
+		console.error(e);
+	} finally {
+		loading.value = false;
+	}
 }
 
 function cancel() {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
 import Table from "@/components/Table.vue";
@@ -13,6 +13,7 @@ import Button from "@/components/Button.vue";
 import Dialog from "@/components/Dialog.vue";
 import DatePicker from "@/components/DatePicker.vue";
 import WorkOrderDetailsDialog from "./WorkOrderDetailsDialog.vue";
+import { workOrderApi } from "@/api/work-order/work-order.api";
 
 const props = defineProps({
 	status: {
@@ -130,6 +131,7 @@ interface TechnicalModel {
 }
 
 interface WorkOrderModel {
+	guid?: string;
 	woNumber: string;
 	title: string;
 	personInCharge: string;
@@ -188,143 +190,78 @@ function resetFilters() {
 	applyFilters();
 }
 
-const workOrders = ref<WorkOrderModel[]>([
-	{
-		woNumber: "WO-2026-0001",
-		title: "Fix HVAC in Lobby",
-		personInCharge: "Bob Smith",
-		customer: { name: "Acme Corp", email: "contact@acme.com", phone: "555-0100" },
-		workType: "Maintenance",
-		status: WorkOrderStatus.New,
-		createdAt: "2026-06-20T08:30",
-	},
-	{
-		woNumber: "WO-2026-0002",
-		title: "Replace broken lights",
-		personInCharge: "Unassigned",
-		customer: { name: "Globex", email: "info@globex.com", phone: "555-0101" },
-		workType: "Electrical",
-		status: WorkOrderStatus.PendingApproval,
-		createdAt: "2026-06-21T09:15",
-		description:
-			"Multiple fluorescent light fixtures are flickering or completely out on the 3rd floor. Please replace ballasts if necessary and install new LED tubes.",
-		location: "3rd Floor, West Wing",
-		estimatedEndDate: "2026-06-25T17:00",
-		leadEngineer: "usr-3",
-		assistantEngineers: ["usr-4"],
-		equipment: {
-			name: "Ceiling Light Fixture",
-			brand: "Philips",
-			model: "CoreLine",
-			serialNo: "PH-10293",
-			equipmentType: "Lighting",
-		},
-	},
-	{
-		woNumber: "WO-2026-0003",
-		title: "Server Room Cooling Check",
-		personInCharge: "Alice Johnson",
-		customer: { name: "Initech", email: "support@initech.com", phone: "555-0102" },
-		workType: "HVAC",
-		status: WorkOrderStatus.InProgress,
-		createdAt: "2026-06-18T14:20",
-	},
-	{
-		woNumber: "WO-2026-0004",
-		title: "Install new desks in Sales Dept",
-		personInCharge: "Charlie Davis",
-		customer: { name: "Umbrella Corp", email: "admin@umbrella.com", phone: "555-0103" },
-		workType: "Carpentry",
-		status: WorkOrderStatus.Rejected,
-		rejectedReason: "Budget not approved for this quarter.",
-		createdAt: "2026-06-15T11:00",
-	},
-	{
-		woNumber: "WO-2026-0005",
-		title: "Monthly Fire Extinguisher Inspection",
-		personInCharge: "Bob Smith",
-		customer: { name: "Massive Dynamic", email: "facilities@massive.com", phone: "555-0104" },
-		workType: "Safety",
-		status: WorkOrderStatus.Done,
-		createdAt: "2026-06-21T10:00",
-	},
-	{
-		woNumber: "WO-2026-0006",
-		title: "Update security camera firmware",
-		personInCharge: "Derrick Rose",
-		customer: { name: "Soylent Corp", email: "security@soylent.com", phone: "555-0105" },
-		workType: "IT",
-		status: WorkOrderStatus.Closed,
-		createdAt: "2026-06-10T16:45",
-	},
-	{
-		woNumber: "WO-2026-0007",
-		title: "Water leak in restroom 2B",
-		personInCharge: "Unassigned",
-		customer: { name: "Cyberdyne", email: "ops@cyberdyne.com", phone: "555-0106" },
-		workType: "Plumbing",
-		status: WorkOrderStatus.New,
-		createdAt: "2026-06-21T08:00",
-	},
-	{
-		woNumber: "WO-2026-0008",
-		title: "Restock printer supplies",
-		personInCharge: "Emma Watson",
-		customer: { name: "Wayne Enterprises", email: "office@wayne.com", phone: "555-0107" },
-		workType: "General",
-		status: WorkOrderStatus.Completed,
-		createdAt: "2026-06-19T13:30",
-	},
-	{
-		woNumber: "WO-2026-0009",
-		title: "Repair front door lock",
-		personInCharge: "Bob Smith",
-		customer: { name: "Stark Industries", email: "facilities@stark.com", phone: "555-0108" },
-		workType: "Security",
-		status: WorkOrderStatus.Claimed,
-		createdAt: "2026-06-20T15:10",
-	},
-]);
+const workOrders = ref<any[]>([]);
+const loading = ref(false);
 
-const filteredWorkOrders = computed(() => {
-	return workOrders.value.filter((wo) => {
-		const search = searchQuery.value.toLowerCase();
-		const matchesSearch =
-			!searchQuery.value ||
-			wo.title.toLowerCase().includes(search) ||
-			wo.woNumber.toLowerCase().includes(search) ||
-			wo.personInCharge.toLowerCase().includes(search) ||
-			wo.customer.name.toLowerCase().includes(search);
-
-		const matchesGlobalStatus =
-			activeStatus.value === "All" || wo.status === activeStatus.value;
-
-		const matchesLocalStatus = appliedStatusFilter.value === "all" || wo.status === appliedStatusFilter.value;
-
-		const matchesWorkType =
-			appliedWorkTypeFilter.value === "all" || wo.workType === appliedWorkTypeFilter.value;
-
-		// Date matching (created at)
-		let matchesDate = true;
-		const woDate = wo.createdAt.split("T")[0]; // Compare just the date part
-
+async function fetchWorkOrders() {
+	loading.value = true;
+	try {
+		const query: any = {
+			pageIndex: 0,
+			pageSize: 100,
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+		};
+		if (searchQuery.value) query.q = searchQuery.value;
+		
+		// Status query
+		if (activeStatus.value !== "All" && activeStatus.value !== "all") {
+			query.status = activeStatus.value;
+		} else if (appliedStatusFilter.value !== "all") {
+			query.status = appliedStatusFilter.value;
+		}
+		
+		if (appliedWorkTypeFilter.value !== "all") {
+			query.workType = appliedWorkTypeFilter.value;
+		}
 		if (appliedDateFrom.value) {
-			const fromDate = appliedDateFrom.value.split("T")[0];
-			if (woDate < fromDate) matchesDate = false;
+			query.startDate = new Date(appliedDateFrom.value).toISOString();
 		}
 		if (appliedDateTo.value) {
-			const toDate = appliedDateTo.value.split("T")[0];
-			if (woDate > toDate) matchesDate = false;
+			query.endDate = new Date(appliedDateTo.value).toISOString();
 		}
 
-		return (
-			matchesSearch &&
-			matchesGlobalStatus &&
-			matchesLocalStatus &&
-			matchesWorkType &&
-			matchesDate
-		);
-	});
+		const { data, error } = await workOrderApi.getWorkOrders(query);
+		if (data && data.data) {
+			workOrders.value = data.data.map((w: any) => ({
+				guid: w.guid,
+				woNumber: w.docNo || w.guid.substring(0, 8).toUpperCase(),
+				title: w.title,
+				personInCharge: w.projectPicName || "Unassigned",
+				customer: {
+					name: w.customerName || "Unknown",
+					email: w.customerEmail || "",
+					phone: w.customerPhone || "",
+				},
+				workType: w.workType || "",
+				status: w.status,
+				createdAt: w.createdAt,
+				rejectedReason: w.rejectedReason || "",
+				description: w.description || "",
+				location: w.locationName || "",
+				estimatedEndDate: w.estimatedEndDate || "",
+				leadEngineer: w.leadEngineerName || "",
+				assistantEngineers: w.assistantEngineers || [],
+			}));
+		} else if (error) {
+			console.error("Failed to load work orders:", error);
+		}
+	} catch (e) {
+		console.error(e);
+	} finally {
+		loading.value = false;
+	}
+}
+
+watch([searchQuery, activeStatus, appliedStatusFilter, appliedWorkTypeFilter, appliedDateFrom, appliedDateTo], () => {
+	fetchWorkOrders();
+});
+
+onMounted(() => {
+	fetchWorkOrders();
+});
+
+const filteredWorkOrders = computed(() => {
+	return workOrders.value;
 });
 
 const isAllSelected = computed({
@@ -430,9 +367,9 @@ const buttonList = [
 				openApproveDialog(item);
 			} else if (item.status === WorkOrderStatus.InProgress) {
 				// If it's in progress, navigate to the full detail page for execution
-				router.push({ name: "Work Order Detail", params: { id: item.woNumber } });
+				router.push({ name: "Work Order Detail", params: { id: item.guid } });
 			} else {
-				router.push({ name: "Work Order Form", params: { id: item.woNumber } });
+				router.push({ name: "Work Order Form", params: { id: item.guid } });
 			}
 		},
 	},
@@ -444,7 +381,7 @@ const buttonList = [
 		click: (item: WorkOrderModel) => {
 			router.push({
 				name: "Work Order Detail",
-				params: { id: item.woNumber },
+				params: { id: item.guid },
 				query: { status: "completed" },
 			});
 		},
@@ -638,79 +575,95 @@ function handleApprove() {
 	isApproveDialog.value = false;
 }
 
-function executeAction() {
+async function executeAction() {
 	if (selectedItem.value && statusAction.value) {
-		console.log(`Executing ${statusAction.value} on ${selectedItem.value.woNumber}`);
-		// Dummy execution logic (in real app, call API)
-		const target = workOrders.value.find((w) => w.woNumber === selectedItem.value?.woNumber);
-		if (target) {
-			// Apply dummy status change based on action
+		try {
+			const guid = selectedItem.value.guid;
+			if (!guid) return;
+			let res;
 			switch (statusAction.value) {
 				case WorkOrderAction.Approve:
-					target.status = WorkOrderStatus.InProgress;
+					res = await workOrderApi.approve(guid);
 					break;
 				case WorkOrderAction.MarkAsDone:
-					target.status = WorkOrderStatus.Done;
+					res = await workOrderApi.complete(guid);
 					break;
 				case WorkOrderAction.Cancel:
-					target.status = WorkOrderStatus.Cancelled;
+					res = await workOrderApi.cancel(guid);
 					break;
 				case WorkOrderAction.Reopen:
-					target.status = WorkOrderStatus.InProgress;
+					res = await workOrderApi.reopen(guid);
 					break;
 				case WorkOrderAction.MarkAsClaimed:
-					target.status = WorkOrderStatus.Claimed;
+					res = await workOrderApi.claim(guid, { invoiceAmount: 0 });
 					break;
 				case WorkOrderAction.Close:
-					target.status = WorkOrderStatus.Closed;
+					res = await workOrderApi.close(guid);
 					break;
 			}
+			if (res && res.error) {
+				alert(`Action failed: ${res.error.error.message}`);
+			} else {
+				fetchWorkOrders();
+			}
+		} catch (e) {
+			console.error(e);
 		}
 	}
 	isConfirm.value = false;
 }
 
-function executeReject() {
+async function executeReject() {
 	if (selectedItem.value && rejectReason.value) {
-		console.log(`Rejecting ${selectedItem.value.woNumber} with reason: ${rejectReason.value}`);
-		const target = workOrders.value.find((w) => w.woNumber === selectedItem.value?.woNumber);
-		if (target) {
-			target.status = WorkOrderStatus.Rejected;
-			target.rejectedReason = rejectReason.value;
+		try {
+			const guid = selectedItem.value.guid;
+			if (!guid) return;
+			const { error } = await workOrderApi.reject(guid, { rejectedReason: rejectReason.value });
+			if (error) {
+				alert(`Failed to reject work order: ${error.error.message}`);
+			} else {
+				fetchWorkOrders();
+			}
+		} catch (e) {
+			console.error(e);
 		}
 	}
 	isReject.value = false;
 }
 
-function applyBulkAction() {
-	console.log(
-		`Applying bulk action ${bulkAction.value} to ${selectedWorkOrders.value.length} items`,
-	);
-	// Dummy execution logic
-	workOrders.value.forEach((w) => {
-		if (selectedWorkOrders.value.includes(w.woNumber)) {
-			switch (bulkAction.value) {
-				case WorkOrderAction.Approve:
-					w.status = WorkOrderStatus.InProgress;
-					break;
-				case WorkOrderAction.MarkAsDone:
-					w.status = WorkOrderStatus.Done;
-					break;
-				case WorkOrderAction.Cancel:
-					w.status = WorkOrderStatus.Cancelled;
-					break;
-				case WorkOrderAction.Reopen:
-					w.status = WorkOrderStatus.InProgress;
-					break;
-				case WorkOrderAction.MarkAsClaimed:
-					w.status = WorkOrderStatus.Claimed;
-					break;
-				case WorkOrderAction.Close:
-					w.status = WorkOrderStatus.Closed;
-					break;
+async function applyBulkAction() {
+	if (!bulkAction.value) return;
+	try {
+		for (const woNumber of selectedWorkOrders.value) {
+			const target = workOrders.value.find((w) => w.woNumber === woNumber);
+			if (target && target.guid) {
+				const guid = target.guid;
+				switch (bulkAction.value) {
+					case WorkOrderAction.Approve:
+						await workOrderApi.approve(guid);
+						break;
+					case WorkOrderAction.MarkAsDone:
+						await workOrderApi.complete(guid);
+						break;
+					case WorkOrderAction.Cancel:
+						await workOrderApi.cancel(guid);
+						break;
+					case WorkOrderAction.Reopen:
+						await workOrderApi.reopen(guid);
+						break;
+					case WorkOrderAction.MarkAsClaimed:
+						await workOrderApi.claim(guid, { invoiceAmount: 0 });
+						break;
+					case WorkOrderAction.Close:
+						await workOrderApi.close(guid);
+						break;
+				}
 			}
 		}
-	});
+		fetchWorkOrders();
+	} catch (e) {
+		console.error(e);
+	}
 	selectedWorkOrders.value = [];
 	bulkAction.value = "";
 	isConfirmBulkAction.value = false;
@@ -741,7 +694,7 @@ function handleEditFromView() {
 		isViewDetails.value = false;
 		openApproveDialog(viewSelectedItem.value);
 	} else {
-		router.push({ name: "Work Order Form", params: { id: viewSelectedItem.value.woNumber } });
+		router.push({ name: "Work Order Form", params: { id: viewSelectedItem.value.guid } });
 	}
 }
 
@@ -900,6 +853,7 @@ defineExpose({
 				hover
 				:headers="headers"
 				:items="filteredWorkOrders"
+				:loading="loading"
 				emptyMessage="No work orders found matching the filter criteria."
 				@row-click="(wo) => viewWorkOrder(wo.woNumber)"
 			>

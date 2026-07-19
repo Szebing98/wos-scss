@@ -1,0 +1,9 @@
+import type { operations } from "../schema";
+
+export type GetWorkOrdersQuery = operations["getApiWork-order"]["parameters"]["query"];
+
+export type CreateWorkOrderDraftBody = NonNullable<operations["postApiWork-orderDraft"]["requestBody"]>["content"]["application/json"];
+
+export type CreateWorkOrderNewBody = NonNullable<operations["postApiWork-orderNew"]["requestBody"]>["content"]["application/json"];
+
+export type RejectWorkOrderBody = NonNullable<operations["putApiWork-orderByGuidReject"]["requestBody"]>["content"]["application/json"];

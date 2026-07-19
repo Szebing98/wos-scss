@@ -228,7 +228,7 @@ function handleCreateClick() {
 						<button class="btn btn--text">View All</button>
 					</div>
 					<Table paginate :headers="draftHeaders" :items="drafts" emptyMessage="No recent drafts.">
-						<template #item-action="{ item }">
+						<template #item-action>
 							<button class="btn btn--icon-primary">
 								<i class="mdi mdi-pencil"></i>
 							</button>

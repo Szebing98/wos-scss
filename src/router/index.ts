@@ -32,6 +32,7 @@ const routes = [
 	{
 		path: "/",
 		component: MainLayout,
+		redirect: "/",
 		children: [
 			{
 				path: "dashboard",
@@ -171,10 +172,17 @@ const router = createRouter({
 router.beforeEach((to) => {
 	const token = localStorage.getItem("authToken");
 
-	if (to.meta.requiresAuth && !token) {
+	const publicPaths = [
+		"/account/login",
+		"/account/forgot-password",
+		"/account/reset-password",
+		"/account/activate"
+	];
+
+	const isPublic = publicPaths.some(path => to.path.startsWith(path));
+
+	if (!isPublic && !token) {
 		return "/account/login";
-	} else if (to.meta.guestOnly && token) {
-		return "/dashboard";
 	}
 });
 

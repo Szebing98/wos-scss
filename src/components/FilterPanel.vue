@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref } from "vue";
 import Button from "./Button.vue";
 
 defineProps<{
@@ -58,7 +58,6 @@ const emit = defineEmits<{
 }>();
 
 const isOpen = ref(false);
-const wrapperRef = ref<HTMLElement | null>(null);
 
 function toggle() {
 	isOpen.value = !isOpen.value;

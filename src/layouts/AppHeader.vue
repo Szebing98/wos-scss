@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MeResponse } from "@/api/auth/auth.types";
+import { getAvatarUrl } from "@/utils/avatar";
 
 defineProps<{
 	darkTheme: boolean;
@@ -55,7 +56,7 @@ function handleLogoutClick() {
 						<div class="account-dropdown__avatar">
 							<img
 								v-if="currentUser?.profileImage"
-								:src="currentUser.profileImage"
+								:src="getAvatarUrl(currentUser.profileImage)"
 								alt="Avatar"
 							/>
 							<i v-else class="mdi mdi-account"></i>

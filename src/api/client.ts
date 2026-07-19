@@ -9,9 +9,12 @@ const authMiddleware: Middleware = {
 		}
 		return request;
 	},
-	async onResponse({ response }) {
+	async onResponse({ request, response }) {
 		if (response.status === 401) {
 			localStorage.removeItem("authToken");
+			if (!request.url.includes("/api/auth/login")) {
+				window.location.href = "/account/login";
+			}
 		}
 		return response;
 	},
@@ -25,3 +28,16 @@ const client = createClient<paths>({
 client.use(authMiddleware);
 
 export default client;
+
+export interface FetchResponse<T> {
+	data?: T;
+	error?: {
+		message: string;
+		[key: string]: any;
+	} | null;
+	response: Response;
+}
+
+export function apiWrap<T>(promise: Promise<any>): Promise<FetchResponse<T>> {
+	return promise;
+}
