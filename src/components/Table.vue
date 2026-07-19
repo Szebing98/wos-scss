@@ -88,7 +88,10 @@ const paginationText = computed(() => {
 						v-for="header in headers" 
 						:key="header.key" 
 						class="mud-table-cell"
-						:class="`u-text-${header.align || 'left'}`"
+						:class="[
+							`mud-table-cell-${header.key}`,
+							`u-text-${header.align || 'left'}`
+						]"
 						:style="{ width: header.width }"
 					>
 						<slot :name="`header-${header.key}`" :header="header">
@@ -114,9 +117,11 @@ const paginationText = computed(() => {
 						:key="header.key"
 						class="mud-table-cell"
 						:class="[
+							`mud-table-cell-${header.key}`,
 							`u-text-${header.align || 'left'}`,
 							{ 'mud-table-cell-dense': dense }
 						]"
+						:data-label="header.label"
 					>
 						<slot :name="`item-${header.key}`" :item="item" :index="index">
 							{{ item[header.key] }}
@@ -180,18 +185,29 @@ const paginationText = computed(() => {
 	display: table;
 	border-spacing: 0;
 	border-collapse: collapse;
-	table-layout: fixed;
+	min-width: max-content;
 }
 
 .mud-table-head {
 	display: table-header-group;
+	background-color: var(--colors-brand-primary);
 	
 	.mud-table-cell {
-		color: var(--colors-text-secondary);
+		color: #ffffff;
 		font-weight: 500;
 		line-height: 1.5rem;
 		border-bottom: 1px solid var(--colors-surface-border);
 		padding: 16px;
+		white-space: nowrap;
+	}
+
+	:global([data-theme="dark"]) & {
+		background-color: #333336;
+		
+		.mud-table-cell {
+			color: var(--colors-text-primary);
+			border-bottom-color: #404040;
+		}
 	}
 }
 
@@ -209,6 +225,10 @@ const paginationText = computed(() => {
 		background-color: var(--colors-surface-hover);
 	}
 	
+	&:nth-of-type(even) {
+		background-color: rgba(0, 0, 0, 0.05);
+	}
+	
 	&.mud-table-row-striped:nth-of-type(odd) {
 		background-color: rgba(0, 0, 0, 0.02);
 	}
@@ -222,8 +242,12 @@ const paginationText = computed(() => {
 	cursor: pointer;
 }
 
-:global(body[data-theme="dark"]) .mud-table-row-striped:nth-of-type(odd) {
+:global([data-theme="dark"]) .mud-table-row-striped:nth-of-type(odd) {
 	background-color: rgba(255, 255, 255, 0.02);
+}
+
+:global([data-theme="dark"]) .mud-table-row:nth-of-type(even) {
+	background-color: rgba(255, 255, 255, 0.03);
 }
 
 .mud-table-cell {
@@ -236,6 +260,7 @@ const paginationText = computed(() => {
 	border-bottom: 1px solid var(--colors-surface-border);
 	letter-spacing: 0.01071em;
 	vertical-align: inherit;
+	white-space: nowrap;
 
 	&-dense {
 		padding: 6px 24px 6px 16px;
@@ -315,6 +340,109 @@ const paginationText = computed(() => {
 		display: flex;
 		align-items: center;
 		gap: 8px;
+	}
+	
+	@media (max-width: 767px) {
+		justify-content: center;
+		padding: 12px;
+		gap: 16px;
+		
+		&-display {
+			width: 100%;
+			text-align: center;
+			order: -1;
+			margin-bottom: 4px;
+		}
+		
+		&-select {
+			margin-right: auto;
+		}
+		
+		&-actions {
+			margin-left: auto;
+		}
+	}
+}
+
+@media (max-width: 767px) {
+	.mud-table-head {
+		display: none;
+	}
+	
+	.mud-table-root {
+		min-width: 100%;
+		border-collapse: separate;
+		border-spacing: 0 16px; /* adds spacing between rows instead of margin */
+	}
+	
+	.mud-table-body {
+		display: block;
+	}
+	
+	.mud-table-row {
+		display: block;
+		margin-bottom: 16px;
+		background: var(--colors-surface-card);
+		border: 1px solid var(--colors-surface-border);
+		border-radius: 8px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+		overflow: hidden;
+		
+		&.mud-table-row-striped:nth-of-type(odd) {
+			background-color: var(--colors-surface-card);
+		}
+	}
+	
+	.mud-table-empty-row {
+		display: block;
+		box-shadow: none;
+		border: none;
+		background: transparent;
+	}
+	
+	.mud-table-cell {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 12px 16px;
+		text-align: right;
+		white-space: normal;
+		border-bottom: 1px solid var(--colors-surface-border);
+		gap: 16px;
+		
+		&:last-child {
+			border-bottom: none;
+		}
+		
+		&::before {
+			content: attr(data-label);
+			font-weight: 600;
+			color: var(--colors-text-secondary);
+			text-align: left;
+			flex-shrink: 0;
+			max-width: 40%;
+		}
+	}
+	
+	.mud-table-cell-select {
+		display: none !important;
+	}
+	
+	.mud-table-empty-cell {
+		justify-content: center;
+		
+		&::before {
+			display: none;
+		}
+	}
+}
+
+@media (max-width: 767px) {
+	.mud-table-container {
+		background: transparent !important;
+		box-shadow: none !important;
+		border: none !important;
+		padding: 0 !important;
 	}
 }
 </style>

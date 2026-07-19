@@ -692,3 +692,66 @@
 		transform: translateY(0);
 	}
 }
+
+// Global mobile overrides for common view classes
+@media (max-width: 767px) {
+	.maintenance-view__header {
+		flex-direction: column;
+		align-items: flex-start !important;
+		gap: var(--spacing-sm) !important;
+		
+		.btn {
+			width: 100%;
+			justify-content: center;
+		}
+	}
+
+	.filter-bar {
+		flex-direction: row;
+		align-items: center !important;
+		flex-wrap: nowrap;
+		
+		> *:not(.filter-panel-wrapper):not(.btn) {
+			flex: 1 !important;
+			width: auto !important;
+		}
+		
+		.filter-panel-wrapper,
+		> .btn {
+			flex: none !important;
+			width: auto !important;
+		}
+
+		.filter-panel-wrapper .btn,
+		> .btn {
+			width: auto;
+			padding: 8px; /* icon button padding */
+			
+			.filter-label-text {
+				display: none;
+			}
+		}
+	}
+
+	.profile-grid,
+	.form-grid,
+	.form-grid-edit,
+	.form-grid-approve {
+		grid-template-columns: 1fr !important;
+	}
+
+	.grid-row {
+		> [class^="col-"] {
+			flex: 0 0 100% !important;
+			max-width: 100% !important;
+		}
+	}
+
+	.table-scroll-container {
+		background: transparent !important;
+		border: none !important;
+		box-shadow: none !important;
+		padding: 0 !important;
+	}
+}
+

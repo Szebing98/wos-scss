@@ -1,10 +1,10 @@
 export const darkTheme = {
 	colors: {
 		brand: {
-			primary: "#6366F1",
-			primaryHover: "#4F46E5",
-			primaryActive: "#4338CA",
-			primarySoft: "rgba(99, 102, 241, 0.15)",
+			primary: "#5D87FF",
+			primaryHover: "#7E9FFF",
+			primaryActive: "#4B71EB",
+			primarySoft: "rgba(93, 135, 255, 0.15)",
 		},
 		surface: {
 			background: "#1E1E1E",

@@ -9,11 +9,11 @@ import FilterPanel from "@/components/FilterPanel.vue";
 import Badge from "@/components/Badge.vue";
 
 const headers: TableHeader[] = [
+	{ key: "status", label: "Status" },
 	{ key: "customer", label: "Customer / Debtor" },
 	{ key: "autocount", label: "AutoCount No" },
 	{ key: "tax", label: "Tax Info / Type" },
 	{ key: "einvoice", label: "e-Invoice" },
-	{ key: "status", label: "Status" },
 	{ key: "actions", label: "Actions", align: "right", width: "100px" },
 ];
 
@@ -149,7 +149,7 @@ function countryFormatAccount(acc: string) {
 		</div>
 
 		<div class="filter-panel">
-			<div class="filter-panel__left" style="align-items: flex-start">
+			<div class="filter-bar" style="width: 100%;">
 				<Textbox
 					v-model="searchQuery"
 					placeholder="Search Name, AutoCount No or Tax ID..."

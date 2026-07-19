@@ -8,27 +8,38 @@
 					title="Filter"
                     style="display: inline-flex; align-items: center; gap: 6px;"
 				>
-					<i class="mdi mdi-filter-variant" style="font-size: 18px;"></i> Filter
+					<i class="mdi mdi-filter-variant" style="font-size: 18px;"></i>
+					<span class="filter-label-text">Filter</span>
 				</Button>
 			</slot>
 		</div>
 
-		<Transition name="popover">
-			<div v-if="isOpen" class="filter-popover" :class="`filter-popover--${align}`">
-				<div class="filter-popover__header">
-					<h4>Filters</h4>
-					<button class="btn btn--icon" @click="close" title="Close">
-						<i class="mdi mdi-close"></i>
-					</button>
+		<Teleport to="body">
+			<Transition name="fade">
+				<div v-if="isOpen" class="filter-backdrop" @click="close"></div>
+			</Transition>
+			
+			<Transition name="popover">
+				<div v-if="isOpen" class="filter-modal-container" @click.self="close">
+					<div class="filter-popover filter-popover--modal">
+						<div class="filter-popover__header">
+							<h4>Filters</h4>
+							<button class="btn btn--icon" @click="close" title="Close">
+								<i class="mdi mdi-close"></i>
+							</button>
+						</div>
+						<div class="filter-popover__body">
+							<slot></slot>
+						</div>
+						<div class="filter-popover__footer">
+							<Button v-if="showReset" variant="text" @click="handleReset">Reset Filters</Button>
+							<div style="flex-grow: 1"></div>
+							<Button variant="primary" @click="handleApply">Apply</Button>
+						</div>
+					</div>
 				</div>
-				<div class="filter-popover__body" @change="close">
-					<slot></slot>
-				</div>
-				<div class="filter-popover__footer" v-if="showReset">
-					<button class="btn btn--text" @click="handleReset">Reset Filters</button>
-				</div>
-			</div>
-		</Transition>
+			</Transition>
+		</Teleport>
 	</div>
 </template>
 
@@ -43,6 +54,7 @@ defineProps<{
 
 const emit = defineEmits<{
 	(e: "reset"): void;
+	(e: "apply"): void;
 }>();
 
 const isOpen = ref(false);
@@ -56,24 +68,16 @@ function close() {
 	isOpen.value = false;
 }
 
+function handleApply() {
+	emit("apply");
+	close();
+}
+
 function handleReset() {
 	emit("reset");
 	close();
 }
 
-function handleClickOutside(event: MouseEvent) {
-	if (wrapperRef.value && !wrapperRef.value.contains(event.target as Node)) {
-		close();
-	}
-}
-
-onMounted(() => {
-	document.addEventListener("mousedown", handleClickOutside);
-});
-
-onUnmounted(() => {
-	document.removeEventListener("mousedown", handleClickOutside);
-});
 </script>
 
 <style lang="scss" scoped>
@@ -108,28 +112,42 @@ onUnmounted(() => {
 	}
 }
 
+.filter-backdrop {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 900;
+}
+
+.filter-modal-container {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 901;
+	padding: 24px;
+}
+
 .filter-popover {
-	position: absolute;
-	top: calc(100% + 8px);
 	background: var(--colors-surface-card);
 	border: 1px solid var(--colors-surface-border);
 	border-radius: 8px;
 	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-	z-index: 100;
-	min-width: 240px;
+	width: 100%;
+	max-width: 400px;
 	display: flex;
 	flex-direction: column;
+	max-height: 90vh;
 
 	:global([data-theme="dark"]) & {
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-	}
-
-	&--left {
-		left: 0;
-	}
-
-	&--right {
-		right: 0;
 	}
 
 	&__header {
@@ -204,5 +222,15 @@ onUnmounted(() => {
 .popover-leave-to {
 	opacity: 0;
 	transform: translateY(-8px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.2s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
 }
 </style>

@@ -52,3 +52,21 @@
 		gap: $gap;
 	}
 }
+
+/**
+ * Mobile breakpoint mixin
+ */
+@mixin mobile {
+	@media (max-width: 767px) {
+		@content;
+	}
+}
+
+/**
+ * Tablet breakpoint mixin
+ */
+@mixin tablet {
+	@media (max-width: 1024px) {
+		@content;
+	}
+}

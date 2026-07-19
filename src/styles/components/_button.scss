@@ -133,10 +133,17 @@
 	&--icon {
 		background: transparent;
 		color: var(--colors-text-secondary);
-		padding: 6px;
-		width: auto;
-		height: auto;
-		border-radius: 6px;
+		padding: 8px;
+		width: 40px;
+		height: 40px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 8px;
+		
+		i {
+			font-size: 22px !important;
+		}
 
 		&:hover {
 			background-color: var(--colors-surface-hover);

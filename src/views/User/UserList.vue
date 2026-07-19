@@ -10,11 +10,11 @@ import FilterPanel from "@/components/FilterPanel.vue";
 import { userApi } from "@/api/user/user.api";
 
 const headers: TableHeader[] = [
+	{ key: "status", label: "Status" },
 	{ key: "employee", label: "Employee" },
 	{ key: "code", label: "Internal Code" },
 	{ key: "role", label: "Assigned Role" },
 	{ key: "email", label: "Contact Email" },
-	{ key: "status", label: "Status" },
 	{ key: "actions", label: "Actions", align: "right", width: "120px" },
 ];
 
@@ -39,7 +39,7 @@ async function fetchUsers() {
 	loading.value = true;
 	try {
 		const query: any = {
-			pageIndex: 1,
+			pageIndex: 0,
 			pageSize: 10, // Fetch up to 100 users for now, handle table pagination later
 			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
 		};

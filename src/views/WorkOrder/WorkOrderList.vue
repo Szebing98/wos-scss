@@ -152,17 +152,40 @@ interface WorkOrderModel {
 const searchQuery = ref("");
 const statusFilter = ref("all");
 const workTypeFilter = ref("all");
-const dateFrom = ref<string | null>(null);
-const dateTo = ref<string | null>(null);
+const today = new Date();
+const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+const formatDate = (d: Date) => {
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const dStr = String(d.getDate()).padStart(2, '0');
+	return `${y}-${m}-${dStr}`;
+};
+
+const dateFrom = ref<string | null>(formatDate(firstDayOfMonth));
+const dateTo = ref<string | null>(formatDate(today));
+
+const appliedStatusFilter = ref(statusFilter.value);
+const appliedWorkTypeFilter = ref(workTypeFilter.value);
+const appliedDateFrom = ref(dateFrom.value);
+const appliedDateTo = ref(dateTo.value);
 
 const selectedWorkOrders = ref<string[]>([]);
 const bulkAction = ref<WorkOrderAction | "">("");
 
+function applyFilters() {
+	appliedStatusFilter.value = statusFilter.value;
+	appliedWorkTypeFilter.value = workTypeFilter.value;
+	appliedDateFrom.value = dateFrom.value;
+	appliedDateTo.value = dateTo.value;
+}
+
 function resetFilters() {
 	statusFilter.value = "all";
 	workTypeFilter.value = "all";
-	dateFrom.value = null;
-	dateTo.value = null;
+	dateFrom.value = formatDate(firstDayOfMonth);
+	dateTo.value = formatDate(today);
+	applyFilters();
 }
 
 const workOrders = ref<WorkOrderModel[]>([
@@ -276,21 +299,21 @@ const filteredWorkOrders = computed(() => {
 		const matchesGlobalStatus =
 			activeStatus.value === "All" || wo.status === activeStatus.value;
 
-		const matchesLocalStatus = statusFilter.value === "all" || wo.status === statusFilter.value;
+		const matchesLocalStatus = appliedStatusFilter.value === "all" || wo.status === appliedStatusFilter.value;
 
 		const matchesWorkType =
-			workTypeFilter.value === "all" || wo.workType === workTypeFilter.value;
+			appliedWorkTypeFilter.value === "all" || wo.workType === appliedWorkTypeFilter.value;
 
 		// Date matching (created at)
 		let matchesDate = true;
 		const woDate = wo.createdAt.split("T")[0]; // Compare just the date part
 
-		if (dateFrom.value) {
-			const fromDate = dateFrom.value.split("T")[0];
+		if (appliedDateFrom.value) {
+			const fromDate = appliedDateFrom.value.split("T")[0];
 			if (woDate < fromDate) matchesDate = false;
 		}
-		if (dateTo.value) {
-			const toDate = dateTo.value.split("T")[0];
+		if (appliedDateTo.value) {
+			const toDate = appliedDateTo.value.split("T")[0];
 			if (woDate > toDate) matchesDate = false;
 		}
 
@@ -330,6 +353,18 @@ function toggleSelection(woNumber: string, isSelected: boolean) {
 	}
 }
 
+const activeFilterCount = computed(() => {
+	let count = 0;
+	if (appliedStatusFilter.value !== "all") count++;
+	if (appliedWorkTypeFilter.value !== "all") count++;
+	
+	// Add counts for dates if they differ from the default
+	if (appliedDateFrom.value !== formatDate(firstDayOfMonth)) count++;
+	if (appliedDateTo.value !== formatDate(today)) count++;
+	
+	return count;
+});
+
 const effectiveStatus = computed(() => {
 	if (activeStatus.value === "All" && statusFilter.value !== "all") {
 		return statusFilter.value;
@@ -346,17 +381,20 @@ const isRejectedView = computed(() => effectiveStatus.value === "Rejected");
 const headers = computed<TableHeader[]>(() => {
 	const base: TableHeader[] = [
 		{ key: "select", label: "", width: "48px", align: "center" },
-		{ key: "woNumber", label: "WO #" },
-		{ key: "title", label: "Title" },
-		{ key: "customer", label: "Customer" },
-		{ key: "workType", label: "Work Type" },
-		{ key: "personInCharge", label: "Person In Charge" },
-		{ key: "createdAt", label: "Created Date" },
 	];
 
 	if (effectiveStatus.value === "All" || effectiveStatus.value === "all") {
 		base.push({ key: "status", label: "Status" });
 	}
+
+	base.push(
+		{ key: "woNumber", label: "WO #" },
+		{ key: "title", label: "Title" },
+		{ key: "customer", label: "Customer" },
+		{ key: "workType", label: "Work Type" },
+		{ key: "personInCharge", label: "Person In Charge" },
+		{ key: "createdAt", label: "Created Date" }
+	);
 
 	if (isRejectedView.value) {
 		base.push({ key: "rejectedReason", label: "Rejected Reason" });
@@ -776,7 +814,7 @@ defineExpose({
 					</template>
 				</Textbox>
 
-				<FilterPanel show-reset align="right" @reset="resetFilters">
+				<FilterPanel :count="activeFilterCount" @reset="resetFilters" @apply="applyFilters">
 					<!-- Hide local status filter if we are already in a specific status view -->
 					<Select v-if="activeStatus === 'All'" v-model="statusFilter" label="Status">
 						<option value="all">All Statuses</option>
@@ -804,13 +842,16 @@ defineExpose({
 						<option value="Security">Security</option>
 					</Select>
 
-					<DatePicker v-model="dateFrom" label="Date From" placeholder="Any" />
-					<DatePicker
-						v-model="dateTo"
-						label="Date To"
-						placeholder="Any"
-						:min="dateFrom || undefined"
-					/>
+					<div style="display: flex; gap: 16px;">
+						<DatePicker style="flex: 1" v-model="dateFrom" label="From" placeholder="Any" />
+						<DatePicker
+							style="flex: 1"
+							v-model="dateTo"
+							label="To"
+							placeholder="Any"
+							:min="dateFrom || undefined"
+						/>
+					</div>
 				</FilterPanel>
 				<Button
 					variant="outlined"
@@ -818,7 +859,8 @@ defineExpose({
 					title="Export List"
 					style="margin-left: 8px; display: inline-flex; align-items: center; gap: 6px"
 				>
-					<i class="mdi mdi-tray-arrow-down" style="font-size: 18px"></i> Export
+					<i class="mdi mdi-tray-arrow-down" style="font-size: 18px"></i>
+					<span class="filter-label-text">Export</span>
 				</Button>
 			</div>
 		</Card>
@@ -879,11 +921,11 @@ defineExpose({
 					<span class="u-font-weight-medium">{{ item.title }}</span>
 				</template>
 				<template #item-customer="{ item }">
-					<div style="display: flex; flex-direction: column; line-height: 1.4">
-						<span class="u-font-weight-medium">{{ item.customer.name }}</span>
-						<span class="u-text-muted" style="font-size: 12px"
-							>{{ item.customer.email }} • {{ item.customer.phone }}</span
-						>
+					<div class="customer-cell-content">
+						<div class="u-font-weight-medium">{{ item.customer.name }}</div>
+						<div class="u-text-muted" style="font-size: 12px">
+							{{ item.customer.email }} • {{ item.customer.phone }}
+						</div>
 					</div>
 				</template>
 				<template #item-workType="{ item }">
@@ -1195,6 +1237,16 @@ defineExpose({
 
 	&:focus {
 		border-color: var(--colors-brand-primary);
+	}
+}
+.customer-cell-content {
+	line-height: 1.4;
+	text-align: left;
+}
+
+@media (max-width: 767px) {
+	.customer-cell-content {
+		text-align: right;
 	}
 }
 </style>

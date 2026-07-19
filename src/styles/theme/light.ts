@@ -1,9 +1,9 @@
 export const lightTheme = {
 	colors: {
 		brand: {
-			primary: "#5058F2",
-			primaryHover: "#444ACF",
-			primaryActive: "#363CBE",
+			primary: "#1B1E5C",
+			primaryHover: "#121440",
+			primaryActive: "#0A0B24",
 			primarySoft: "#EEF0FF",
 		},
 
