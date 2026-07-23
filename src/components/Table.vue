@@ -101,6 +101,7 @@ function onDrop(event: DragEvent, targetKey: string) {
 const resizingColumn = ref<string | null>(null);
 const startX = ref(0);
 const startWidth = ref(0);
+const isHoveringResizer = ref(false);
 
 function onResizeStart(event: MouseEvent, key: string) {
 	event.stopPropagation();
@@ -109,6 +110,21 @@ function onResizeStart(event: MouseEvent, key: string) {
 	
 	const th = (event.target as HTMLElement).closest('th');
 	startWidth.value = th ? th.offsetWidth : 0;
+
+	// Initialize _width for all visible headers using their current actual offsetWidth
+	// to prevent layout shifts when table-layout switches to fixed.
+	const tr = th?.closest('tr');
+	const thElements = tr?.querySelectorAll('th');
+	if (thElements) {
+		visibleHeaders.value.forEach((header, index) => {
+			if (!header._width) {
+				const thEl = thElements[index] as HTMLElement;
+				if (thEl) {
+					header._width = `${thEl.offsetWidth}px`;
+				}
+			}
+		});
+	}
 
 	document.addEventListener('mousemove', onResizeMove);
 	document.addEventListener('mouseup', onResizeEnd);
@@ -134,6 +150,14 @@ function onResizeEnd() {
 onUnmounted(() => {
 	document.removeEventListener('mousemove', onResizeMove);
 	document.removeEventListener('mouseup', onResizeEnd);
+});
+
+const hasCustomWidths = computed(() => internalHeaders.value.some(h => h._width));
+const tableStyle = computed(() => {
+	if (hasCustomWidths.value) {
+		return { tableLayout: 'fixed' as const };
+	}
+	return {};
 });
 
 // --- Sorting ---
@@ -216,7 +240,7 @@ const paginationText = computed(() => {
 			'mud-table-outlined': outlined
 		}"
 	>
-		<table class="mud-table-root" :class="{ 'mud-table-root--bordered': bordered }">
+		<table class="mud-table-root" :class="{ 'mud-table-root--bordered': bordered }" :style="tableStyle">
 			<thead class="mud-table-head">
 				<tr>
 					<th 
@@ -229,7 +253,7 @@ const paginationText = computed(() => {
 							{ 'dragging': draggedColumn === header.key, 'sortable-header': header.sortable !== false }
 						]"
 						:style="{ width: header._width || header.width, minWidth: header._width || header.width, maxWidth: header._width || header.width }"
-						draggable="true"
+						:draggable="!isHoveringResizer && !resizingColumn"
 						@dragstart="onDragStart($event, header.key)"
 						@dragover="onDragOver($event)"
 						@drop="onDrop($event, header.key)"
@@ -243,7 +267,13 @@ const paginationText = computed(() => {
 								<i :class="sortOrder === 'asc' ? 'mdi mdi-arrow-up' : 'mdi mdi-arrow-down'"></i>
 							</span>
 						</div>
-						<div class="resizer" @mousedown.stop="onResizeStart($event, header.key)"></div>
+						<div 
+							class="resizer" 
+							:class="{ 'resizing': resizingColumn === header.key }"
+							@mousedown.stop="onResizeStart($event, header.key)"
+							@mouseenter="isHoveringResizer = true"
+							@mouseleave="isHoveringResizer = false"
+						></div>
 					</th>
 				</tr>
 			</thead>
@@ -643,20 +673,37 @@ const paginationText = computed(() => {
 
 	.resizer {
 		position: absolute;
-		right: 0;
+		right: -4px;
 		top: 0;
 		bottom: 0;
-		width: 5px;
+		width: 8px;
 		cursor: col-resize;
-		z-index: 1;
+		z-index: 10;
+		background-color: transparent;
+		transition: background-color 0.2s;
 
-		&:hover {
-			background-color: rgba(255,255,255,0.2);
+		&::after {
+			content: "";
+			position: absolute;
+			left: 3px;
+			top: 0;
+			bottom: 0;
+			width: 2px;
+			background-color: transparent;
+			transition: background-color 0.2s;
+		}
+
+		&:hover::after,
+		&.resizing::after {
+			background-color: rgba(255, 255, 255, 0.4);
 		}
 	}
-	
-	:global([data-theme="dark"]) .resizer:hover {
-		background-color: rgba(255,255,255,0.1);
+
+	:global([data-theme="dark"]) .resizer {
+		&:hover::after,
+		&.resizing::after {
+			background-color: rgba(255, 255, 255, 0.25);
+		}
 	}
 }
 
