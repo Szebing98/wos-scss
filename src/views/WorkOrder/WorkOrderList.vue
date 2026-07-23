@@ -317,7 +317,7 @@ const isRejectedView = computed(() => effectiveStatus.value === "Rejected");
 
 const headers = computed<TableHeader[]>(() => {
 	const base: TableHeader[] = [
-		{ key: "select", label: "", width: "48px", align: "center" },
+		{ key: "select", label: "", width: "48px", align: "center", sortable: false },
 	];
 
 	if (effectiveStatus.value === "All" || effectiveStatus.value === "all") {
@@ -337,7 +337,7 @@ const headers = computed<TableHeader[]>(() => {
 		base.push({ key: "rejectedReason", label: "Rejected Reason" });
 	}
 
-	base.push({ key: "actions", label: "Actions", align: "right", width: "160px" });
+	base.push({ key: "actions", label: "Actions", align: "right", width: "160px", sortable: false });
 
 	return base;
 });
@@ -851,6 +851,7 @@ defineExpose({
 			<Table
 				paginate
 				hover
+				bordered
 				:headers="headers"
 				:items="filteredWorkOrders"
 				:loading="loading"

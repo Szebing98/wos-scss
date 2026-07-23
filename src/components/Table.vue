@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch, onUnmounted } from "vue";
+import Dialog from "@/components/Dialog.vue";
 
 export interface TableHeader {
 	key: string;
 	label: string;
 	align?: "left" | "center" | "right";
 	width?: string;
+	sortable?: boolean;
+}
+
+interface InternalHeader extends TableHeader {
+	visible: boolean;
+	_width?: string;
 }
 
 const props = withDefaults(defineProps<{
@@ -15,6 +22,7 @@ const props = withDefaults(defineProps<{
 	hover?: boolean;
 	striped?: boolean;
 	dense?: boolean;
+	bordered?: boolean;
 	elevation?: number;
 	outlined?: boolean;
 	paginate?: boolean;
@@ -34,22 +42,149 @@ const emit = defineEmits<{
 	'row-click': [item: any]
 }>();
 
+// --- Internal Headers State (Customization, Order, Width) ---
+const internalHeaders = ref<InternalHeader[]>([]);
 
+watch(() => props.headers, (newHeaders) => {
+	const currentMap = new Map(internalHeaders.value.map(h => [h.key, h]));
+	internalHeaders.value = newHeaders.map(h => {
+		const existing = currentMap.get(h.key);
+		return {
+			...h,
+			visible: existing !== undefined ? existing.visible : true,
+			_width: existing?._width || h.width
+		};
+	});
+}, { immediate: true, deep: true });
+
+const visibleHeaders = computed(() => internalHeaders.value.filter(h => h.visible));
+
+const showColumnSettings = ref(false);
+function toggleColumnSettings() {
+	showColumnSettings.value = !showColumnSettings.value;
+}
+
+// --- Drag & Drop Reordering ---
+const draggedColumn = ref<string | null>(null);
+
+function onDragStart(event: DragEvent, key: string) {
+	draggedColumn.value = key;
+	if (event.dataTransfer) {
+		event.dataTransfer.effectAllowed = 'move';
+	}
+}
+
+function onDragOver(event: DragEvent) {
+	event.preventDefault();
+	if (event.dataTransfer) {
+		event.dataTransfer.dropEffect = 'move';
+	}
+}
+
+function onDrop(event: DragEvent, targetKey: string) {
+	event.preventDefault();
+	if (draggedColumn.value && draggedColumn.value !== targetKey) {
+		const draggedIndex = internalHeaders.value.findIndex(h => h.key === draggedColumn.value);
+		const targetIndex = internalHeaders.value.findIndex(h => h.key === targetKey);
+		
+		if (draggedIndex !== -1 && targetIndex !== -1) {
+			const temp = [...internalHeaders.value];
+			const [removed] = temp.splice(draggedIndex, 1);
+			temp.splice(targetIndex, 0, removed);
+			internalHeaders.value = temp;
+		}
+	}
+	draggedColumn.value = null;
+}
+
+// --- Resizing ---
+const resizingColumn = ref<string | null>(null);
+const startX = ref(0);
+const startWidth = ref(0);
+
+function onResizeStart(event: MouseEvent, key: string) {
+	event.stopPropagation();
+	resizingColumn.value = key;
+	startX.value = event.clientX;
+	
+	const th = (event.target as HTMLElement).closest('th');
+	startWidth.value = th ? th.offsetWidth : 0;
+
+	document.addEventListener('mousemove', onResizeMove);
+	document.addEventListener('mouseup', onResizeEnd);
+}
+
+function onResizeMove(event: MouseEvent) {
+	if (resizingColumn.value) {
+		const diffX = event.clientX - startX.value;
+		const newWidth = Math.max(50, startWidth.value + diffX);
+		const header = internalHeaders.value.find(h => h.key === resizingColumn.value);
+		if (header) {
+			header._width = `${newWidth}px`;
+		}
+	}
+}
+
+function onResizeEnd() {
+	resizingColumn.value = null;
+	document.removeEventListener('mousemove', onResizeMove);
+	document.removeEventListener('mouseup', onResizeEnd);
+}
+
+onUnmounted(() => {
+	document.removeEventListener('mousemove', onResizeMove);
+	document.removeEventListener('mouseup', onResizeEnd);
+});
+
+// --- Sorting ---
+const sortKey = ref<string | null>(null);
+const sortOrder = ref<'asc' | 'desc'>('asc');
+
+function toggleSort(key: string) {
+	if (sortKey.value === key) {
+		if (sortOrder.value === 'asc') sortOrder.value = 'desc';
+		else {
+			sortKey.value = null;
+			sortOrder.value = 'asc';
+		}
+	} else {
+		sortKey.value = key;
+		sortOrder.value = 'asc';
+	}
+}
+
+const sortedItems = computed(() => {
+	if (!sortKey.value) return props.items || [];
+	return [...(props.items || [])].sort((a, b) => {
+		const valA = a[sortKey.value!];
+		const valB = b[sortKey.value!];
+		if (valA === valB) return 0;
+		if (valA == null) return 1;
+		if (valB == null) return -1;
+		
+		const strA = String(valA).toLowerCase();
+		const strB = String(valB).toLowerCase();
+		if (strA < strB) return sortOrder.value === 'asc' ? -1 : 1;
+		if (strA > strB) return sortOrder.value === 'asc' ? 1 : -1;
+		return 0;
+	});
+});
+
+// --- Pagination ---
 const currentPage = ref(1);
 const rowsPerPage = ref(10);
 
-// Initialize rowsPerPage with the first option
 if (props.rowsPerPageOptions && props.rowsPerPageOptions.length > 0) {
 	rowsPerPage.value = props.rowsPerPageOptions[0];
 }
 
-const totalItems = computed(() => props.items?.length || 0);
+const totalItems = computed(() => sortedItems.value?.length || 0);
 const totalPages = computed(() => Math.ceil(totalItems.value / rowsPerPage.value) || 1);
 
 const paginatedItems = computed(() => {
-	if (!props.paginate) return props.items;
+	if (!props.paginate) return sortedItems.value;
 	const start = (currentPage.value - 1) * rowsPerPage.value;
-	return props.items.slice(start, start + rowsPerPage.value);
+	return sortedItems.value.slice(start, start + rowsPerPage.value);
 });
 
 function goToPage(page: number) {
@@ -81,22 +216,34 @@ const paginationText = computed(() => {
 			'mud-table-outlined': outlined
 		}"
 	>
-		<table class="mud-table-root">
+		<table class="mud-table-root" :class="{ 'mud-table-root--bordered': bordered }">
 			<thead class="mud-table-head">
 				<tr>
 					<th 
-						v-for="header in headers" 
+						v-for="header in visibleHeaders" 
 						:key="header.key" 
-						class="mud-table-cell"
+						class="mud-table-cell mud-table-cell-header"
 						:class="[
 							`mud-table-cell-${header.key}`,
-							`u-text-${header.align || 'left'}`
+							`u-text-${header.align || 'left'}`,
+							{ 'dragging': draggedColumn === header.key, 'sortable-header': header.sortable !== false }
 						]"
-						:style="{ width: header.width }"
+						:style="{ width: header._width || header.width, minWidth: header._width || header.width, maxWidth: header._width || header.width }"
+						draggable="true"
+						@dragstart="onDragStart($event, header.key)"
+						@dragover="onDragOver($event)"
+						@drop="onDrop($event, header.key)"
+						@click="header.sortable !== false && toggleSort(header.key)"
 					>
-						<slot :name="`header-${header.key}`" :header="header">
-							{{ header.label }}
-						</slot>
+						<div class="header-content">
+							<slot :name="`header-${header.key}`" :header="header">
+								{{ header.label }}
+							</slot>
+							<span v-if="header.sortable !== false && sortKey === header.key" class="sort-icon">
+								<i :class="sortOrder === 'asc' ? 'mdi mdi-arrow-up' : 'mdi mdi-arrow-down'"></i>
+							</span>
+						</div>
+						<div class="resizer" @mousedown.stop="onResizeStart($event, header.key)"></div>
 					</th>
 				</tr>
 			</thead>
@@ -113,7 +260,7 @@ const paginationText = computed(() => {
 					@click="emit('row-click', item)"
 				>
 					<td 
-						v-for="header in headers" 
+						v-for="header in visibleHeaders" 
 						:key="header.key"
 						class="mud-table-cell"
 						:class="[
@@ -129,13 +276,28 @@ const paginationText = computed(() => {
 					</td>
 				</tr>
 				<tr v-if="!items || items.length === 0" class="mud-table-empty-row">
-					<td :colspan="headers.length" class="mud-table-cell mud-table-empty-cell">
+					<td :colspan="visibleHeaders.length" class="mud-table-cell mud-table-empty-cell">
 						{{ emptyMessage || 'No data available.' }}
 					</td>
 				</tr>
 			</tbody>
 		</table>
 		<div class="mud-table-pagination" v-if="paginate && items && items.length > 0">
+			<div class="mud-table-column-settings" style="margin-right: auto;">
+				<button class="btn btn--outlined" @click="toggleColumnSettings" title="Customize Columns" style="display: flex; align-items: center; gap: 6px;">
+					<i class="mdi mdi-view-column-outline"></i> Columns
+				</button>
+				<Teleport to="body">
+					<Dialog v-model="showColumnSettings" title="Customize Columns">
+						<div class="column-settings-list" style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0;">
+							<label v-for="header in internalHeaders" :key="header.key" class="column-setting-item" style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+								<input type="checkbox" v-model="header.visible" style="width: 16px; height: 16px; cursor: pointer;" />
+								<span style="font-size: 14px;">{{ header.label || '(Empty Label)' }}</span>
+							</label>
+						</div>
+					</Dialog>
+				</Teleport>
+			</div>
 			<div class="mud-table-pagination-spacer"></div>
 			<div class="mud-table-pagination-select">
 				<span>Rows per page:</span>
@@ -164,8 +326,6 @@ const paginationText = computed(() => {
 	</div>
 </template>
 
-
-
 <style lang="scss" scoped>
 .mud-table-container {
 	width: 100%;
@@ -186,6 +346,16 @@ const paginationText = computed(() => {
 	border-spacing: 0;
 	border-collapse: collapse;
 	min-width: max-content;
+
+	&--bordered {
+		.mud-table-cell {
+			border-right: 1px solid var(--colors-surface-border);
+			
+			&:last-child {
+				border-right: none;
+			}
+		}
+	}
 }
 
 .mud-table-head {
@@ -444,5 +614,55 @@ const paginationText = computed(() => {
 		border: none !important;
 		padding: 0 !important;
 	}
+}
+
+/* Header Specific Additions */
+.mud-table-cell-header {
+	position: relative;
+	user-select: none;
+
+	&.sortable-header {
+		cursor: pointer;
+	}
+
+	&.dragging {
+		opacity: 0.5;
+	}
+
+	.header-content {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.sort-icon {
+		font-size: 14px;
+		display: flex;
+		align-items: center;
+	}
+
+	.resizer {
+		position: absolute;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		width: 5px;
+		cursor: col-resize;
+		z-index: 1;
+
+		&:hover {
+			background-color: rgba(255,255,255,0.2);
+		}
+	}
+	
+	:global([data-theme="dark"]) .resizer:hover {
+		background-color: rgba(255,255,255,0.1);
+	}
+}
+
+.mud-table-column-settings {
+	position: relative;
+	display: flex;
+	align-items: center;
 }
 </style>
