@@ -231,20 +231,22 @@ function formatPrice(value: number) {
 					</Badge>
 				</template>
 				<template #item-actions="{ item }">
-					<button
-						class="btn btn--icon"
-						@click="prepareEdit(item)"
-						title="Modify Service"
-					>
-						<i class="mdi mdi-pencil"></i>
-					</button>
-					<button
-						class="btn btn--icon-danger"
-						@click="deleteService(item)"
-						title="Delete Service"
-					>
-						<i class="mdi mdi-delete"></i>
-					</button>
+					<div style="display: flex; gap: 4px; justify-content: flex-end;">
+						<button
+							class="btn btn--icon"
+							@click="prepareEdit(item)"
+							title="Modify Service"
+						>
+							<i class="mdi mdi-pencil"></i>
+						</button>
+						<button
+							class="btn btn--icon btn--icon-danger"
+							@click="deleteService(item)"
+							title="Delete Service"
+						>
+							<i class="mdi mdi-delete"></i>
+						</button>
+					</div>
 				</template>
 			</Table>
 		</Card>

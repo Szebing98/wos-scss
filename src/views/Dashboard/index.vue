@@ -31,13 +31,21 @@ enum WorkOrderStatus {
 	Completed = "Completed",
 	Claimed = "Claimed",
 	Closed = "Closed",
-	Cancelled = "Cancelled"
+	Cancelled = "Cancelled",
+	Rejected = "Rejected"
 }
 
 const cardRoute = "/work-orders?status=";
 
 const cardList = ref([
-	
+	{
+		label: "Draft",
+		count: 2,
+		status: "draft",
+		icon: "mdi-archive-clock-outline",
+		route: `${cardRoute}${WorkOrderStatus.New}&draft=true`,
+		baseColor: "#80858f"
+	},
 	{
 		label: "New",
 		count: 8,
@@ -102,7 +110,14 @@ const cardList = ref([
 		route: `${cardRoute}${WorkOrderStatus.Cancelled}`,
 		baseColor: "#EF4444"
 	},
-	
+	{
+		label: "Rejected",
+		count: 1,
+		status: WorkOrderStatus.Rejected,
+		icon: "mdi-cancel",
+		route: `${cardRoute}${WorkOrderStatus.Rejected}`,
+		baseColor: "#DC2626"
+	},
 ]);
 
 const drafts = ref([

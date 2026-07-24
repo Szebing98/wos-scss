@@ -45,6 +45,12 @@ const routes = [
 				name: "Audit Log",
 				component: () => import("@/views/AuditLog/index.vue"),
 				meta: { requiresAuth: true },
+			},
+			{
+				path: "settings",
+				name: "Settings",
+				component: () => import("@/views/Settings/index.vue"),
+				meta: { requiresAuth: true },
 			}
 		],
 	},

@@ -32,6 +32,7 @@ const props = withDefaults(defineProps<{
 	hover: false,
 	striped: false,
 	dense: false,
+	bordered: true,
 	elevation: 0,
 	outlined: false,
 	paginate: false,
@@ -60,8 +61,25 @@ watch(() => props.headers, (newHeaders) => {
 const visibleHeaders = computed(() => internalHeaders.value.filter(h => h.visible));
 
 const showColumnSettings = ref(false);
+const tempHeaders = ref<InternalHeader[]>([]);
+
 function toggleColumnSettings() {
+	if (!showColumnSettings.value) {
+		tempHeaders.value = internalHeaders.value.map(h => ({ ...h }));
+	}
 	showColumnSettings.value = !showColumnSettings.value;
+}
+
+const allSelected = computed(() => tempHeaders.value.length > 0 && tempHeaders.value.every(h => h.visible));
+
+function toggleSelectAll() {
+	const newState = !allSelected.value;
+	tempHeaders.value.forEach(h => h.visible = newState);
+}
+
+function applyColumnSettings() {
+	internalHeaders.value = tempHeaders.value.map(h => ({ ...h }));
+	showColumnSettings.value = false;
 }
 
 // --- Drag & Drop Reordering ---
@@ -98,6 +116,7 @@ function onDrop(event: DragEvent, targetKey: string) {
 }
 
 // --- Resizing ---
+const isTableFixed = ref(false);
 const resizingColumn = ref<string | null>(null);
 const startX = ref(0);
 const startWidth = ref(0);
@@ -105,6 +124,7 @@ const isHoveringResizer = ref(false);
 
 function onResizeStart(event: MouseEvent, key: string) {
 	event.stopPropagation();
+	isTableFixed.value = true;
 	resizingColumn.value = key;
 	startX.value = event.clientX;
 	
@@ -152,9 +172,8 @@ onUnmounted(() => {
 	document.removeEventListener('mouseup', onResizeEnd);
 });
 
-const hasCustomWidths = computed(() => internalHeaders.value.some(h => h._width));
 const tableStyle = computed(() => {
-	if (hasCustomWidths.value) {
+	if (isTableFixed.value) {
 		return { tableLayout: 'fixed' as const };
 	}
 	return {};
@@ -319,11 +338,27 @@ const paginationText = computed(() => {
 				</button>
 				<Teleport to="body">
 					<Dialog v-model="showColumnSettings" title="Customize Columns">
-						<div class="column-settings-list" style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0;">
-							<label v-for="header in internalHeaders" :key="header.key" class="column-setting-item" style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-								<input type="checkbox" v-model="header.visible" style="width: 16px; height: 16px; cursor: pointer;" />
-								<span style="font-size: 14px;">{{ header.label || '(Empty Label)' }}</span>
-							</label>
+						<div class="column-settings-container">
+							<div class="column-settings-list">
+								<label v-for="header in tempHeaders" :key="header.key" class="column-setting-item">
+									<div class="checkbox-wrapper">
+										<input type="checkbox" v-model="header.visible" />
+										<div class="checkbox-custom">
+											<i class="mdi mdi-check"></i>
+										</div>
+									</div>
+									<span class="column-label">{{ header.label || '(Empty Label)' }}</span>
+								</label>
+							</div>
+							<div class="column-settings-footer">
+								<button class="action-btn" @click="toggleSelectAll">
+									<i :class="allSelected ? 'mdi mdi-checkbox-blank-outline' : 'mdi mdi-check-all'"></i>
+									{{ allSelected ? 'Deselect All' : 'Select All' }}
+								</button>
+								<button class="action-btn apply-btn" @click="applyColumnSettings">
+									Apply
+								</button>
+							</div>
 						</div>
 					</Dialog>
 				</Teleport>
@@ -711,5 +746,175 @@ const paginationText = computed(() => {
 	position: relative;
 	display: flex;
 	align-items: center;
+}
+
+/* Customize Columns Modal Styles */
+.column-settings-container {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 8px 0;
+	min-width: 320px;
+}
+
+.column-settings-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-top: 16px;
+	border-top: 1px solid var(--colors-surface-border);
+	margin-top: 8px;
+
+	.action-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		font-size: 0.875rem;
+		padding: 0 16px;
+		height: 36px;
+		min-width: 120px;
+		color: var(--colors-text-primary);
+		background-color: transparent;
+		border: 1px solid var(--colors-surface-border);
+		border-radius: 6px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		
+		&:hover {
+			color: var(--colors-brand-primary);
+			border-color: var(--colors-brand-primary);
+			background-color: var(--colors-surface-hover);
+		}
+
+		&:active {
+			transform: scale(0.98);
+		}
+
+		&.apply-btn {
+			background-color: var(--colors-brand-primary);
+			color: #ffffff;
+			border-color: var(--colors-brand-primary);
+			font-weight: 500;
+
+			&:hover {
+				opacity: 0.9;
+				color: #ffffff;
+			}
+		}
+
+		i {
+			font-size: 1.1rem;
+		}
+	}
+}
+
+.column-settings-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 8px 16px;
+	max-height: 400px;
+	overflow-y: auto;
+	padding-right: 8px;
+
+	/* Custom Scrollbar */
+	&::-webkit-scrollbar {
+		width: 6px;
+	}
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	&::-webkit-scrollbar-thumb {
+		background: var(--colors-surface-border);
+		border-radius: 4px;
+	}
+	&::-webkit-scrollbar-thumb:hover {
+		background: var(--colors-text-muted);
+	}
+}
+
+.column-setting-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	cursor: pointer;
+	padding: 8px 12px;
+	border-radius: 8px;
+	transition: background-color 0.2s, transform 0.1s;
+	user-select: none;
+	border: 1px solid transparent;
+
+	&:hover {
+		background-color: var(--colors-surface-hover);
+		border-color: var(--colors-surface-border);
+	}
+	
+	&:active {
+		transform: scale(0.98);
+	}
+
+	.column-label {
+		font-size: 0.95rem;
+		color: var(--colors-text-primary);
+		font-weight: 500;
+	}
+}
+
+.checkbox-wrapper {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+
+	input[type="checkbox"] {
+		position: absolute;
+		opacity: 0;
+		width: 100%;
+		height: 100%;
+		cursor: pointer;
+		z-index: 2;
+		margin: 0;
+
+		&:checked + .checkbox-custom {
+			background-color: var(--colors-brand-primary);
+			border-color: var(--colors-brand-primary);
+
+			i {
+				transform: scale(1);
+				opacity: 1;
+			}
+		}
+
+		&:focus-visible + .checkbox-custom {
+			box-shadow: 0 0 0 2px var(--colors-surface-card), 0 0 0 4px var(--colors-brand-primary);
+		}
+	}
+}
+
+.checkbox-custom {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border: 2px solid var(--colors-text-muted);
+	border-radius: 4px;
+	background-color: transparent;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1;
+
+	i {
+		color: white;
+		font-size: 14px;
+		transform: scale(0.5);
+		opacity: 0;
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		font-weight: bold;
+	}
 }
 </style>

@@ -3,13 +3,11 @@ import type { MeResponse } from "@/api/auth/auth.types";
 import { getAvatarUrl } from "@/utils/avatar";
 
 defineProps<{
-	darkTheme: boolean;
 	currentUser: MeResponse | null;
 }>();
 
 const emit = defineEmits<{
 	(e: "toggle-sidebar"): void;
-	(e: "toggle-theme"): void;
 	(e: "open-logout"): void;
 }>();
 
@@ -34,11 +32,6 @@ function handleLogoutClick() {
 			<!-- Notifications -->
 			<button class="btn btn--icon" aria-label="Notifications">
 				<i class="mdi mdi-bell-outline"></i>
-			</button>
-
-			<!-- Theme -->
-			<button class="btn btn--icon" @click="emit('toggle-theme')" aria-label="Toggle Theme">
-				<i class="mdi" :class="darkTheme ? 'mdi-brightness-4' : 'mdi-brightness-7'"></i>
 			</button>
 
 			<!-- Account -->

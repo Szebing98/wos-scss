@@ -438,20 +438,22 @@ function deleteItem(item: WorkTypeItem) {
 								</span>
 							</template>
 							<template #item-actions="{ item }">
-								<button
-									class="btn btn--icon"
-									@click="editItem(item)"
-									title="Edit"
-								>
-									<i class="mdi mdi-pencil"></i>
-								</button>
-								<button
-									class="btn btn--icon-danger"
-									@click="deleteItem(item)"
-									title="Delete"
-								>
-									<i class="mdi mdi-delete"></i>
-								</button>
+								<div style="display: flex; gap: 4px; justify-content: flex-end;">
+									<button
+										class="btn btn--icon"
+										@click="editItem(item)"
+										title="Edit"
+									>
+										<i class="mdi mdi-pencil"></i>
+									</button>
+									<button
+										class="btn btn--icon btn--icon-danger"
+										@click="deleteItem(item)"
+										title="Delete"
+									>
+										<i class="mdi mdi-delete"></i>
+									</button>
+								</div>
 							</template>
 						</Table>
 					</Card>

@@ -210,27 +210,29 @@ function getRandomAvatarBg(name: string) {
 					</Badge>
 				</template>
 				<template #item-actions="{ item: user }">
-					<button
-						class="btn btn--icon"
-						@click.stop="viewUserProfile(user.code)"
-						title="View Profile / Edit"
-					>
-						<i class="mdi mdi-account-edit-outline"></i>
-					</button>
-					<button
-						class="btn btn--icon-danger"
-						@click.stop="toggleUserStatus(user)"
-						:title="user.isActive ? 'Suspend' : 'Activate'"
-					>
-						<i
-							class="mdi"
-							:class="
-								user.isActive
-									? 'mdi-account-off-outline'
-									: 'mdi-account-check-outline'
-							"
-						></i>
-					</button>
+					<div style="display: flex; gap: 4px; justify-content: flex-end;">
+						<button
+							class="btn btn--icon"
+							@click.stop="viewUserProfile(user.code)"
+							title="View Profile / Edit"
+						>
+							<i class="mdi mdi-account-edit-outline"></i>
+						</button>
+						<button
+							class="btn btn--icon btn--icon-danger"
+							@click.stop="toggleUserStatus(user)"
+							:title="user.isActive ? 'Suspend' : 'Activate'"
+						>
+							<i
+								class="mdi"
+								:class="
+									user.isActive
+										? 'mdi-account-off-outline'
+										: 'mdi-account-check-outline'
+								"
+							></i>
+						</button>
+					</div>
 				</template>
 			</Table>
 		</Card>

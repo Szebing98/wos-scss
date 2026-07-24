@@ -104,10 +104,8 @@ onUnmounted(() => {
 		<!-- Header -->
 		<AppHeader
 			v-model:isAccountOpenMobile="isAccountOpenMobile"
-			:dark-theme="themeStore.dark"
 			:current-user="authStore.currentUser"
 			@toggle-sidebar="toggleSidebar"
-			@toggle-theme="themeStore.toggleTheme()"
 			@open-logout="isLogoutDialogOpen = true"
 		/>
 
