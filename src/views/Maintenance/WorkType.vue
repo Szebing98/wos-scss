@@ -812,19 +812,26 @@ function deleteItem(item: WorkTypeItem) {
 		border: 2px solid #cbd5e1;
 		border-radius: 4px;
 		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		transition: all 0.15s;
 	}
 	input:checked + &__box {
-		background-color: var(--colors-brand-primary);
+		background-color: #ffffff;
 		border-color: var(--colors-brand-primary);
 		&::after {
 			content: "✓";
-			position: absolute;
-			color: white;
-			font-size: 11px;
+			color: var(--colors-brand-primary);
+			font-size: 12px;
 			font-weight: bold;
-			left: 2px;
-			top: -2px;
+			line-height: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 100%;
+			height: 100%;
+			margin-top: -1px;
 		}
 	}
 }

@@ -4,6 +4,8 @@ import { useRoute, useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
+import Dialog from "@/components/Dialog.vue";
+import Button from "@/components/Button.vue";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSnackbarStore } from "@/stores/snackbar.store";
 import { userApi } from "@/api/user/user.api";
@@ -21,6 +23,59 @@ const isEditMode = ref(false);
 const loading = ref(false);
 const avatarLoading = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
+
+// Password Dialog State
+const showPasswordModal = ref(false);
+const passwordLoading = ref(false);
+const passwordForm = ref({
+	newPassword: "",
+	confirmPassword: "",
+});
+
+function openPasswordDialog() {
+	passwordForm.value = { newPassword: "", confirmPassword: "" };
+	showPasswordModal.value = true;
+}
+
+async function handleUpdatePassword() {
+	if (!passwordForm.value.newPassword || !passwordForm.value.confirmPassword) {
+		snackbar.error("Please fill in both password fields.");
+		return;
+	}
+	if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+		snackbar.error("Passwords do not match.");
+		return;
+	}
+	if (passwordForm.value.newPassword.length < 6) {
+		snackbar.error("Password must be at least 6 characters long.");
+		return;
+	}
+
+	passwordLoading.value = true;
+	try {
+		const guid = (route.query.code as string) || (authStore.currentUser && authStore.currentUser.guid) || (authStore.user && authStore.user.guid);
+		if (!guid) {
+			snackbar.error("Could not determine user ID.");
+			return;
+		}
+		const { error } = await userApi.updatePassword(guid, {
+			password: passwordForm.value.newPassword,
+			passwordConfirm: passwordForm.value.confirmPassword,
+		} as any);
+
+		if (error) {
+			snackbar.error((error as any)?.error?.message || "Failed to update password.");
+			return;
+		}
+		snackbar.success("Password updated successfully.");
+		showPasswordModal.value = false;
+	} catch (e) {
+		console.error(e);
+		snackbar.error("Failed to update password.");
+	} finally {
+		passwordLoading.value = false;
+	}
+}
 
 // Preview state — independent of isEditMode
 const avatarPreviewUrl = ref<string | null>(null);
@@ -199,13 +254,15 @@ async function confirmAvatarUpload() {
 			return;
 		}
 
-		// Backend returns { message, url } — url is the full CDN/R2 URL
-		const savedUrl: string = res?.data?.url || avatarPreviewUrl.value || "";
+		// Backend returns { message, url, key } — key is the R2 object key
+		const savedKey: string = res?.data?.key || res?.data?.url || avatarPreviewUrl.value || "";
+		const cleanKey = savedKey.startsWith("/") ? savedKey.slice(1) : savedKey;
 
-		profileData.value.profileImage = savedUrl;
+		profileData.value.profileImage = cleanKey;
 
 		if (isOwnProfile.value) {
-			authStore.updateProfileImage(savedUrl);
+			authStore.updateProfileImage(cleanKey);
+			await authStore.fetchMe();
 		}
 
 		showAvatarPreview.value = false;
@@ -267,18 +324,29 @@ async function confirmAvatarUpload() {
 					</div>
 				</div>
 
-				<!-- Part 2: Security Policy Card (only when viewing other users) -->
-				<div class="panel-card mt-lg" v-if="!isOwnProfile">
+				<!-- Part 2: Security Policy Card -->
+				<div class="panel-card mt-lg">
 					<h2 class="panel-card__title mb-md" style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--colors-text-muted)">
 						<i class="mdi mdi-shield-account-outline"></i> Security Policy
 					</h2>
 					<div class="quick-nav-box">
-						<p style="font-size: 12px; color: var(--colors-text-secondary); line-height: 1.5; margin-bottom: 16px;">
-							Need custom overrides? You can adjust independent security matrix rules for this user.
-						</p>
-						<button class="btn btn--outlined w-full" @click="goToOverrides">
-							<i class="mdi mdi-shield-key-outline"></i> Edit Individual Overrides
-						</button>
+						<div class="security-action-item">
+							<p style="font-size: 12px; color: var(--colors-text-secondary); line-height: 1.5; margin-bottom: 10px;">
+								Manage account credentials and password security policies.
+							</p>
+							<button class="btn btn--outlined w-full" @click="openPasswordDialog">
+								<i class="mdi mdi-lock-reset"></i> {{ isOwnProfile ? 'Change Password' : 'Reset User Password' }}
+							</button>
+						</div>
+
+						<div v-if="!isOwnProfile" style="border-top: 1px solid var(--colors-surface-border); margin-top: 16px; padding-top: 16px;">
+							<p style="font-size: 12px; color: var(--colors-text-secondary); line-height: 1.5; margin-bottom: 10px;">
+								Need custom overrides? You can adjust independent security matrix rules for this user.
+							</p>
+							<button class="btn btn--outlined w-full" @click="goToOverrides">
+								<i class="mdi mdi-shield-key-outline"></i> Edit Individual Overrides
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -290,7 +358,7 @@ async function confirmAvatarUpload() {
 
 					<div class="form-grid">
 						<div class="form-group">
-							<label class="form-group__label">Internal Employee Code <span class="u-required">*</span></label>
+							<label class="form-group__label">Employee Code <span class="u-required">*</span></label>
 							<Textbox v-model="profileData.code" :disabled="!isNewMode" placeholder="e.g. USR-099" />
 						</div>
 
@@ -300,12 +368,12 @@ async function confirmAvatarUpload() {
 						</div>
 
 						<div class="form-group">
-							<label class="form-group__label">Corporate Email Address <span class="u-required">*</span></label>
+							<label class="form-group__label">Email Address <span class="u-required">*</span></label>
 							<Textbox v-model="profileData.email" type="email" :disabled="!isEditMode" placeholder="username@gstech.com" />
 						</div>
 
 						<div class="form-group">
-							<label class="form-group__label">Assigned Authorization Role</label>
+							<label class="form-group__label">Role</label>
 							<Select v-model="profileData.role" :disabled="!isEditMode || isOwnProfile">
 								<option value="Superadmin">Superadmin (Root)</option>
 								<option value="Administrator">Administrator</option>
@@ -366,6 +434,26 @@ async function confirmAvatarUpload() {
 			</div>
 		</div>
 	</Teleport>
+
+	<!-- Password Change / Reset Dialog -->
+	<Dialog v-model="showPasswordModal" :title="isOwnProfile ? 'Change Password' : 'Reset User Password'" maxWidth="440px">
+		<div class="form-grid" style="grid-template-columns: 1fr; gap: 16px; padding: 8px 0;">
+			<div class="form-group">
+				<label class="form-group__label">New Password <span class="u-required">*</span></label>
+				<Textbox v-model="passwordForm.newPassword" type="password" placeholder="Enter new password" />
+			</div>
+			<div class="form-group">
+				<label class="form-group__label">Confirm New Password <span class="u-required">*</span></label>
+				<Textbox v-model="passwordForm.confirmPassword" type="password" placeholder="Confirm new password" />
+			</div>
+		</div>
+		<template #footer>
+			<Button variant="outlined" @click="showPasswordModal = false" :disabled="passwordLoading">Cancel</Button>
+			<Button variant="primary" @click="handleUpdatePassword" :loading="passwordLoading">
+				<i v-if="!passwordLoading" class="mdi mdi-check"></i> Update Password
+			</Button>
+		</template>
+	</Dialog>
 </template>
 
 <style lang="scss" scoped>
@@ -501,7 +589,7 @@ async function confirmAvatarUpload() {
 	border-radius: 50%;
 	background-color: var(--colors-surface-card);
 	color: var(--colors-text-secondary);
-	border: 1.5px solid var(--colors-surface-border);
+	border: 1.5px solid var(--colors-text-muted);
 	display: flex;
 	align-items: center;
 	justify-content: center;

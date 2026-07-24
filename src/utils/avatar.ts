@@ -25,6 +25,8 @@ export function getAvatarUrl(path: string | null | undefined): string {
 		return path;
 	}
 
+	const cleanKey = path.startsWith("/") ? path.slice(1) : path;
+
 	// R2 key — proxy through backend no-auth endpoint
-	return `${API_BASE}/api/user/avatar?key=${encodeURIComponent(path)}`;
+	return `${API_BASE}/api/user/avatar?key=${encodeURIComponent(cleanKey)}`;
 }

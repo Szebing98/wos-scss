@@ -878,12 +878,25 @@ const paginationText = computed(() => {
 		margin: 0;
 
 		&:checked + .checkbox-custom {
-			background-color: var(--colors-brand-primary);
+			background-color: #ffffff;
 			border-color: var(--colors-brand-primary);
 
+			&::after {
+				content: "✓";
+				color: var(--colors-brand-primary);
+				font-size: 12px;
+				font-weight: bold;
+				line-height: 1;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				width: 100%;
+				height: 100%;
+				margin-top: -1px;
+			}
+
 			i {
-				transform: scale(1);
-				opacity: 1;
+				display: none;
 			}
 		}
 
