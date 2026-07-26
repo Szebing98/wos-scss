@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
 import Textbox from "@/components/Textbox.vue";
@@ -8,6 +8,7 @@ import Dialog from "@/components/Dialog.vue";
 import Button from "@/components/Button.vue";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useBreadcrumbStore } from "@/stores/breadcrumb.store";
 import { userApi } from "@/api/user/user.api";
 import { authApi } from "@/api/auth/auth.api";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -17,6 +18,7 @@ const snackbar = useSnackbarStore();
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const breadcrumbStore = useBreadcrumbStore();
 
 const isNewMode = ref(false);
 const isEditMode = ref(false);
@@ -82,7 +84,12 @@ const avatarPreviewUrl = ref<string | null>(null);
 const avatarPreviewFile = ref<File | null>(null);
 const showAvatarPreview = ref(false);
 
-const isOwnProfile = computed(() => !route.query.code && route.query.mode !== "new");
+const isOwnProfile = computed(() => {
+	if (route.query.mode === "new") return false;
+	if (!route.query.code) return true;
+	const currentGuid = authStore.currentUser?.guid || authStore.user?.guid;
+	return !!(currentGuid && route.query.code === currentGuid);
+});
 
 interface ProfileForm {
 	code: string;
@@ -108,7 +115,7 @@ async function loadProfile() {
 		const userCode = route.query.code;
 		const mode = route.query.mode;
 
-		if (mode === "new") {
+		if (mode === "new" || route.path.endsWith("/form")) {
 			isNewMode.value = true;
 			isEditMode.value = true;
 			profileData.value = {
@@ -122,18 +129,23 @@ async function loadProfile() {
 		} else if (userCode) {
 			isNewMode.value = false;
 			isEditMode.value = false;
-			const { data } = await userApi.getUserByGuid(userCode as string);
-			if (data && data.data) {
-				const u = data.data as any;
-				const roleName = u.groups && u.groups[0] ? u.groups[0].name : "Engineer";
+			const { data, error } = await userApi.getUserByGuid(userCode as string);
+			const u = (data as any)?.data || data;
+			if (u && (u.guid || u.email || u.displayCode || u.profile)) {
+				const userProfile = u.profile || {};
+				const g = (u.groups || u.userGroups || [])[0];
+				const rawRole = g ? (g.code || g.name) : (u.userGroupCode || u.role || "Engineer");
 				profileData.value = {
-					code: u.displayCode || u.guid.substring(0, 8).toUpperCase(),
-					name: u.displayName || u.profile?.displayName || "",
+					code: u.displayCode || u.code || (u.guid ? u.guid.substring(0, 8).toUpperCase() : ""),
+					name: u.displayName || userProfile.displayName || u.name || "Employee Profile",
 					email: u.email || "",
-					role: roleName,
+					role: normalizeRoleCode(rawRole),
 					isActive: u.isActive ?? true,
-					profileImage: u.profile?.profileImage || null,
+					profileImage: u.profileImage || userProfile.profileImage || null,
 				};
+			} else if (error) {
+				console.error("Failed to load user by GUID:", error);
+				snackbar.error("Failed to load user details.");
 			}
 		} else {
 			isNewMode.value = false;
@@ -141,17 +153,20 @@ async function loadProfile() {
 			const { data } = await authApi.me();
 			if (data) {
 				const u = data as any;
-				const roleName = u.userGroups && u.userGroups[0] ? u.userGroups[0].name : "Administrator";
+				const userProfile = u.profile || {};
+				const g = (u.groups || u.userGroups || [])[0];
+				const rawRole = g ? (g.code || g.name) : (u.userGroupCode || u.role || "Administrator");
 				profileData.value = {
-					code: u.displayCode || "",
-					name: u.displayName || "",
+					code: u.displayCode || u.code || "",
+					name: u.displayName || userProfile.displayName || u.name || "My Profile",
 					email: u.email || "",
-					role: roleName,
+					role: normalizeRoleCode(rawRole),
 					isActive: u.isActive ?? true,
-					profileImage: u.profileImage || u.profile?.profileImage || null,
+					profileImage: u.profileImage || userProfile.profileImage || null,
 				};
 			}
 		}
+		updateBreadcrumbs();
 	} catch (e) {
 		console.error("Failed to load user profile:", e);
 	} finally {
@@ -159,9 +174,63 @@ async function loadProfile() {
 	}
 }
 
+function normalizeRoleCode(rawRole: string): string {
+	if (!rawRole) return "Administrator";
+	const lower = rawRole.toLowerCase().trim();
+	if (rawRole === "SA" || lower === "superadmin") return "SA";
+	if (rawRole === "ADM" || lower === "adm" || lower.startsWith("admin")) return "Administrator";
+	if (rawRole === "MGR" || lower === "mgr" || lower.startsWith("manag")) return "Manager";
+	if (rawRole === "ENG" || lower === "eng" || lower.startsWith("engin") || lower.startsWith("tech")) return "Engineer";
+	if (lower.startsWith("sale")) return "Sales";
+	return rawRole;
+}
+
+function getRoleDisplayName(roleCode: string): string {
+	if (roleCode === "SA" || roleCode === "Superadmin") return "Superadmin";
+	const found = roleList.value.find(r => r.code === roleCode || r.name === roleCode);
+	return found ? found.name : roleCode;
+}
+
+function updateBreadcrumbs() {
+	if (isNewMode.value) {
+		breadcrumbStore.setItems([
+			{ label: "Employee List", to: "/user/list" },
+			{ label: "Create New Profile" }
+		]);
+	} else if (!isOwnProfile.value) {
+		const formattedName = profileData.value.name
+			? `${profileData.value.name}${profileData.value.code ? ` (${profileData.value.code})` : ""}`
+			: "Employee Profile";
+		breadcrumbStore.setItems([
+			{ label: "Employee List", to: "/user/list" },
+			{ label: formattedName }
+		]);
+	} else {
+		breadcrumbStore.setItems([
+			{ label: "My Profile" }
+		]);
+	}
+}
+
+import { fetchRoleList, type RoleModel } from "@/utils/role";
+
+const roleList = ref<RoleModel[]>([]);
+
+const assignableRoles = computed(() => {
+	return roleList.value.filter(r => r.code !== "SA" && r.name !== "Superadmin");
+});
+
 onMounted(async () => {
+	roleList.value = await fetchRoleList();
 	await loadProfile();
 });
+
+watch(
+	() => [route.query.code, route.query.mode, route.path],
+	async () => {
+		await loadProfile();
+	}
+);
 
 async function handleSaveProfile() {
 	if (!profileData.value.name || !profileData.value.email) {
@@ -183,7 +252,7 @@ async function handleSaveProfile() {
 				return;
 			}
 			snackbar.success("User created and invitation email sent.");
-			router.back();
+			router.push("/user/list");
 		} else {
 			const guid = (route.query.code as string) || (authStore.user && authStore.user.guid);
 			if (!guid) {
@@ -212,7 +281,12 @@ async function handleSaveProfile() {
 }
 
 function goToOverrides() {
-	router.push("/maintenance/user-permission");
+	const userCode = (route.query.code as string) || (authStore.currentUser && authStore.currentUser.guid);
+	if (userCode) {
+		router.push(`/maintenance/user-permission?user=${userCode}`);
+	} else {
+		router.push("/maintenance/user-permission");
+	}
 }
 
 // --- Avatar upload: independent flow ---
@@ -238,6 +312,30 @@ function cancelAvatarPreview() {
 	showAvatarPreview.value = false;
 	avatarPreviewUrl.value = null;
 	avatarPreviewFile.value = null;
+}
+
+const reinviteLoading = ref(false);
+
+async function handleReinviteUser() {
+	const guid = route.query.code as string;
+	if (!guid) {
+		snackbar.error("Could not determine user ID.");
+		return;
+	}
+	reinviteLoading.value = true;
+	try {
+		const { error } = await userApi.reinviteUser(guid);
+		if (error) {
+			snackbar.error((error as any)?.error?.message || "Failed to resend invitation.");
+			return;
+		}
+		snackbar.success(`Invitation email sent to ${profileData.value.email || 'user'}.`);
+	} catch (e) {
+		console.error(e);
+		snackbar.error("Failed to send invitation email.");
+	} finally {
+		reinviteLoading.value = false;
+	}
 }
 
 async function confirmAvatarUpload() {
@@ -281,11 +379,8 @@ async function confirmAvatarUpload() {
 	<div class="maintenance-view">
 		<div class="maintenance-view__header">
 			<div class="maintenance-view__title-area">
-				<button class="btn btn--text back-link-btn" v-if="!isOwnProfile" @click="router.back()">
-					<i class="mdi mdi-arrow-left"></i> Back to Directory
-				</button>
-				<h1 class="mt-xs">
-					{{ isNewMode ? "Create New Profile" : isOwnProfile ? "My Profile" : "Profile" }}
+				<h1>
+					{{ isNewMode ? "Create New Profile" : isOwnProfile ? "My Profile" : "Employee Profile" }}
 				</h1>
 			</div>
 			<div class="header-actions">
@@ -303,7 +398,10 @@ async function confirmAvatarUpload() {
 				<!-- Part 1: User Meta Card -->
 				<div class="panel-card user-meta-card">
 					<div class="user-meta-card__avatar-wrapper">
-						<div class="user-meta-card__avatar">
+						<div
+							class="user-meta-card__avatar"
+							:class="profileData.isActive ? 'user-meta-card__avatar--active' : 'user-meta-card__avatar--inactive'"
+						>
 							<img v-if="profileData.profileImage" :src="getAvatarUrl(profileData.profileImage)" class="user-meta-card__avatar-img" alt="Avatar" />
 							<span v-else>{{ profileData.name ? profileData.name[0].toUpperCase() : "U" }}</span>
 						</div>
@@ -317,33 +415,52 @@ async function confirmAvatarUpload() {
 					<span class="user-meta-card__email">{{ profileData.email || "no-email@gstech.com" }}</span>
 
 					<div class="user-meta-card__badges mt-sm">
-						<Badge type="info" icon="mdi-shield-account">{{ profileData.role }}</Badge>
+						<Badge type="info" icon="mdi-shield-account">{{ getRoleDisplayName(profileData.role) }}</Badge>
 						<Badge :type="profileData.isActive ? 'success' : 'error'">
 							{{ profileData.isActive ? "Active" : "Inactive" }}
 						</Badge>
 					</div>
 				</div>
 
-				<!-- Part 2: Security Policy Card -->
-				<div class="panel-card mt-lg">
-					<h2 class="panel-card__title mb-md" style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--colors-text-muted)">
-						<i class="mdi mdi-shield-account-outline"></i> Security Policy
-					</h2>
+				<!-- Part 2: Security Policy Card (Only for existing user accounts) -->
+				<div v-if="!isNewMode" class="panel-card security-card mt-lg">
+					<div class="security-card__header mb-md">
+						<div class="security-card__icon-badge">
+							<i class="mdi mdi-shield-lock-outline"></i>
+						</div>
+						<div>
+							<h2 class="security-card__title">Security & Credentials</h2>
+							<p class="security-card__subtitle">Manage password and security settings</p>
+						</div>
+					</div>
 					<div class="quick-nav-box">
-						<div class="security-action-item">
-							<p style="font-size: 12px; color: var(--colors-text-secondary); line-height: 1.5; margin-bottom: 10px;">
-								Manage account credentials and password security policies.
+						<div v-if="!isOwnProfile" class="security-action-item">
+							<p class="security-card__desc">
+								As an Administrator, you can reset this user's password directly or resend account activation link.
 							</p>
-							<button class="btn btn--outlined w-full" @click="openPasswordDialog">
-								<i class="mdi mdi-lock-reset"></i> {{ isOwnProfile ? 'Change Password' : 'Reset User Password' }}
+							<button class="btn btn--outlined security-card__btn mb-sm" @click="openPasswordDialog">
+								<i class="mdi mdi-lock-reset"></i> Reset User Password
+							</button>
+							<button class="btn btn--outlined security-card__btn" @click="handleReinviteUser" :disabled="reinviteLoading">
+								<i v-if="reinviteLoading" class="mdi mdi-loading mdi-spin"></i>
+								<i v-else class="mdi mdi-email-send-outline"></i>
+								{{ reinviteLoading ? "Sending..." : "Resend Invitation Link" }}
+							</button>
+						</div>
+						<div v-else class="security-action-item">
+							<p class="security-card__desc">
+								To update your own password and security credentials, please visit Settings.
+							</p>
+							<button class="btn btn--outlined security-card__btn" @click="router.push('/settings')">
+								<i class="mdi mdi-cog-outline"></i> Go to Settings
 							</button>
 						</div>
 
-						<div v-if="!isOwnProfile" style="border-top: 1px solid var(--colors-surface-border); margin-top: 16px; padding-top: 16px;">
-							<p style="font-size: 12px; color: var(--colors-text-secondary); line-height: 1.5; margin-bottom: 10px;">
+						<div v-if="!isOwnProfile" class="security-card__override-box">
+							<p class="security-card__desc">
 								Need custom overrides? You can adjust independent security matrix rules for this user.
 							</p>
-							<button class="btn btn--outlined w-full" @click="goToOverrides">
+							<button class="btn btn--outlined security-card__btn" @click="goToOverrides">
 								<i class="mdi mdi-shield-key-outline"></i> Edit Individual Overrides
 							</button>
 						</div>
@@ -358,8 +475,8 @@ async function confirmAvatarUpload() {
 
 					<div class="form-grid">
 						<div class="form-group">
-							<label class="form-group__label">Employee Code <span class="u-required">*</span></label>
-							<Textbox v-model="profileData.code" :disabled="!isNewMode" placeholder="e.g. USR-099" />
+							<label class="form-group__label">Employee Code</label>
+							<Textbox :model-value="profileData.code || '(Auto-generated by system)'" disabled placeholder="(Auto-generated by system)" />
 						</div>
 
 						<div class="form-group">
@@ -374,11 +491,10 @@ async function confirmAvatarUpload() {
 
 						<div class="form-group">
 							<label class="form-group__label">Role</label>
-							<Select v-model="profileData.role" :disabled="!isEditMode || isOwnProfile">
-								<option value="Superadmin">Superadmin (Root)</option>
-								<option value="Administrator">Administrator</option>
-								<option value="Manager">Manager / Scheduler</option>
-								<option value="Engineer">Field Engineer / Tech</option>
+							<Select v-model="profileData.role" :disabled="!isEditMode || (isOwnProfile && !isNewMode)">
+								<option v-for="role in assignableRoles" :key="role.code" :value="role.code">
+									{{ role.name }}
+								</option>
 							</Select>
 						</div>
 
@@ -558,6 +674,18 @@ async function confirmAvatarUpload() {
 		justify-content: center;
 		box-shadow: 0 8px 24px rgba(80, 88, 242, 0.2);
 		overflow: hidden;
+		border: 3px solid transparent;
+		transition: border-color 0.25s ease, box-shadow 0.25s ease;
+
+		&--active {
+			border-color: #10B981 !important;
+			box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15), 0 6px 18px rgba(16, 185, 129, 0.1) !important;
+		}
+
+		&--inactive {
+			border-color: #F43F5E !important;
+			box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.15), 0 6px 18px rgba(244, 63, 94, 0.1) !important;
+		}
 	}
 	&__avatar-img {
 		width: 100%;
@@ -849,9 +977,74 @@ async function confirmAvatarUpload() {
 .mb-lg {
 	margin-bottom: var(--spacing-lg);
 }
-.w-full {
-	width: 100% !important;
+.security-card {
+	background: var(--colors-surface-card);
+	padding: 24px !important;
+	box-sizing: border-box;
+
+	&__header {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	&__icon-badge {
+		width: 36px;
+		height: 36px;
+		border-radius: 10px;
+		background: rgba(80, 88, 242, 0.1);
+		color: var(--colors-brand-primary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 20px;
+		flex-shrink: 0;
+	}
+
+	&__title {
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--colors-text-primary);
+		margin: 0;
+	}
+
+	&__subtitle {
+		font-size: 12px;
+		color: var(--colors-text-muted);
+		margin: 2px 0 0 0;
+	}
+
+	&__desc {
+		font-size: 12px;
+		color: var(--colors-text-secondary);
+		line-height: 1.5;
+		margin-bottom: 12px;
+	}
+
+	&__btn {
+		width: 100% !important;
+		display: flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+		gap: 8px !important;
+		padding: 10px 16px !important;
+		box-sizing: border-box !important;
+	}
+
+	&__override-box {
+		border-top: 1px solid var(--colors-surface-border);
+		margin-top: 20px !important;
+		padding-top: 20px !important;
+	}
 }
+
+.security-action-item {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	gap: 12px;
+}
+
 .u-required {
 	color: #ef4444;
 }

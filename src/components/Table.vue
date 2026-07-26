@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from "vue";
 import Dialog from "@/components/Dialog.vue";
+import HighlightText from "@/components/HighlightText.vue";
 
 export interface TableHeader {
 	key: string;
 	label: string;
 	align?: "left" | "center" | "right";
 	width?: string;
+	minWidth?: string;
 	sortable?: boolean;
 }
 
@@ -27,6 +29,8 @@ const props = withDefaults(defineProps<{
 	outlined?: boolean;
 	paginate?: boolean;
 	rowsPerPageOptions?: number[];
+	storageKey?: string;
+	searchQuery?: string;
 }>(), {
 	emptyMessage: 'No data available.',
 	hover: false,
@@ -36,7 +40,9 @@ const props = withDefaults(defineProps<{
 	elevation: 0,
 	outlined: false,
 	paginate: false,
-	rowsPerPageOptions: () => [10, 25, 50, 100]
+	rowsPerPageOptions: () => [10, 25, 50, 100],
+	storageKey: undefined,
+	searchQuery: undefined,
 });
 
 const emit = defineEmits<{
@@ -45,6 +51,68 @@ const emit = defineEmits<{
 
 // --- Internal Headers State (Customization, Order, Width) ---
 const internalHeaders = ref<InternalHeader[]>([]);
+
+// --- Sorting State (Multi-column support with priority badges 1, 2, 3) ---
+export interface SortRule {
+	key: string;
+	order: 'asc' | 'desc';
+}
+
+const sortRules = ref<SortRule[]>([]);
+
+function loadTablePreferences() {
+	if (!props.storageKey) return;
+	try {
+		const saved = localStorage.getItem(`table_pref_${props.storageKey}`);
+		if (saved) {
+			const parsed = JSON.parse(saved);
+			if (parsed.sortRules && Array.isArray(parsed.sortRules)) {
+				sortRules.value = parsed.sortRules;
+			} else if (parsed.sortKey) {
+				sortRules.value = [{ key: parsed.sortKey, order: parsed.sortOrder || 'asc' }];
+			}
+			if (parsed.headers && Array.isArray(parsed.headers)) {
+				const savedMap = new Map(parsed.headers.map((h: any) => [h.key, h]));
+				const restored: InternalHeader[] = [];
+				parsed.headers.forEach((h: any) => {
+					const propH = props.headers.find(ph => ph.key === h.key);
+					if (propH) {
+						restored.push({
+							...propH,
+							visible: h.visible !== undefined ? h.visible : true,
+							_width: h._width || propH.width,
+						});
+					}
+				});
+				props.headers.forEach(ph => {
+					if (!savedMap.has(ph.key)) {
+						restored.push({ ...ph, visible: true });
+					}
+				});
+				internalHeaders.value = restored;
+			}
+		}
+	} catch (e) {
+		console.error("Failed to load table preferences:", e);
+	}
+}
+
+function saveTablePreferences() {
+	if (!props.storageKey) return;
+	try {
+		const payload = {
+			sortRules: sortRules.value,
+			headers: internalHeaders.value.map(h => ({
+				key: h.key,
+				visible: h.visible,
+				_width: h._width,
+			})),
+		};
+		localStorage.setItem(`table_pref_${props.storageKey}`, JSON.stringify(payload));
+	} catch (e) {
+		console.error("Failed to save table preferences:", e);
+	}
+}
 
 watch(() => props.headers, (newHeaders) => {
 	const currentMap = new Map(internalHeaders.value.map(h => [h.key, h]));
@@ -56,7 +124,14 @@ watch(() => props.headers, (newHeaders) => {
 			_width: existing?._width || h.width
 		};
 	});
+	if (props.storageKey) {
+		loadTablePreferences();
+	}
 }, { immediate: true, deep: true });
+
+watch([sortRules, internalHeaders], () => {
+	saveTablePreferences();
+}, { deep: true });
 
 const visibleHeaders = computed(() => internalHeaders.value.filter(h => h.visible));
 
@@ -65,7 +140,9 @@ const tempHeaders = ref<InternalHeader[]>([]);
 
 function toggleColumnSettings() {
 	if (!showColumnSettings.value) {
-		tempHeaders.value = internalHeaders.value.map(h => ({ ...h }));
+		tempHeaders.value = internalHeaders.value
+			.filter(h => h.label && h.label.trim() !== '')
+			.map(h => ({ ...h }));
 	}
 	showColumnSettings.value = !showColumnSettings.value;
 }
@@ -78,7 +155,13 @@ function toggleSelectAll() {
 }
 
 function applyColumnSettings() {
-	internalHeaders.value = tempHeaders.value.map(h => ({ ...h }));
+	const tempVisibilityMap = new Map(tempHeaders.value.map(h => [h.key, h.visible]));
+	internalHeaders.value = internalHeaders.value.map(h => {
+		if (tempVisibilityMap.has(h.key)) {
+			return { ...h, visible: tempVisibilityMap.get(h.key)! };
+		}
+		return h;
+	});
 	showColumnSettings.value = false;
 }
 
@@ -172,43 +255,92 @@ onUnmounted(() => {
 	document.removeEventListener('mouseup', onResizeEnd);
 });
 
+const isAnyHeaderResized = computed(() => visibleHeaders.value.some(h => !!h._width));
+
 const tableStyle = computed(() => {
-	if (isTableFixed.value) {
+	if (isTableFixed.value || isAnyHeaderResized.value) {
 		return { tableLayout: 'fixed' as const };
 	}
 	return {};
 });
 
 // --- Sorting ---
-const sortKey = ref<string | null>(null);
-const sortOrder = ref<'asc' | 'desc'>('asc');
+function isHeaderSortable(header: TableHeader): boolean {
+	if (header.sortable !== undefined) return header.sortable;
+	if (header.key === 'actions' || header.key === 'action' || header.key === 'select') return false;
+	return true;
+}
 
-function toggleSort(key: string) {
-	if (sortKey.value === key) {
-		if (sortOrder.value === 'asc') sortOrder.value = 'desc';
-		else {
-			sortKey.value = null;
-			sortOrder.value = 'asc';
+function getSortPriority(key: string): number | null {
+	const index = sortRules.value.findIndex(r => r.key === key);
+	return index !== -1 ? index + 1 : null;
+}
+
+function getSortOrder(key: string): 'asc' | 'desc' | null {
+	const rule = sortRules.value.find(r => r.key === key);
+	return rule ? rule.order : null;
+}
+
+function toggleSort(key: string, event?: MouseEvent) {
+	const header = internalHeaders.value.find(h => h.key === key);
+	if (header && !isHeaderSortable(header)) return;
+
+	const isShift = event?.shiftKey;
+	const existingIndex = sortRules.value.findIndex(r => r.key === key);
+
+	if (isShift) {
+		// Shift + Click: Add or cycle in multi-sort rule list
+		if (existingIndex !== -1) {
+			const currentOrder = sortRules.value[existingIndex].order;
+			if (currentOrder === 'asc') {
+				sortRules.value[existingIndex].order = 'desc';
+			} else {
+				sortRules.value.splice(existingIndex, 1);
+			}
+		} else {
+			sortRules.value.push({ key, order: 'asc' });
 		}
 	} else {
-		sortKey.value = key;
-		sortOrder.value = 'asc';
+		// Normal Click: Replace with single column sort, or cycle asc -> desc -> none
+		if (existingIndex !== -1) {
+			if (sortRules.value.length === 1) {
+				const currentOrder = sortRules.value[0].order;
+				if (currentOrder === 'asc') {
+					sortRules.value[0].order = 'desc';
+				} else {
+					sortRules.value = [];
+				}
+			} else {
+				sortRules.value = [{ key, order: 'asc' }];
+			}
+		} else {
+			sortRules.value = [{ key, order: 'asc' }];
+		}
 	}
 }
 
+function getSortableValue(item: any, key: string): any {
+	if (item[key] !== undefined && item[key] !== null) return item[key];
+	if (key === 'employee') return item.name || item.displayName || item.employeeName || '';
+	if (key === 'status') return item.isActive !== undefined ? (item.isActive ? 'Active' : 'Inactive') : (item.status || '');
+	return '';
+}
+
 const sortedItems = computed(() => {
-	if (!sortKey.value) return props.items || [];
+	if (!sortRules.value.length) return props.items || [];
 	return [...(props.items || [])].sort((a, b) => {
-		const valA = a[sortKey.value!];
-		const valB = b[sortKey.value!];
-		if (valA === valB) return 0;
-		if (valA == null) return 1;
-		if (valB == null) return -1;
-		
-		const strA = String(valA).toLowerCase();
-		const strB = String(valB).toLowerCase();
-		if (strA < strB) return sortOrder.value === 'asc' ? -1 : 1;
-		if (strA > strB) return sortOrder.value === 'asc' ? 1 : -1;
+		for (const rule of sortRules.value) {
+			const valA = getSortableValue(a, rule.key);
+			const valB = getSortableValue(b, rule.key);
+			if (valA === valB) continue;
+			if (valA == null) return 1;
+			if (valB == null) return -1;
+			
+			const strA = String(valA).toLowerCase();
+			const strB = String(valB).toLowerCase();
+			if (strA < strB) return rule.order === 'asc' ? -1 : 1;
+			if (strA > strB) return rule.order === 'asc' ? 1 : -1;
+		}
 		return 0;
 	});
 });
@@ -269,21 +401,25 @@ const paginationText = computed(() => {
 						:class="[
 							`mud-table-cell-${header.key}`,
 							`u-text-${header.align || 'left'}`,
-							{ 'dragging': draggedColumn === header.key, 'sortable-header': header.sortable !== false }
+							{ 'dragging': draggedColumn === header.key, 'sortable-header': isHeaderSortable(header) }
 						]"
-						:style="{ width: header._width || header.width, minWidth: header._width || header.width, maxWidth: header._width || header.width }"
+						:style="{ width: header._width || header.width, minWidth: header._width || header.minWidth || (header.width && header.width.endsWith('px') ? header.width : '100px') }"
 						:draggable="!isHoveringResizer && !resizingColumn"
 						@dragstart="onDragStart($event, header.key)"
 						@dragover="onDragOver($event)"
 						@drop="onDrop($event, header.key)"
-						@click="header.sortable !== false && toggleSort(header.key)"
+						@click="isHeaderSortable(header) && toggleSort(header.key, $event)"
+						:title="isHeaderSortable(header) ? 'Click to sort, Shift + Click for multi-column sort' : undefined"
 					>
 						<div class="header-content">
 							<slot :name="`header-${header.key}`" :header="header">
 								{{ header.label }}
 							</slot>
-							<span v-if="header.sortable !== false && sortKey === header.key" class="sort-icon">
-								<i :class="sortOrder === 'asc' ? 'mdi mdi-arrow-up' : 'mdi mdi-arrow-down'"></i>
+							<span v-if="isHeaderSortable(header) && getSortOrder(header.key)" class="sort-icon-group">
+								<i :class="getSortOrder(header.key) === 'asc' ? 'mdi mdi-arrow-up' : 'mdi mdi-arrow-down'"></i>
+								<span v-if="sortRules.length > 1" class="sort-priority-badge">
+									{{ getSortPriority(header.key) }}
+								</span>
 							</span>
 						</div>
 						<div 
@@ -317,10 +453,11 @@ const paginationText = computed(() => {
 							`u-text-${header.align || 'left'}`,
 							{ 'mud-table-cell-dense': dense }
 						]"
+						:style="{ width: header._width || header.width, minWidth: header._width || header.minWidth || (header.width && header.width.endsWith('px') ? header.width : '100px') }"
 						:data-label="header.label"
 					>
 						<slot :name="`item-${header.key}`" :item="item" :index="index">
-							{{ item[header.key] }}
+							<HighlightText :text="item[header.key]" :query="searchQuery" />
 						</slot>
 					</td>
 				</tr>
@@ -347,7 +484,7 @@ const paginationText = computed(() => {
 											<i class="mdi mdi-check"></i>
 										</div>
 									</div>
-									<span class="column-label">{{ header.label || '(Empty Label)' }}</span>
+									<span class="column-label">{{ header.label }}</span>
 								</label>
 							</div>
 							<div class="column-settings-footer">
@@ -410,7 +547,7 @@ const paginationText = computed(() => {
 	display: table;
 	border-spacing: 0;
 	border-collapse: collapse;
-	min-width: max-content;
+	min-width: 100%;
 
 	&--bordered {
 		.mud-table-cell {
@@ -487,19 +624,58 @@ const paginationText = computed(() => {
 
 .mud-table-cell {
 	display: table-cell;
-	padding: 16px;
+	padding: 14px 16px;
 	font-size: 0.875rem;
 	text-align: left;
 	font-weight: 400;
 	line-height: 1.43;
 	border-bottom: 1px solid var(--colors-surface-border);
 	letter-spacing: 0.01071em;
-	vertical-align: inherit;
-	white-space: nowrap;
+	vertical-align: middle;
+	white-space: normal;
+	word-break: break-word;
+	overflow-wrap: break-word;
+	max-width: 320px;
 
 	&-dense {
 		padding: 6px 24px 6px 16px;
 	}
+}
+
+.mud-table-cell-actions,
+.mud-table-cell-status,
+.mud-table-cell-select,
+.mud-table-cell-code,
+.mud-table-cell-woNumber,
+.mud-table-cell-createdAt {
+	white-space: nowrap;
+}
+
+.sort-icon-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	margin-left: 6px;
+	vertical-align: middle;
+
+	i {
+		font-size: 14px;
+	}
+}
+
+.sort-priority-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	font-size: 10px;
+	font-weight: 700;
+	border-radius: 8px;
+	background-color: var(--colors-brand-primary, #5058f2);
+	color: #ffffff;
+	line-height: 1;
 }
 
 .mud-table-empty-row {
@@ -708,19 +884,19 @@ const paginationText = computed(() => {
 
 	.resizer {
 		position: absolute;
-		right: -4px;
+		right: -8px;
 		top: 0;
 		bottom: 0;
-		width: 8px;
+		width: 16px;
 		cursor: col-resize;
 		z-index: 10;
 		background-color: transparent;
-		transition: background-color 0.2s;
+		touch-action: none;
 
 		&::after {
 			content: "";
 			position: absolute;
-			left: 3px;
+			left: 7px;
 			top: 0;
 			bottom: 0;
 			width: 2px;
@@ -730,14 +906,14 @@ const paginationText = computed(() => {
 
 		&:hover::after,
 		&.resizing::after {
-			background-color: rgba(255, 255, 255, 0.4);
+			background-color: rgba(255, 255, 255, 0.6);
 		}
 	}
 
 	:global([data-theme="dark"]) .resizer {
 		&:hover::after,
 		&.resizing::after {
-			background-color: rgba(255, 255, 255, 0.25);
+			background-color: rgba(255, 255, 255, 0.4);
 		}
 	}
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Badge from "@/components/Badge.vue";
 import Dialog from "@/components/Dialog.vue";
@@ -8,9 +8,11 @@ import FilterPanel from "@/components/FilterPanel.vue";
 import Table from "@/components/Table.vue";
 import Textbox from "@/components/Textbox.vue";
 import type { TableHeader } from "@/components/Table.vue";
+import http from "@/utils/http";
 
 interface WorkType {
-	id: number;
+	guid?: string;
+	id?: number;
 	code: string;
 	name: string;
 	description: string;
@@ -19,8 +21,10 @@ interface WorkType {
 }
 
 interface WorkTypeItem {
-	id: number;
-	workTypeCode: string;
+	guid?: string;
+	id?: number;
+	workTypeGuid?: string;
+	workTypeCode?: string;
 	code: string;
 	name: string;
 	description: string;
@@ -30,73 +34,73 @@ interface WorkTypeItem {
 const searchType = ref("");
 const selectedType = ref<WorkType | null>(null);
 const isEditing = ref(false);
+const isTypeDialogOpen = ref(false);
+const isNewRecord = ref(false);
 const isItemDialogOpen = ref(false);
 const filterActive = ref("all");
 const filterForm = ref("all");
 
+const workTypeFormData = ref<Partial<WorkType>>({
+	code: "",
+	name: "",
+	description: "",
+	withEquipmentForm: false,
+	isActive: true,
+});
+
 const itemHeaders: TableHeader[] = [
-	{ key: "code", label: "Code" },
-	{ key: "name", label: "Item Name" },
-	{ key: "status", label: "Status" },
-	{ key: "actions", label: "Actions", align: "right", width: "100px" },
+	{ key: "code", label: "Code", width: "130px", minWidth: "110px" },
+	{ key: "name", label: "Item Name", width: "180px", minWidth: "150px" },
+	{ key: "description", label: "Description", width: "auto", minWidth: "220px" },
+	{ key: "status", label: "Status", width: "110px", minWidth: "100px" },
+	{ key: "actions", label: "Actions", align: "right", width: "110px", minWidth: "100px" },
 ];
 
 const searchItem = ref("");
 const filterItemStatus = ref("all");
 const editingItem = ref<WorkTypeItem>({
-	id: 0,
-	workTypeCode: "",
 	code: "",
 	name: "",
 	description: "",
 	isActive: true,
 });
 
-const workTypes = ref<WorkType[]>([
-	{
-		id: 1,
-		code: "PM",
-		name: "Preventive Maintenance",
-		description: "Regular scheduled maintenance routines",
-		withEquipmentForm: true,
-		isActive: true,
-	},
-	{
-		id: 2,
-		code: "BR",
-		name: "Breakdown Repair",
-		description: "Emergency repair when equipment fails",
-		withEquipmentForm: true,
-		isActive: true,
-	},
-	{
-		id: 3,
-		code: "IN",
-		name: "Inspection",
-		description: "Standard audit and checkpoints",
-		withEquipmentForm: false,
-		isActive: true,
-	},
-]);
+const workTypes = ref<WorkType[]>([]);
+const items = ref<WorkTypeItem[]>([]);
 
-const items = ref<WorkTypeItem[]>([
-	{
-		id: 1,
-		workTypeCode: "PM",
-		code: "PM-01",
-		name: "Engine Oil Change",
-		description: "",
-		isActive: true,
-	},
-	{
-		id: 2,
-		workTypeCode: "PM",
-		code: "PM-02",
-		name: "Filter Replacement",
-		description: "",
-		isActive: true,
-	},
-]);
+async function fetchWorkTypes() {
+	try {
+		const res = await http.get("/work-type", { params: { pageSize: 100 } });
+		const data = res.data?.data || res.data || [];
+		workTypes.value = data;
+		if (workTypes.value.length > 0 && !selectedType.value) {
+			selectType(workTypes.value[0]);
+		}
+	} catch (e) {
+		console.error("Failed to fetch work types", e);
+	}
+}
+
+async function selectType(type: WorkType) {
+	selectedType.value = { ...type };
+	isEditing.value = false;
+	await fetchItemsForWorkType(type);
+}
+
+async function fetchItemsForWorkType(type: WorkType) {
+	if (!type) return;
+	try {
+		if (type.guid) {
+			const res = await http.get(`/work-type/${type.guid}`);
+			items.value = res.data?.items || res.data?.data?.items || [];
+		} else {
+			items.value = [];
+		}
+	} catch (e) {
+		console.error("Failed to fetch work type items", e);
+		items.value = [];
+	}
+}
 
 const filteredWorkTypes = computed(() => {
 	let result = workTypes.value;
@@ -122,9 +126,7 @@ const filteredWorkTypes = computed(() => {
 });
 
 const filteredItems = computed(() => {
-	if (!selectedType.value) return [];
-
-	let result = items.value.filter((i) => i.workTypeCode === selectedType.value?.code);
+	let result = items.value;
 
 	if (searchItem.value) {
 		const q = searchItem.value.toLowerCase();
@@ -152,26 +154,69 @@ function resetItemFilter() {
 	filterItemStatus.value = "all";
 }
 
-function selectType(type: WorkType) {
+function openCreateTypeModal() {
+	isNewRecord.value = true;
+	workTypeFormData.value = {
+		code: "",
+		name: "",
+		description: "",
+		withEquipmentForm: false,
+		isActive: true,
+	};
+	isTypeDialogOpen.value = true;
+}
+
+function openEditTypeModal(type: WorkType) {
+	isNewRecord.value = false;
 	selectedType.value = type;
-	isEditing.value = false;
+	workTypeFormData.value = { ...type };
+	isTypeDialogOpen.value = true;
 }
 
-function createNewType() {
-	console.log("Creating new work type...");
-}
+async function saveTypeModal() {
+	if (!workTypeFormData.value.code?.trim() || !workTypeFormData.value.name?.trim()) {
+		alert("Work Type Code and Name are required.");
+		return;
+	}
 
-function saveType() {
-	console.log("Type details updated local-store successfully", selectedType.value);
-	isEditing.value = false;
+	try {
+		if (isNewRecord.value) {
+			const res = await http.post("/work-type", {
+				code: workTypeFormData.value.code.trim(),
+				name: workTypeFormData.value.name.trim(),
+				description: workTypeFormData.value.description || "",
+				withEquipmentForm: workTypeFormData.value.withEquipmentForm ?? false,
+				isActive: workTypeFormData.value.isActive ?? true,
+			});
+			if (res.data?.guid) {
+				const newType = { ...workTypeFormData.value, guid: res.data.guid } as WorkType;
+				selectType(newType);
+			}
+		} else if (workTypeFormData.value.guid) {
+			await http.put(`/work-type/${workTypeFormData.value.guid}`, {
+				name: workTypeFormData.value.name.trim(),
+				description: workTypeFormData.value.description || "",
+				withEquipmentForm: workTypeFormData.value.withEquipmentForm ?? false,
+				isActive: workTypeFormData.value.isActive ?? true,
+			});
+		}
+		isTypeDialogOpen.value = false;
+		await fetchWorkTypes();
+	} catch (e) {
+		console.error("Failed to save work type", e);
+	}
 }
 
 function addNewItem() {
 	if (!selectedType.value) return;
+	const prefix = (selectedType.value.code || "ITEM").toUpperCase();
+	const existingCount = items.value.length;
+	const nextSeq = String(existingCount + 1).padStart(4, "0");
+	const autoCode = `${prefix}-${nextSeq}`;
+
 	editingItem.value = {
-		id: 0,
-		workTypeCode: selectedType.value.code,
-		code: "",
+		guid: "",
+		code: autoCode,
 		name: "",
 		description: "",
 		isActive: true,
@@ -184,20 +229,61 @@ function editItem(item: WorkTypeItem) {
 	isItemDialogOpen.value = true;
 }
 
-function saveItem() {
-	if (editingItem.value.id === 0) {
-		editingItem.value.id = Date.now();
-		items.value.push({ ...editingItem.value });
-	} else {
-		const index = items.value.findIndex((i) => i.code === editingItem.value.code);
-		if (index !== -1) items.value[index] = { ...editingItem.value };
+async function saveItem() {
+	if (!selectedType.value?.code) return;
+	try {
+		if (editingItem.value.guid) {
+			await http.put(`/work-type-item/${editingItem.value.guid}`, {
+				name: editingItem.value.name,
+				description: editingItem.value.description,
+				isActive: editingItem.value.isActive,
+			});
+		} else {
+			await http.post("/work-type-item", {
+				workTypeCode: selectedType.value.code,
+				code: editingItem.value.code,
+				name: editingItem.value.name,
+				description: editingItem.value.description || "",
+				isActive: editingItem.value.isActive,
+			});
+		}
+		isItemDialogOpen.value = false;
+		await fetchItemsForWorkType(selectedType.value);
+	} catch (e) {
+		console.error("Failed to save work type item", e);
 	}
-	isItemDialogOpen.value = false;
 }
 
-function deleteItem(item: WorkTypeItem) {
-	items.value = items.value.filter((i) => i.code !== item.code);
+const isConfirmItemStatusOpen = ref(false);
+const itemToToggle = ref<WorkTypeItem | null>(null);
+
+function requestToggleItemStatus(item: WorkTypeItem) {
+	itemToToggle.value = item;
+	isConfirmItemStatusOpen.value = true;
 }
+
+async function confirmToggleItemStatus() {
+	if (!itemToToggle.value?.guid) return;
+	try {
+		const newStatus = !itemToToggle.value.isActive;
+		await http.put(`/work-type-item/${itemToToggle.value.guid}`, {
+			name: itemToToggle.value.name,
+			description: itemToToggle.value.description,
+			isActive: newStatus,
+		});
+		isConfirmItemStatusOpen.value = false;
+		itemToToggle.value = null;
+		if (selectedType.value) {
+			await fetchItemsForWorkType(selectedType.value);
+		}
+	} catch (e) {
+		console.error("Failed to toggle item status:", e);
+	}
+}
+
+onMounted(() => {
+	fetchWorkTypes();
+});
 </script>
 
 <template>
@@ -209,7 +295,7 @@ function deleteItem(item: WorkTypeItem) {
 					Define service categories and their specific task items
 				</p>
 			</div>
-			<button class="action-btn action-btn--primary" @click="createNewType">
+			<button class="action-btn action-btn--primary" @click="openCreateTypeModal" style="display: flex; align-items: center; gap: 6px;">
 				<i class="mdi mdi-plus"></i> New Work Type
 			</button>
 		</div>
@@ -262,12 +348,12 @@ function deleteItem(item: WorkTypeItem) {
 									<span class="type-card__code">({{ type.code }})</span>
 								</span>
 								<div class="type-card__chips">
-									<Badge :type="type.isActive ? 'success' : 'default'">
+									<Badge :type="type.isActive ? 'success' : 'error'">
 										{{ type.isActive ? "Active" : "Inactive" }}
 									</Badge>
 									<Badge
 										v-if="type.withEquipmentForm"
-										type="warning"
+										type="info"
 										icon="mdi-assignment"
 									>
 										With Equipment Form
@@ -303,17 +389,11 @@ function deleteItem(item: WorkTypeItem) {
 								Work Type Details: <strong>{{ selectedType.code }}</strong>
 							</h2>
 							<button
-								v-if="!isEditing"
 								class="action-btn action-btn--sm action-btn--outlined"
-								@click="isEditing = true"
+								@click="openEditTypeModal(selectedType)"
 							>
 								<i class="mdi mdi-pencil"></i> Edit
 							</button>
-							<label v-else class="switch-toggle">
-								<input type="checkbox" v-model="selectedType.isActive" />
-								<span class="switch-toggle__slider"></span>
-								<span class="switch-toggle__label">Active</span>
-							</label>
 						</template>
 
 						<div v-if="!isEditing" class="detail-view">
@@ -324,7 +404,7 @@ function deleteItem(item: WorkTypeItem) {
 							<div class="detail-view__group">
 								<label>Status</label>
 								<p>
-									<Badge :type="selectedType.isActive ? 'success' : 'default'">
+									<Badge :type="selectedType.isActive ? 'success' : 'error'">
 										{{ selectedType.isActive ? "Active" : "Inactive" }}
 									</Badge>
 								</p>
@@ -332,9 +412,9 @@ function deleteItem(item: WorkTypeItem) {
 							<div class="detail-view__group">
 								<label>Equipment Form</label>
 								<p>
-									{{
-										selectedType.withEquipmentForm ? "Required" : "Not Required"
-									}}
+									<Badge :type="selectedType.withEquipmentForm ? 'info' : 'warning'">
+										{{ selectedType.withEquipmentForm ? "Required" : "Not Required" }}
+									</Badge>
 								</p>
 							</div>
 							<div class="detail-view__group detail-view__group--full">
@@ -377,7 +457,7 @@ function deleteItem(item: WorkTypeItem) {
 							</button>
 							<button
 								class="action-btn action-btn--primary action-btn--sm"
-								@click="saveType"
+								@click="saveTypeModal"
 							>
 								Save Changes
 							</button>
@@ -429,29 +509,29 @@ function deleteItem(item: WorkTypeItem) {
 							<template #item-code="{ item }">
 								<span class="u-font-mono">{{ item.code }}</span>
 							</template>
+							<template #item-description="{ item }">
+								<span class="u-text-muted">{{ item.description || "—" }}</span>
+							</template>
 							<template #item-status="{ item }">
-								<span
-									class="badge"
-									:class="item.isActive ? 'badge--success' : 'badge--disabled'"
-								>
-									{{ item.isActive ? "Active" : "Disabled" }}
-								</span>
+								<Badge :type="item.isActive ? 'success' : 'error'">
+									{{ item.isActive ? "Active" : "Inactive" }}
+								</Badge>
 							</template>
 							<template #item-actions="{ item }">
-								<div style="display: flex; gap: 4px; justify-content: flex-end;">
+								<div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
 									<button
 										class="btn btn--icon"
 										@click="editItem(item)"
-										title="Edit"
+										title="Edit Item"
 									>
 										<i class="mdi mdi-pencil"></i>
 									</button>
 									<button
-										class="btn btn--icon btn--icon-danger"
-										@click="deleteItem(item)"
-										title="Delete"
+										class="btn btn--icon"
+										@click="requestToggleItemStatus(item)"
+										:title="item.isActive ? 'Deactivate Item' : 'Activate Item'"
 									>
-										<i class="mdi mdi-delete"></i>
+										<i class="mdi" :class="item.isActive ? 'mdi-check-circle-outline' : 'mdi-pause-circle-outline'"></i>
 									</button>
 								</div>
 							</template>
@@ -468,12 +548,15 @@ function deleteItem(item: WorkTypeItem) {
 
 		<Dialog v-model="isItemDialogOpen">
 			<template #header>
-				<h3>{{ editingItem.id === 0 ? "New" : "Edit" }} Work Item</h3>
+				<h2>{{ editingItem.guid ? "Edit Work Type Item" : "Create Work Type Item" }}</h2>
+				<p>Manage task item specifications for {{ selectedType?.name }}</p>
 			</template>
 
 			<div class="form-group">
-				<label class="form-group__label">Item Code</label>
-				<Textbox v-model="editingItem.code" :disabled="editingItem.id !== 0" />
+				<label class="form-group__label">
+					Item Code <span style="font-size: 11px; color: var(--colors-text-muted); font-weight: normal;">(System Auto-Generated)</span>
+				</label>
+				<Textbox v-model="editingItem.code" disabled class="u-font-mono" />
 			</div>
 			<div class="form-group">
 				<label class="form-group__label">Item Name</label>
@@ -491,7 +574,7 @@ function deleteItem(item: WorkTypeItem) {
 				<label class="switch-toggle">
 					<input type="checkbox" v-model="editingItem.isActive" />
 					<span class="switch-toggle__slider"></span>
-					<span class="switch-toggle__label">Active</span>
+					<span class="switch-toggle__label">Activate Work Type Item</span>
 				</label>
 			</div>
 
@@ -500,6 +583,93 @@ function deleteItem(item: WorkTypeItem) {
 					Cancel
 				</button>
 				<button class="action-btn action-btn--primary" @click="saveItem">Save Item</button>
+			</template>
+		</Dialog>
+
+		<!-- Work Type Create / Edit Dialog Modal -->
+		<Dialog v-model="isTypeDialogOpen">
+			<template #header>
+				<h2>{{ isNewRecord ? "Create Work Type" : "Edit Work Type Details" }}</h2>
+				<p>Manage service categories and form requirements</p>
+			</template>
+
+			<div class="form-grid">
+				<div class="form-group form-group--full">
+					<label class="form-group__label">Work Type Code <span class="u-required">*</span></label>
+					<Textbox
+						v-model="workTypeFormData.code"
+						:disabled="!isNewRecord"
+						placeholder="e.g. WT-ELEC, WT-HVAC"
+						class="u-font-mono"
+					/>
+				</div>
+
+				<div class="form-group form-group--full">
+					<label class="form-group__label">Work Type Name <span class="u-required">*</span></label>
+					<Textbox
+						v-model="workTypeFormData.name"
+						placeholder="e.g. Electrical Maintenance"
+					/>
+				</div>
+
+				<div class="form-group form-group--full">
+					<label class="form-group__label">Description</label>
+					<textarea
+						v-model="workTypeFormData.description"
+						rows="3"
+						class="form-group__textarea"
+						placeholder="Optional description of service category..."
+					></textarea>
+				</div>
+
+				<div class="form-group form-group--full">
+					<label class="checkbox-container">
+						<input
+							type="checkbox"
+							v-model="workTypeFormData.withEquipmentForm"
+						/>
+						<span class="checkbox-container__box"></span>
+						Requires Equipment Form
+					</label>
+				</div>
+
+				<div class="form-group form-group--full" style="padding-top: 8px;">
+					<label class="switch-toggle">
+						<input type="checkbox" v-model="workTypeFormData.isActive" />
+						<span class="switch-toggle__slider"></span>
+						<span class="switch-toggle__label">Activate Work Type</span>
+					</label>
+				</div>
+			</div>
+
+			<template #footer>
+				<button class="btn btn--secondary" @click="isTypeDialogOpen = false">
+					Cancel
+				</button>
+				<button class="btn btn--primary" @click="saveTypeModal">
+					Save Work Type
+				</button>
+			</template>
+		</Dialog>
+
+		<!-- Item Status Toggle Confirmation Dialog -->
+		<Dialog v-model="isConfirmItemStatusOpen">
+			<template #header>
+				<h2>Confirm Status Change</h2>
+			</template>
+
+			<p style="padding: 8px 0; font-size: 14px; line-height: 1.5;">
+				Are you sure you want to {{ itemToToggle?.isActive ? 'deactivate' : 'activate' }} work type item
+				<strong>"{{ itemToToggle?.name }}"</strong> ({{ itemToToggle?.code }})?
+			</p>
+
+			<template #footer>
+				<button class="btn btn--secondary" @click="isConfirmItemStatusOpen = false">
+					Cancel
+				</button>
+				<button class="btn btn--primary" @click="confirmToggleItemStatus">
+					Confirm
+				</button>
 			</template>
 		</Dialog>
 	</div>

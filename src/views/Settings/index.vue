@@ -1,33 +1,185 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useThemeStore } from "@/stores/theme.store";
+import { useAuthStore } from "@/stores/auth.store";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useDateFormatStore, type SystemDateFormat } from "@/stores/dateFormat.store";
+import { userApi } from "@/api/user/user.api";
 import Card from "@/components/Card.vue";
 import Button from "@/components/Button.vue";
+import Textbox from "@/components/Textbox.vue";
+import Select from "@/components/Select.vue";
+import Dialog from "@/components/Dialog.vue";
 
 const themeStore = useThemeStore();
+const authStore = useAuthStore();
+const snackbar = useSnackbarStore();
+const dateFormatStore = useDateFormatStore();
+
+// Password Change State
+const showPasswordModal = ref(false);
+const passwordLoading = ref(false);
+const passwordForm = ref({
+	newPassword: "",
+	confirmPassword: "",
+});
+
+function openPasswordModal() {
+	passwordForm.value = { newPassword: "", confirmPassword: "" };
+	showPasswordModal.value = true;
+}
+
+async function handleUpdatePassword() {
+	if (!passwordForm.value.newPassword || !passwordForm.value.confirmPassword) {
+		snackbar.error("Please fill in both password fields.");
+		return;
+	}
+	if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+		snackbar.error("Passwords do not match.");
+		return;
+	}
+	if (passwordForm.value.newPassword.length < 6) {
+		snackbar.error("Password must be at least 6 characters long.");
+		return;
+	}
+
+	const guid = (authStore.currentUser && authStore.currentUser.guid) || (authStore.user && authStore.user.guid);
+	if (!guid) {
+		snackbar.error("Could not determine user ID.");
+		return;
+	}
+
+	passwordLoading.value = true;
+	try {
+		const { error } = await userApi.updatePassword(guid, {
+			password: passwordForm.value.newPassword,
+			passwordConfirm: passwordForm.value.confirmPassword,
+		} as any);
+
+		if (error) {
+			snackbar.error((error as any)?.error?.message || "Failed to update password.");
+			return;
+		}
+		snackbar.success("Password updated successfully.");
+		showPasswordModal.value = false;
+	} catch (e) {
+		console.error(e);
+		snackbar.error("Failed to update password.");
+	} finally {
+		passwordLoading.value = false;
+	}
+}
+
+function handleDateFormatChange(val: string) {
+	dateFormatStore.setDateFormat(val as SystemDateFormat);
+	snackbar.success(`System Date Format set to ${val}`);
+}
 </script>
 
 <template>
 	<div class="settings-page page">
 		<div class="settings-page__header">
 			<h1>Settings</h1>
-			<p class="u-text-muted">Manage your application preferences</p>
+			<p class="u-text-muted">Manage your application preferences, date formats, and security</p>
 		</div>
 
-		<Card bordered>
-			<template #header>
-				<h2 style="font-size: 18px;">Appearance</h2>
-			</template>
-			<div class="setting-item">
-				<div>
-					<h3 style="margin: 0 0 4px 0; font-size: 16px;">Theme Mode</h3>
-					<p class="u-text-muted" style="margin: 0; font-size: 14px;">Toggle between Light and Dark mode</p>
+		<div class="settings-grid">
+			<!-- Theme Preference -->
+			<Card bordered>
+				<template #header>
+					<h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
+						<i class="mdi mdi-palette-outline" style="color: var(--colors-brand-primary);"></i>
+						Appearance & Theme
+					</h2>
+				</template>
+				<div class="setting-item">
+					<div>
+						<h3 style="margin: 0 0 4px 0; font-size: 16px;">Theme Mode</h3>
+						<p class="u-text-muted" style="margin: 0; font-size: 14px;">Toggle between Light and Dark mode</p>
+					</div>
+					<Button variant="outlined" @click="themeStore.toggleTheme()" style="display: flex; align-items: center; gap: 8px;">
+						<i class="mdi" :class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'" style="font-size: 18px;"></i>
+						{{ themeStore.dark ? 'Dark Mode' : 'Light Mode' }}
+					</Button>
 				</div>
-				<Button variant="outlined" @click="themeStore.toggleTheme()" style="display: flex; align-items: center; gap: 8px;">
-					<i class="mdi" :class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'" style="font-size: 18px;"></i>
-					{{ themeStore.dark ? 'Dark Mode' : 'Light Mode' }}
-				</Button>
+			</Card>
+
+			<!-- System Date Format Preference -->
+			<Card bordered>
+				<template #header>
+					<h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
+						<i class="mdi mdi-calendar-clock-outline" style="color: var(--colors-brand-primary);"></i>
+						System Date Display Format
+					</h2>
+				</template>
+				<div class="setting-item" style="flex-wrap: wrap; gap: 16px;">
+					<div>
+						<h3 style="margin: 0 0 4px 0; font-size: 16px;">Global Date Separator & Style</h3>
+						<p class="u-text-muted" style="margin: 0; font-size: 14px;">
+							Choose your preferred system date style (dots, dashes, slashes, or word text)
+						</p>
+						<div class="live-date-preview" style="margin-top: 8px;">
+							<span style="font-size: 12px; font-weight: 600; color: var(--colors-text-muted);">LIVE PREVIEW: </span>
+							<strong style="font-size: 15px; color: var(--colors-brand-primary); font-family: monospace;">
+								{{ dateFormatStore.formatDate(new Date()) }}
+							</strong>
+						</div>
+					</div>
+
+					<div style="min-width: 220px;">
+						<Select :model-value="dateFormatStore.currentFormat" @update:model-value="handleDateFormatChange">
+							<option value="YYYY-MM-DD">YYYY-MM-DD (Dashed: 2026-07-26)</option>
+							<option value="YYYY.MM.DD">YYYY.MM.DD (Dotted: 2026.07.26)</option>
+							<option value="DD.MM.YYYY">DD.MM.YYYY (Dotted: 26.07.2026)</option>
+							<option value="DD/MM/YYYY">DD/MM/YYYY (Slash: 26/07/2026)</option>
+							<option value="DD-MM-YYYY">DD-MM-YYYY (Dashed: 26-07-2026)</option>
+							<option value="YYYY/MM/DD">YYYY/MM/DD (Slash: 2026/07/26)</option>
+							<option value="DD MMM YYYY">DD MMM YYYY (Word Text: 26 Jul 2026)</option>
+						</Select>
+					</div>
+				</div>
+			</Card>
+
+			<!-- Security Settings -->
+			<Card bordered>
+				<template #header>
+					<h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
+						<i class="mdi mdi-shield-lock-outline" style="color: var(--colors-brand-primary);"></i>
+						Account Security
+					</h2>
+				</template>
+				<div class="setting-item">
+					<div>
+						<h3 style="margin: 0 0 4px 0; font-size: 16px;">Change Password</h3>
+						<p class="u-text-muted" style="margin: 0; font-size: 14px;">Ensure your account is using a secure password</p>
+					</div>
+					<Button variant="outlined" @click="openPasswordModal" style="display: flex; align-items: center; gap: 8px;">
+						<i class="mdi mdi-lock-reset" style="font-size: 18px;"></i>
+						Change Password
+					</Button>
+				</div>
+			</Card>
+		</div>
+
+		<!-- Password Change Dialog -->
+		<Dialog v-model="showPasswordModal" title="Change Password" maxWidth="440px">
+			<div class="form-grid" style="display: flex; flex-direction: column; gap: 16px; padding: 8px 0;">
+				<div class="form-group">
+					<label class="form-group__label">New Password <span class="u-required">*</span></label>
+					<Textbox v-model="passwordForm.newPassword" type="password" placeholder="Enter new password" />
+				</div>
+				<div class="form-group">
+					<label class="form-group__label">Confirm New Password <span class="u-required">*</span></label>
+					<Textbox v-model="passwordForm.confirmPassword" type="password" placeholder="Confirm new password" />
+				</div>
 			</div>
-		</Card>
+			<template #footer>
+				<Button variant="outlined" @click="showPasswordModal = false" :disabled="passwordLoading">Cancel</Button>
+				<Button variant="primary" @click="handleUpdatePassword" :loading="passwordLoading">
+					<i v-if="!passwordLoading" class="mdi mdi-check"></i> Update Password
+				</Button>
+			</template>
+		</Dialog>
 	</div>
 </template>
 
@@ -47,10 +199,32 @@ const themeStore = useThemeStore();
 	}
 }
 
+.settings-grid {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-lg);
+}
+
 .setting-item {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	padding: var(--spacing-md) 0;
+}
+
+.form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	
+	&__label {
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--colors-text-secondary);
+	}
+}
+
+.u-required {
+	color: #ef4444;
 }
 </style>

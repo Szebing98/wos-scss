@@ -31,18 +31,45 @@ const steps = [
 const fromStatus = (route.query.status as string) || "progress";
 
 let initialStep = 2;
-let breadcrumbStatus = "In Progress";
+let breadcrumbStatus = ref("In Progress");
 
 if (fromStatus === "done") {
 	initialStep = 3;
-	breadcrumbStatus = "Done";
+	breadcrumbStatus.value = "Done";
 } else if (fromStatus === "completed") {
 	initialStep = 4;
-	breadcrumbStatus = "Completed";
+	breadcrumbStatus.value = "Completed";
 }
 
 const currentStepIndex = ref(initialStep);
 const isEditing = computed(() => currentStepIndex.value === 2);
+
+function updateStepFromStatus(statusStr: string) {
+	if (!statusStr) return;
+	const s = statusStr.toLowerCase();
+	if (s === "new") {
+		currentStepIndex.value = 0;
+		breadcrumbStatus.value = "New Request";
+	} else if (s === "pendingapproval") {
+		currentStepIndex.value = 1;
+		breadcrumbStatus.value = "Pending Approval";
+	} else if (s === "inprogress") {
+		currentStepIndex.value = 2;
+		breadcrumbStatus.value = "In Progress";
+	} else if (s === "done") {
+		currentStepIndex.value = 3;
+		breadcrumbStatus.value = "Done";
+	} else if (s === "completed") {
+		currentStepIndex.value = 4;
+		breadcrumbStatus.value = "Completed";
+	} else if (s === "claimed") {
+		currentStepIndex.value = 5;
+		breadcrumbStatus.value = "Claimed";
+	} else if (s === "closed") {
+		currentStepIndex.value = 6;
+		breadcrumbStatus.value = "Closed";
+	}
+}
 
 interface ImageRecord {
 	id: number;
@@ -93,9 +120,22 @@ const workOrder = ref<any>({
 	estimatedEndDate: "",
 	description: "",
 	location: "",
+	siteCode: "",
+	jobPriority: "Medium",
+	// Leader = was Lead Engineer
+	leaderCode: "",
+	leaderIICode: "",
+	// Technicians = was Assistant Engineers
+	technicianCodes: [] as string[],
+	// Legacy aliases (kept for backwards compat)
 	leadEngineer: "",
 	assistantEngineers: [] as string[],
 	customer: { name: "", email: "", phone: "" },
+	customerPic: "",
+	customerPicPhone: "",
+	contractNo: "",
+	contractStartDate: "",
+	contractEndDate: "",
 	equipment: {
 		name: "",
 		serialNo: "",
@@ -112,6 +152,77 @@ const workOrder = ref<any>({
 
 const loading = ref(false);
 
+function getMockWorkOrderDetails(id: string) {
+	const num = id || "WO-00032";
+	return {
+		guid: num,
+		woNumber: num,
+		title: num === "WO-00033"
+			? "Cooling Tower Piping Assembly & Leak Test"
+			: num === "WO-00034"
+			? "High Voltage Switchgear Annual Maintenance"
+			: num === "WO-00035"
+			? "Emergency Water Pump Motor Replacement"
+			: num === "WO-00036"
+			? "Main Substation Relay Calibration & Inspection"
+			: num === "WO-00037"
+			? "Boiler Pressure Relief Valve Certification & Testing"
+			: "Air Handling Unit 04 Overhaul & Filter Replacement",
+		status: num === "WO-00033"
+			? "New"
+			: num === "WO-00034"
+			? "PendingApproval"
+			: num === "WO-00035"
+			? "Claimed"
+			: num === "WO-00036"
+			? "Done"
+			: num === "WO-00037"
+			? "Completed"
+			: "InProgress",
+		workType: num === "WO-00033" ? "Piping" : num === "WO-00034" || num === "WO-00036" ? "Electrical" : "Maintenance",
+		workTypeItem: num === "WO-00033" ? "Piping Installation" : num === "WO-00034" ? "Switchgear Service" : "Overhaul & Repair",
+		salesAgent: "usr-2",
+		projectPersonInCharge: "usr-3",
+		startDate: "2026-05-06T00:00:00Z",
+		estimatedEndDate: "2026-05-13T00:00:00Z",
+		description: "Scope of work includes comprehensive inspection, mechanical & electrical testing, parts replacement, and final verification.",
+		location: "Level 4 Plant Room, Tower 1, Petronas Twin Towers, KLCC",
+		siteCode: num === "WO-00033" || num === "WO-00036" ? "FAC-PG" : num === "WO-00035" ? "WH-PJ" : "HQ-KL",
+		jobPriority: num === "WO-00035" ? "Low" : num === "WO-00033" || num === "WO-00036" ? "Medium" : "High",
+		leaderCode: "usr-1",
+		leaderIICode: "usr-2",
+		technicianCodes: ["usr-3", "usr-4"],
+		leadEngineer: "usr-1",
+		assistantEngineers: ["usr-3", "usr-4"],
+		customerPic: "Ahmad Rahman",
+		customerPicPhone: "+60123456789",
+		contractNo: "CTR-2026-9901",
+		contractStartDate: "2026-01-01T00:00:00Z",
+		contractEndDate: "2026-12-31T00:00:00Z",
+		customer: {
+			name: num === "WO-00033" || num === "WO-00037" ? "YTL Power Services Sdn Bhd" : num === "WO-00034" || num === "WO-00036" ? "TNB Engineering Corporation" : "Petronas Carigali Sdn Bhd",
+			email: "contact@customer.com",
+			phone: "+603-23315000",
+		},
+		equipment: {
+			name: "Centrifugal Pump AHU-04",
+			serialNo: "SN-998231-X",
+			brand: "Grundfos",
+			model: "CR 45-3",
+			equipmentType: "Mechanical Pump",
+		},
+		servicesProvided: [],
+		partsReplaced: [],
+		images: [
+			{ id: 101, category: "Before", url: "https://placehold.co/150x150/e2e8f0/64748b?text=Before+1", name: "Before_Inspection_01.jpg" },
+			{ id: 102, category: "In Progress", url: "https://placehold.co/150x150/ddd6fe/6d28d9?text=In+Progress+1", name: "In_Progress_01.jpg" },
+			{ id: 103, category: "After", url: "https://placehold.co/150x150/dcfce7/15803d?text=After+1", name: "After_Completion_01.jpg" },
+		],
+		cusRefNo: "REF-88921",
+		remarks: "Initial testing completed without anomalies.",
+	};
+}
+
 async function fetchWorkOrderDetails() {
 	if (!woNumber) return;
 	loading.value = true;
@@ -121,23 +232,33 @@ async function fetchWorkOrderDetails() {
 			const w = data.data as any;
 			workOrder.value = {
 				guid: w.guid,
-				woNumber: w.docNo || w.guid.substring(0, 8).toUpperCase(),
+				woNumber: w.docNo || w.code || w.guid.substring(0, 8).toUpperCase(),
 				title: w.title || "",
-				status: w.status || "InProgress",
+				status: w.orderStatus || w.status || "InProgress",
 				workType: w.workType || "",
 				workTypeItem: w.workTypeItem || "",
 				salesAgent: w.salesAgentCode || "",
-				projectPersonInCharge: w.projectPicCode || "",
+				projectPersonInCharge: w.personInChargeCode || w.projectPicCode || "",
 				startDate: w.startDate || "",
 				estimatedEndDate: w.estimatedEndDate || "",
 				description: w.description || "",
-				location: w.locationName || "",
-				leadEngineer: w.leadEngineerCode || "",
-				assistantEngineers: w.assistantEngineers || [],
+				location: w.location || w.locationName || "",
+				siteCode: w.siteCode || "",
+				jobPriority: w.jobPriority || "Low",
+				leaderCode: w.leaderCode || w.leadEngineerCode || "",
+				leaderIICode: w.leaderIICode || "",
+				technicianCodes: w.technicianCodes || w.assistantEngineers || [],
+				leadEngineer: w.leaderCode || w.leadEngineerCode || "",
+				assistantEngineers: w.technicianCodes || w.assistantEngineers || [],
+				customerPic: w.customerPic || "",
+				customerPicPhone: w.customerPicPhone || "",
+				contractNo: w.contractNo || "",
+				contractStartDate: w.contractStartDate || "",
+				contractEndDate: w.contractEndDate || "",
 				customer: {
-					name: w.customerName || "",
-					email: w.customerEmail || "",
-					phone: w.customerPhone || "",
+					name: w.customerName || w.customer?.name || "",
+					email: w.customerEmail || w.customer?.email || "",
+					phone: w.customerPhone || w.customer?.phone || "",
 				},
 				equipment: w.equipment ? {
 					name: w.equipment.name || "",
@@ -152,12 +273,16 @@ async function fetchWorkOrderDetails() {
 				cusRefNo: w.cusRefNo || "",
 				remarks: w.remarks || "",
 			};
-		} else if (error) {
-			console.error("Failed to load work order detail:", error);
+		} else {
+			workOrder.value = getMockWorkOrderDetails(woNumber);
 		}
 	} catch (e) {
-		console.error(e);
+		console.warn("Using mock work order details fallback:", e);
+		workOrder.value = getMockWorkOrderDetails(woNumber);
 	} finally {
+		if (workOrder.value?.status) {
+			updateStepFromStatus(workOrder.value.status);
+		}
 		loading.value = false;
 	}
 }
@@ -178,8 +303,10 @@ const workTypes = [
 const tabs = [
 	{ id: "general", label: "General" },
 	{ id: "activity", label: "Activity Log" },
-	{ id: "services", label: "Services Provided" },
-	{ id: "parts", label: "Parts Replaced" },
+	// { id: "services", label: "Services Provided" },  // Temporarily hidden
+	// { id: "parts", label: "Parts Replaced" },        // Temporarily hidden
+	{ id: "partInfo", label: "Part Info" },
+	{ id: "supplierInvoices", label: "Supplier Invoices" },
 	{ id: "images", label: "Images" },
 	{ id: "notes", label: "Work Notes" },
 	{ id: "finance", label: "Finance" },
@@ -191,10 +318,171 @@ const tabs = [
 const activeTab = ref("general");
 
 const currentUserRole = ref<"Manager" | "Technician">("Manager");
-const signatureStatus = ref<"pending" | "uploaded">("pending");
+// Verification approval state (replaces signature)
+const verificationStatus = ref<"pending" | "approved" | "rejected">("pending");
+const verificationRejectionReason = ref("");
+const isShowRejectReasonInput = ref(false);
 
-function handleSignatureUpload() {
-	signatureStatus.value = "uploaded";
+function approveVerification() {
+	verificationStatus.value = "approved";
+	isShowRejectReasonInput.value = false;
+}
+
+function showRejectInput() {
+	isShowRejectReasonInput.value = true;
+}
+
+function rejectVerification() {
+	if (!verificationRejectionReason.value.trim()) return;
+	verificationStatus.value = "rejected";
+	isShowRejectReasonInput.value = false;
+}
+
+// Extend EndDate Dialog
+const isExtendDialogOpen = ref(false);
+const extendForm = ref({ newEstimatedEndDate: "", extensionReason: "" });
+const isExtending = ref(false);
+
+async function submitExtend() {
+	if (!extendForm.value.newEstimatedEndDate) return;
+	isExtending.value = true;
+	try {
+		const { error } = await workOrderApi.extendEndDate(woNumber, {
+			newEstimatedEndDate: new Date(extendForm.value.newEstimatedEndDate).toISOString(),
+			extensionReason: extendForm.value.extensionReason || undefined,
+		});
+		if (error) {
+			alert(`Failed to extend: ${error.error?.message || 'Unknown error'}`);
+		} else {
+			alert('Estimated end date extended successfully!');
+			isExtendDialogOpen.value = false;
+			extendForm.value = { newEstimatedEndDate: '', extensionReason: '' };
+			await fetchWorkOrderDetails();
+		}
+	} catch (e) {
+		console.error(e);
+	} finally {
+		isExtending.value = false;
+	}
+}
+
+// Repeat Work Order Dialog
+const isRepeatDialogOpen = ref(false);
+const repeatForm = ref({ title: '', description: '', startDate: '', estimatedEndDate: '' });
+const isRepeating = ref(false);
+
+async function submitRepeat() {
+	isRepeating.value = true;
+	try {
+		const { error } = await workOrderApi.repeat(woNumber, {
+			title: repeatForm.value.title || undefined,
+			description: repeatForm.value.description || undefined,
+			startDate: repeatForm.value.startDate ? new Date(repeatForm.value.startDate).toISOString() : undefined,
+			estimatedEndDate: repeatForm.value.estimatedEndDate ? new Date(repeatForm.value.estimatedEndDate).toISOString() : undefined,
+		});
+		if (error) {
+			alert(`Failed to repeat: ${error.error?.message || 'Unknown error'}`);
+		} else {
+			alert('Work order repeated successfully! A new sub-order has been created.');
+			isRepeatDialogOpen.value = false;
+		}
+	} catch (e) {
+		console.error(e);
+	} finally {
+		isRepeating.value = false;
+	}
+}
+
+// Transfer Work Order Dialog
+const isTransferDialogOpen = ref(false);
+const transferForm = ref({ title: '', description: '', startDate: '', estimatedEndDate: '' });
+const isTransferring = ref(false);
+
+async function submitTransfer() {
+	isTransferring.value = true;
+	try {
+		const { error } = await workOrderApi.transfer(woNumber, {
+			title: transferForm.value.title || undefined,
+			description: transferForm.value.description || undefined,
+			startDate: transferForm.value.startDate ? new Date(transferForm.value.startDate).toISOString() : undefined,
+			estimatedEndDate: transferForm.value.estimatedEndDate ? new Date(transferForm.value.estimatedEndDate).toISOString() : undefined,
+		});
+		if (error) {
+			alert(`Failed to transfer: ${error.error?.message || 'Unknown error'}`);
+		} else {
+			alert('Work order transferred successfully! A new work order has been created.');
+			isTransferDialogOpen.value = false;
+		}
+	} catch (e) {
+		console.error(e);
+	} finally {
+		isTransferring.value = false;
+	}
+}
+
+// Part Info Photos (12 max)
+const partInfoPhotos = ref<ImageRecord[]>([
+	{ id: 1, category: 'partInfo', url: 'https://placehold.co/200x200/e2e8f0/64748b?text=Part+1', name: 'Part_IMG_001.jpg' },
+	{ id: 2, category: 'partInfo', url: 'https://placehold.co/200x200/ddd6fe/6d28d9?text=Part+2', name: 'Part_IMG_002.jpg' },
+]);
+
+const isManager = computed(() => currentUserRole.value === 'Manager');
+const isClaimed = computed(() => workOrder.value.status === 'Claimed' || workOrder.value.status === 'claimed');
+
+function addDummyPartInfoPhoto() {
+	if (partInfoPhotos.value.length >= 12) return;
+	partInfoPhotos.value.push({
+		id: Date.now(),
+		category: 'partInfo',
+		url: `https://placehold.co/200x200/e2e8f0/64748b?text=Part+${partInfoPhotos.value.length + 1}`,
+		name: `Part_IMG_${String(partInfoPhotos.value.length + 1).padStart(3, '0')}.jpg`,
+	});
+}
+
+function removePartInfoPhoto(id: number) {
+	const idx = partInfoPhotos.value.findIndex(p => p.id === id);
+	if (idx > -1) partInfoPhotos.value.splice(idx, 1);
+}
+
+// Supplier Invoice Photos (12 max)
+const supplierInvoicePhotos = ref<ImageRecord[]>([]);
+
+function addDummySupplierInvoicePhoto() {
+	if (supplierInvoicePhotos.value.length >= 12) return;
+	supplierInvoicePhotos.value.push({
+		id: Date.now(),
+		category: 'supplierInvoice',
+		url: `https://placehold.co/200x200/fef3c7/92400e?text=Inv+${supplierInvoicePhotos.value.length + 1}`,
+		name: `Supplier_INV_${String(supplierInvoicePhotos.value.length + 1).padStart(3, '0')}.jpg`,
+	});
+}
+
+function removeSupplierInvoicePhoto(id: number) {
+	const idx = supplierInvoicePhotos.value.findIndex(p => p.id === id);
+	if (idx > -1) supplierInvoicePhotos.value.splice(idx, 1);
+}
+
+const priorityColorMap: Record<string, string> = {
+	High: '#ef4444',
+	Medium: '#f59e0b',
+	Low: '#3b82f6',
+};
+
+const priorityIconMap: Record<string, string> = {
+	High: 'mdi-alert-circle',
+	Medium: 'mdi-alert',
+	Low: 'mdi-information',
+};
+
+function formatDate(dateStr: string) {
+	if (!dateStr) return '—';
+	try {
+		return new Date(dateStr).toLocaleDateString('en-GB', {
+			day: '2-digit', month: 'short', year: 'numeric'
+		});
+	} catch {
+		return dateStr;
+	}
 }
 
 const isItemDialogOpen = ref(false);
@@ -565,8 +853,6 @@ function removePayment(id: number) {
 	if (idx > -1) payments.value.splice(idx, 1);
 }
 
-const isClaimed = ref(false);
-
 async function markAsClaimed() {
 	if (!isFullyPaid.value) return;
 	try {
@@ -620,6 +906,18 @@ onUnmounted(() => {
 			<div class="header-actions">
 				<Button variant="outlined" @click="router.push('/work-order')">
 					<i class="mdi mdi-chevron-left" style="margin-right: 4px"></i> Back
+				</Button>
+				<!-- Extend Estimated End Date -->
+				<Button variant="outlined" @click="isExtendDialogOpen = true" title="Extend Estimated End Date">
+					<i class="mdi mdi-calendar-clock" style="margin-right: 4px"></i> Extend Date
+				</Button>
+				<!-- Repeat Work Order -->
+				<Button variant="outlined" @click="isRepeatDialogOpen = true" title="Create a repeat sub-order">
+					<i class="mdi mdi-repeat" style="margin-right: 4px"></i> Repeat
+				</Button>
+				<!-- Transfer Work Order -->
+				<Button variant="outlined" @click="isTransferDialogOpen = true" title="Transfer to a new work order">
+					<i class="mdi mdi-transfer" style="margin-right: 4px"></i> Transfer
 				</Button>
 				<Button variant="primary" @click="markAsDone" v-if="isEditing">Mark as Done</Button>
 				<Button
@@ -745,6 +1043,26 @@ onUnmounted(() => {
 						<div class="col-12">
 							<Textbox v-model="workOrder.title" label="Title *" disabled />
 						</div>
+
+						<!-- Job Priority + Site -->
+						<div class="col-6">
+							<label class="custom-label">Job Priority</label>
+							<div class="priority-badge-row">
+								<span
+									class="priority-dot"
+									:style="{ backgroundColor: priorityColorMap[workOrder.jobPriority] || '#3b82f6' }"
+								></span>
+								<span class="priority-label">{{ workOrder.jobPriority || 'Low' }}</span>
+							</div>
+						</div>
+						<div class="col-6">
+							<label class="custom-label">Site</label>
+							<div class="read-only-val">
+								<i class="mdi mdi-map-marker" style="margin-right: 4px; color: var(--colors-brand-primary)"></i>
+								{{ workOrder.siteCode || '—' }}
+							</div>
+						</div>
+
 						<div class="col-6">
 							<Select v-model="workOrder.salesAgent" label="Sales Agent" disabled>
 								<option value="">Select Sales Agent</option>
@@ -760,7 +1078,7 @@ onUnmounted(() => {
 								:disabled="!isEditing"
 							>
 								<template #label>
-									Project Person In Charge *
+									Project Person In Charge
 									<i
 										class="mdi mdi-information text-primary"
 										style="margin-left: 4px; font-size: 14px"
@@ -776,7 +1094,7 @@ onUnmounted(() => {
 							<DatePicker
 								v-model="workOrder.startDate"
 								label="Start Date *"
-								:enableTime="true"
+								:enableTime="false"
 								disabled
 							/>
 						</div>
@@ -784,12 +1102,12 @@ onUnmounted(() => {
 							<DatePicker
 								v-model="workOrder.estimatedEndDate"
 								label="Estimated Date of Completion *"
-								:enableTime="true"
+								:enableTime="false"
 								:disabled="!isEditing"
 							/>
 						</div>
 
-						<!-- Ported Fields from Dialog -->
+						<!-- Execution Details -->
 						<div class="col-12">
 							<h4 class="section-title" style="margin-top: 16px">
 								Execution Details
@@ -797,16 +1115,33 @@ onUnmounted(() => {
 						</div>
 						<div class="col-6">
 							<Select
-								v-model="workOrder.leadEngineer"
-								label="Lead Engineer"
+								v-model="workOrder.leaderCode"
+								label="Leader"
 								:disabled="!isEditing"
 							>
-								<option value="">Select Lead Engineer</option>
+								<option value="">Select Leader</option>
 								<option
 									v-for="u in users"
 									:key="u.code"
 									:value="u.code"
-									:disabled="workOrder.assistantEngineers.includes(u.code)"
+									:disabled="workOrder.technicianCodes.includes(u.code)"
+								>
+									{{ u.name }}
+								</option>
+							</Select>
+						</div>
+						<div class="col-6">
+							<Select
+								v-model="workOrder.leaderIICode"
+								label="Leader II"
+								:disabled="!isEditing"
+							>
+								<option value="">Select Leader II</option>
+								<option
+									v-for="u in users"
+									:key="u.code"
+									:value="u.code"
+									:disabled="u.code === workOrder.leaderCode"
 								>
 									{{ u.name }}
 								</option>
@@ -832,23 +1167,25 @@ onUnmounted(() => {
 						</div>
 						<div class="col-12">
 							<MultiSelect
-								v-model="workOrder.assistantEngineers"
+								v-model="workOrder.technicianCodes"
 								:options="
 									users.filter(
 										(u) =>
-											u.code !== workOrder.leadEngineer &&
+											u.code !== workOrder.leaderCode &&
+											u.code !== workOrder.leaderIICode &&
 											u.code !== workOrder.projectPersonInCharge,
 									)
 								"
-								label="Assistant Engineers"
-								placeholder="Search to add engineers..."
+								label="Technicians"
+								placeholder="Search to add technicians..."
 								:disabled="!isEditing"
 							/>
 						</div>
 
+						<!-- Customer & Contract (Read-Only) -->
 						<div class="col-12">
 							<h4 class="section-title" style="margin-top: 16px">
-								Customer & Equipment (Read-Only)
+								Customer & Contract (Read-Only)
 							</h4>
 						</div>
 						<div class="col-4">
@@ -856,12 +1193,24 @@ onUnmounted(() => {
 							<div class="read-only-val">{{ workOrder.customer.name }}</div>
 						</div>
 						<div class="col-4">
-							<label class="custom-label">Customer Email</label>
-							<div class="read-only-val">{{ workOrder.customer.email }}</div>
+							<label class="custom-label">Customer PIC</label>
+							<div class="read-only-val">{{ workOrder.customerPic || '—' }}</div>
 						</div>
 						<div class="col-4">
-							<label class="custom-label">Customer Phone</label>
-							<div class="read-only-val">{{ workOrder.customer.phone }}</div>
+							<label class="custom-label">PIC Phone</label>
+							<div class="read-only-val">{{ workOrder.customerPicPhone || '—' }}</div>
+						</div>
+						<div class="col-4">
+							<label class="custom-label">Contract No.</label>
+							<div class="read-only-val">{{ workOrder.contractNo || '—' }}</div>
+						</div>
+						<div class="col-4">
+							<label class="custom-label">Contract Start</label>
+							<div class="read-only-val">{{ formatDate(workOrder.contractStartDate) }}</div>
+						</div>
+						<div class="col-4">
+							<label class="custom-label">Contract End</label>
+							<div class="read-only-val">{{ formatDate(workOrder.contractEndDate) }}</div>
 						</div>
 						<div class="col-4">
 							<label class="custom-label">Equipment Name</label>
@@ -971,6 +1320,112 @@ onUnmounted(() => {
 						<strong>Total Parts:</strong> ${{ totalPartsCost.toFixed(2) }}
 					</div>
 				</div>
+
+			<!-- PART INFO TAB (12 photos) -->
+			<div v-if="activeTab === 'partInfo'">
+				<div class="card-header" style="display: flex; justify-content: space-between; align-items: center">
+					<div>
+						<h3>Part Info</h3>
+						<p class="text-muted">Upload up to 12 photos of parts, components, and job-related materials.</p>
+					</div>
+					<div style="display: flex; align-items: center; gap: 12px">
+						<span class="photo-counter-badge">{{ partInfoPhotos.length }}/12 Photos</span>
+						<Button
+							v-if="isEditing || (isManager && isClaimed)"
+							variant="primary"
+							@click="addDummyPartInfoPhoto"
+							:disabled="partInfoPhotos.length >= 12"
+						>
+							<i class="mdi mdi-camera-plus" style="margin-right: 4px"></i> Add Photo
+						</Button>
+					</div>
+				</div>
+				<div class="photo-grid-12">
+					<div
+						v-for="photo in partInfoPhotos"
+						:key="photo.id"
+						class="photo-slot"
+					>
+						<div class="photo-slot__img-wrap">
+							<img :src="photo.url" :alt="photo.name" class="photo-slot__img" />
+							<button
+								v-if="isEditing || (isManager && isClaimed)"
+								class="photo-slot__del"
+								@click="removePartInfoPhoto(photo.id)"
+								title="Remove photo"
+							>
+								<i class="mdi mdi-close"></i>
+							</button>
+						</div>
+						<div class="photo-slot__name">{{ photo.name }}</div>
+					</div>
+					<div
+						v-if="(isEditing || (isManager && isClaimed)) && partInfoPhotos.length < 12"
+						class="photo-slot photo-slot--add"
+						@click="addDummyPartInfoPhoto"
+					>
+						<i class="mdi mdi-camera-plus"></i>
+						<span>Upload Photo</span>
+					</div>
+					<div v-if="partInfoPhotos.length === 0 && !isEditing && !isClaimed" class="photo-grid-empty">
+						<i class="mdi mdi-image-off"></i>
+						<p>No part info photos uploaded yet.</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- SUPPLIER INVOICES TAB (12 photos) -->
+			<div v-if="activeTab === 'supplierInvoices'">
+				<div class="card-header" style="display: flex; justify-content: space-between; align-items: center">
+					<div>
+						<h3>Supplier Invoices</h3>
+						<p class="text-muted">Upload up to 12 supplier invoice photos or scanned documents.</p>
+					</div>
+					<div style="display: flex; align-items: center; gap: 12px">
+						<span class="photo-counter-badge">{{ supplierInvoicePhotos.length }}/12 Files</span>
+						<Button
+							v-if="isEditing || (isManager && isClaimed)"
+							variant="primary"
+							@click="addDummySupplierInvoicePhoto"
+							:disabled="supplierInvoicePhotos.length >= 12"
+						>
+							<i class="mdi mdi-file-upload" style="margin-right: 4px"></i> Add Invoice
+						</Button>
+					</div>
+				</div>
+				<div class="photo-grid-12">
+					<div
+						v-for="photo in supplierInvoicePhotos"
+						:key="photo.id"
+						class="photo-slot"
+					>
+						<div class="photo-slot__img-wrap">
+							<img :src="photo.url" :alt="photo.name" class="photo-slot__img" />
+							<button
+								v-if="isEditing || (isManager && isClaimed)"
+								class="photo-slot__del"
+								@click="removeSupplierInvoicePhoto(photo.id)"
+								title="Remove invoice"
+							>
+								<i class="mdi mdi-close"></i>
+							</button>
+						</div>
+						<div class="photo-slot__name">{{ photo.name }}</div>
+					</div>
+					<div
+						v-if="(isEditing || (isManager && isClaimed)) && supplierInvoicePhotos.length < 12"
+						class="photo-slot photo-slot--add"
+						@click="addDummySupplierInvoicePhoto"
+					>
+						<i class="mdi mdi-file-plus"></i>
+						<span>Upload Invoice</span>
+					</div>
+					<div v-if="supplierInvoicePhotos.length === 0 && !isEditing && !isClaimed" class="photo-grid-empty">
+						<i class="mdi mdi-file-document-outline"></i>
+						<p>No supplier invoices uploaded yet.</p>
+					</div>
+				</div>
+			</div>
 
 				<!-- IMAGES -->
 				<div v-if="activeTab === 'images'">
@@ -1168,9 +1623,9 @@ onUnmounted(() => {
 						style="display: flex; justify-content: space-between; align-items: center"
 					>
 						<div>
-							<h3>Verification</h3>
+							<h3>Verification & Approval</h3>
 							<p class="text-muted">
-								Manager signature required to verify the work order.
+								Manager verification and approval of completed work. No signature upload required.
 							</p>
 						</div>
 						<div class="role-selector">
@@ -1178,7 +1633,7 @@ onUnmounted(() => {
 							<select
 								v-model="currentUserRole"
 								style="
-									padding: 4px;
+									padding: 4px 8px;
 									border-radius: 4px;
 									border: 1px solid var(--colors-surface-border);
 								"
@@ -1198,99 +1653,79 @@ onUnmounted(() => {
 							background: var(--colors-surface-background);
 						"
 					>
+						<!-- Manager Level View -->
 						<div v-if="currentUserRole === 'Manager'">
-							<div
-								v-if="signatureStatus === 'pending'"
-								style="
-									display: flex;
-									flex-direction: column;
-									align-items: center;
-									gap: 16px;
-								"
-							>
-								<div class="file-upload" style="width: 100%">
-									<i class="mdi mdi-draw"></i>
-									<span>Draw or upload your signature here</span>
-									<Button
-										variant="primary"
-										style="margin-top: 12px"
-										@click="handleSignatureUpload"
-										>Upload Signature</Button
-									>
+							<div v-if="verificationStatus === 'pending'" class="verification-actions-box">
+								<div class="verification-actions-box__icon">
+									<i class="mdi mdi-shield-check-outline"></i>
+								</div>
+								<h4>Manager Approval Required</h4>
+								<p class="text-muted">Review the work order details, photos, and notes before making a decision.</p>
+
+								<div class="verification-buttons-row">
+									<Button variant="primary" @click="approveVerification" style="min-width: 140px;">
+										<i class="mdi mdi-check-circle" style="margin-right: 6px"></i> Approve
+									</Button>
+									<Button variant="danger" @click="showRejectInput" style="min-width: 140px;">
+										<i class="mdi mdi-close-circle" style="margin-right: 6px"></i> Reject
+									</Button>
+								</div>
+
+								<!-- Rejection reason input form -->
+								<div v-if="isShowRejectReasonInput" class="rejection-input-card">
+									<label class="custom-label">Reason for Rejection *</label>
+									<textarea
+										v-model="verificationRejectionReason"
+										class="custom-textarea"
+										rows="3"
+										placeholder="State the reason for rejecting this work order..."
+									></textarea>
+									<div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px">
+										<Button variant="secondary" @click="isShowRejectReasonInput = false">Cancel</Button>
+										<Button variant="danger" @click="rejectVerification" :disabled="!verificationRejectionReason.trim()">
+											Confirm Reject
+										</Button>
+									</div>
 								</div>
 							</div>
-							<div
-								v-else
-								style="
-									display: flex;
-									flex-direction: column;
-									align-items: center;
-									gap: 16px;
-								"
-							>
-								<i
-									class="mdi mdi-check-circle"
-									style="font-size: 48px; color: #10b981"
-								></i>
-								<span style="font-size: 18px; font-weight: 500"
-									>Signature Uploaded Successfully</span
-								>
-								<img
-									src="https://placehold.co/300x100/e2e8f0/64748b?text=Manager+Signature"
-									alt="Signature"
-									style="
-										border: 1px solid var(--colors-surface-border);
-										border-radius: 4px;
-									"
-								/>
-								<Button variant="outlined" @click="signatureStatus = 'pending'"
-									>Remove Signature</Button
-								>
+
+							<!-- Approved State -->
+							<div v-else-if="verificationStatus === 'approved'" class="verification-result-box verification-result-box--approved">
+								<i class="mdi mdi-check-decagram" style="font-size: 52px; color: #10b981"></i>
+								<h4 style="margin: 8px 0 4px 0; color: var(--colors-text-primary)">Work Order Approved</h4>
+								<p class="text-muted" style="margin: 0">Approved by Manager level on {{ new Date().toLocaleDateString('en-GB') }}</p>
+								<Button variant="outlined" @click="verificationStatus = 'pending'" style="margin-top: 16px">
+									Reset Approval Status
+								</Button>
+							</div>
+
+							<!-- Rejected State -->
+							<div v-else-if="verificationStatus === 'rejected'" class="verification-result-box verification-result-box--rejected">
+								<i class="mdi mdi-close-circle" style="font-size: 52px; color: #ef4444"></i>
+								<h4 style="margin: 8px 0 4px 0; color: #ef4444">Work Order Rejected</h4>
+								<p style="margin: 4px 0; font-size: 14px; font-weight: 500">Reason: {{ verificationRejectionReason }}</p>
+								<Button variant="outlined" @click="verificationStatus = 'pending'" style="margin-top: 16px">
+									Reset Approval Status
+								</Button>
 							</div>
 						</div>
-						<div
-							v-else
-							style="
-								display: flex;
-								flex-direction: column;
-								align-items: center;
-								justify-content: center;
-								padding: 40px 0;
-							"
-						>
-							<div v-if="signatureStatus === 'pending'" style="text-align: center">
-								<i
-									class="mdi mdi-clock-outline"
-									style="font-size: 48px; color: var(--colors-text-muted)"
-								></i>
-								<p
-									style="
-										font-size: 18px;
-										font-weight: 500;
-										margin-top: 16px;
-										color: var(--colors-text-secondary);
-									"
-								>
-									Signature Still Pending
-								</p>
-								<p class="text-muted">Waiting for manager to sign.</p>
+
+						<!-- Non-Manager Level View -->
+						<div v-else style="text-align: center; padding: 32px 16px">
+							<div v-if="verificationStatus === 'pending'">
+								<i class="mdi mdi-clock-outline" style="font-size: 48px; color: var(--colors-text-muted)"></i>
+								<h4 style="margin-top: 12px; font-size: 16px">Pending Manager Approval</h4>
+								<p class="text-muted">Approval can only be performed by Manager-level accounts.</p>
 							</div>
-							<div v-else style="text-align: center">
-								<i
-									class="mdi mdi-check-decagram"
-									style="font-size: 48px; color: #10b981"
-								></i>
-								<p
-									style="
-										font-size: 18px;
-										font-weight: 500;
-										margin-top: 16px;
-										color: var(--colors-text-primary);
-									"
-								>
-									Signature Uploaded
-								</p>
-								<p class="text-muted">The manager has verified this work order.</p>
+							<div v-else-if="verificationStatus === 'approved'">
+								<i class="mdi mdi-check-circle" style="font-size: 48px; color: #10b981"></i>
+								<h4 style="margin-top: 12px; font-size: 16px; color: #10b981">Approved by Manager</h4>
+								<p class="text-muted">This work order has been verified and approved.</p>
+							</div>
+							<div v-else>
+								<i class="mdi mdi-close-circle" style="font-size: 48px; color: #ef4444"></i>
+								<h4 style="margin-top: 12px; font-size: 16px; color: #ef4444">Rejected by Manager</h4>
+								<p class="text-muted">Reason: {{ verificationRejectionReason }}</p>
 							</div>
 						</div>
 					</div>
@@ -2013,6 +2448,142 @@ onUnmounted(() => {
 			<template #footer>
 				<Button variant="secondary" @click="isEditInvoiceDialogOpen = false">Cancel</Button>
 				<Button variant="primary" @click="saveEditInvoice">Save Changes</Button>
+			</template>
+		</Dialog>
+		<!-- Extend Estimated End Date Dialog -->
+		<Dialog v-model="isExtendDialogOpen" title="Extend Estimated End Date" maxWidth="500px">
+			<div style="display: flex; flex-direction: column; gap: 16px">
+				<p class="text-muted" style="margin: 0; font-size: 13px">
+					Extend completion deadline for <strong>{{ workOrder.woNumber }}</strong>. Extension count will be tracked automatically.
+				</p>
+
+				<DatePicker
+					v-model="extendForm.newEstimatedEndDate"
+					label="New Estimated Completion Date *"
+					:min="workOrder.estimatedEndDate || undefined"
+					:enableTime="false"
+				/>
+
+				<div class="textbox-field">
+					<label class="custom-label">Extension Reason (Optional)</label>
+					<textarea
+						v-model="extendForm.extensionReason"
+						class="custom-textarea"
+						rows="3"
+						placeholder="Explain why an extension is required..."
+					></textarea>
+				</div>
+			</div>
+			<template #footer>
+				<Button variant="secondary" @click="isExtendDialogOpen = false">Cancel</Button>
+				<Button
+					variant="primary"
+					@click="submitExtend"
+					:disabled="!extendForm.newEstimatedEndDate || isExtending"
+				>
+					<i v-if="isExtending" class="mdi mdi-loading mdi-spin" style="margin-right: 4px"></i>
+					Extend End Date
+				</Button>
+			</template>
+		</Dialog>
+
+		<!-- Repeat Work Order Dialog -->
+		<Dialog v-model="isRepeatDialogOpen" title="Repeat Work Order" maxWidth="520px">
+			<div style="display: flex; flex-direction: column; gap: 16px">
+				<p class="text-muted" style="margin: 0; font-size: 13px">
+					Create an extended sub-order from <strong>{{ workOrder.woNumber }}</strong> (e.g. {{ workOrder.woNumber }}-01). Status will be <strong>NEW</strong>.
+				</p>
+
+				<Textbox
+					v-model="repeatForm.title"
+					label="Title (Optional)"
+					:placeholder="workOrder.title"
+					hide-footer
+				/>
+
+				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+					<DatePicker
+						v-model="repeatForm.startDate"
+						label="New Start Date"
+						:enableTime="false"
+					/>
+					<DatePicker
+						v-model="repeatForm.estimatedEndDate"
+						label="New Est. End Date"
+						:enableTime="false"
+					/>
+				</div>
+
+				<div class="textbox-field">
+					<label class="custom-label">Description (Optional)</label>
+					<textarea
+						v-model="repeatForm.description"
+						class="custom-textarea"
+						rows="3"
+						:placeholder="workOrder.description"
+					></textarea>
+				</div>
+			</div>
+			<template #footer>
+				<Button variant="secondary" @click="isRepeatDialogOpen = false">Cancel</Button>
+				<Button
+					variant="primary"
+					@click="submitRepeat"
+					:disabled="isRepeating"
+				>
+					<i v-if="isRepeating" class="mdi mdi-loading mdi-spin" style="margin-right: 4px"></i>
+					Create Sub-Order
+				</Button>
+			</template>
+		</Dialog>
+
+		<!-- Transfer Work Order Dialog -->
+		<Dialog v-model="isTransferDialogOpen" title="Transfer to New Work Order" maxWidth="520px">
+			<div style="display: flex; flex-direction: column; gap: 16px">
+				<p class="text-muted" style="margin: 0; font-size: 13px">
+					Transfer content from <strong>{{ workOrder.woNumber }}</strong> into a brand new sequential work order (e.g. WO-0002). Status will be <strong>NEW</strong>. Original work order remains unchanged.
+				</p>
+
+				<Textbox
+					v-model="transferForm.title"
+					label="Title (Optional)"
+					:placeholder="workOrder.title"
+					hide-footer
+				/>
+
+				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+					<DatePicker
+						v-model="transferForm.startDate"
+						label="New Start Date"
+						:enableTime="false"
+					/>
+					<DatePicker
+						v-model="transferForm.estimatedEndDate"
+						label="New Est. End Date"
+						:enableTime="false"
+					/>
+				</div>
+
+				<div class="textbox-field">
+					<label class="custom-label">Description (Optional)</label>
+					<textarea
+						v-model="transferForm.description"
+						class="custom-textarea"
+						rows="3"
+						:placeholder="workOrder.description"
+					></textarea>
+				</div>
+			</div>
+			<template #footer>
+				<Button variant="secondary" @click="isTransferDialogOpen = false">Cancel</Button>
+				<Button
+					variant="primary"
+					@click="submitTransfer"
+					:disabled="isTransferring"
+				>
+					<i v-if="isTransferring" class="mdi mdi-loading mdi-spin" style="margin-right: 4px"></i>
+					Confirm Transfer
+				</Button>
 			</template>
 		</Dialog>
 	</div>
@@ -3197,6 +3768,212 @@ onUnmounted(() => {
 	}
 	body {
 		background: white;
+	}
+}
+
+// Additional styles for 12-Photo Grid, Verification Approval, and Priority Badges
+.photo-counter-badge {
+	background: rgba(80, 88, 242, 0.1);
+	color: var(--colors-brand-primary);
+	padding: 4px 10px;
+	border-radius: 12px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.photo-grid-12 {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 16px;
+	padding-top: 16px;
+}
+
+.photo-slot {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 8px;
+	padding: 8px;
+
+	&__img-wrap {
+		position: relative;
+		width: 100%;
+		height: 120px;
+		border-radius: 6px;
+		overflow: hidden;
+		background: var(--colors-surface-background);
+	}
+
+	&__img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	&__del {
+		position: absolute;
+		top: 6px;
+		right: 6px;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		background: rgba(239, 68, 68, 0.9);
+		color: white;
+		border: none;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		font-size: 14px;
+		transition: transform 0.2s, background-color 0.2s;
+
+		&:hover {
+			background: #dc2626;
+			transform: scale(1.1);
+		}
+	}
+
+	&__name {
+		font-size: 11px;
+		color: var(--colors-text-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: center;
+	}
+
+	&--add {
+		height: 154px;
+		border: 2px dashed var(--colors-surface-border);
+		background: transparent;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		color: var(--colors-text-muted);
+		cursor: pointer;
+		transition: all 0.2s;
+
+		&:hover {
+			border-color: var(--colors-brand-primary);
+			color: var(--colors-brand-primary);
+			background: rgba(80, 88, 242, 0.04);
+		}
+
+		i {
+			font-size: 28px;
+		}
+
+		span {
+			font-size: 12px;
+			font-weight: 500;
+		}
+	}
+}
+
+.photo-grid-empty {
+	grid-column: 1 / -1;
+	text-align: center;
+	padding: 40px 20px;
+	color: var(--colors-text-muted);
+
+	i {
+		font-size: 40px;
+		margin-bottom: 8px;
+		opacity: 0.4;
+	}
+
+	p {
+		margin: 0;
+		font-size: 13px;
+	}
+}
+
+.priority-badge-row {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 6px;
+	background: var(--colors-surface-background);
+	border: 1px solid var(--colors-surface-border);
+}
+
+.priority-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+
+.priority-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--colors-text-primary);
+}
+
+.verification-actions-box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	padding: 32px 16px;
+	gap: 12px;
+
+	&__icon {
+		width: 64px;
+		height: 64px;
+		border-radius: 50%;
+		background: rgba(80, 88, 242, 0.1);
+		color: var(--colors-brand-primary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 32px;
+	}
+
+	h4 {
+		margin: 0;
+		font-size: 18px;
+		font-weight: 600;
+		color: var(--colors-text-primary);
+	}
+}
+
+.verification-buttons-row {
+	display: flex;
+	gap: 16px;
+	margin-top: 12px;
+}
+
+.rejection-input-card {
+	width: 100%;
+	max-width: 480px;
+	margin-top: 16px;
+	text-align: left;
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 8px;
+	padding: 16px;
+}
+
+.verification-result-box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	padding: 36px 16px;
+
+	&--approved {
+		background: rgba(16, 185, 129, 0.04);
+		border-radius: 8px;
+	}
+
+	&--rejected {
+		background: rgba(239, 68, 68, 0.04);
+		border-radius: 8px;
 	}
 }
 </style>

@@ -7,27 +7,34 @@ import type { TableHeader } from "@/components/Table.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
+import Dialog from "@/components/Dialog.vue";
+import Button from "@/components/Button.vue";
 import { userApi } from "@/api/user/user.api";
+import { useAuthStore } from "@/stores/auth.store";
+import { getAvatarUrl } from "@/utils/avatar";
+import HighlightText from "@/components/HighlightText.vue";
 
 const headers: TableHeader[] = [
 	{ key: "status", label: "Status" },
 	{ key: "employee", label: "Employee" },
-	{ key: "code", label: "Internal Code" },
+	{ key: "code", label: "Code" },
 	{ key: "role", label: "Assigned Role" },
 	{ key: "email", label: "Contact Email" },
-	{ key: "actions", label: "Actions", align: "right", width: "120px" },
+	{ key: "actions", label: "Actions", align: "right", width: "120px", sortable: false },
 ];
 
 interface UserModel {
 	guid: string;
 	code: string;
 	name: string;
+	employee?: string;
 	email: string;
 	role: string;
 	isActive: boolean;
 }
 
 const router = useRouter();
+const authStore = useAuthStore();
 const searchQuery = ref("");
 const roleFilter = ref("all");
 const filterStatus = ref("all");
@@ -35,17 +42,21 @@ const filterStatus = ref("all");
 const users = ref<UserModel[]>([]);
 const loading = ref(false);
 
+// Status Modal Confirmation State
+const showStatusModal = ref(false);
+const selectedUserForStatus = ref<UserModel | null>(null);
+const statusLoading = ref(false);
+
 async function fetchUsers() {
 	loading.value = true;
 	try {
 		const query: any = {
 			pageIndex: 0,
-			pageSize: 10, // Fetch up to 100 users for now, handle table pagination later
+			pageSize: 50,
 			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
 		};
 
 		if (searchQuery.value) query.q = searchQuery.value;
-		// If you have actual group codes like 'SA' or 'ENG', map them accordingly.
 		if (roleFilter.value !== "all") query.userGroupCode = roleFilter.value;
 		
 		if (filterStatus.value === "active") query.isActive = "true";
@@ -56,11 +67,13 @@ async function fetchUsers() {
 		if (data && data.data) {
 			users.value = data.data.map((u: any) => ({
 				guid: u.guid,
-				code: u.displayCode || u.guid.substring(0, 8).toUpperCase(),
-				name: u.displayName || "Unknown",
+				code: u.displayCode || (u.guid ? u.guid.substring(0, 8).toUpperCase() : ""),
+				name: u.displayName || u.profile?.displayName || u.name || "Unknown",
+				employee: u.displayName || u.profile?.displayName || u.name || "Unknown",
 				email: u.email,
-				role: u.groups && u.groups.length > 0 ? u.groups[0].name : "Unassigned",
+				role: u.groups && u.groups.length > 0 ? (u.groups[0].name || u.groups[0].code) : (u.userGroupCode || u.role || "Unassigned"),
 				isActive: u.isActive,
+				profileImage: u.profileImage || u.profile?.profileImage || u.avatarUrl || u.avatar || null,
 			}));
 		} else if (error) {
 			console.error("Failed to load users:", error);
@@ -72,12 +85,46 @@ async function fetchUsers() {
 	}
 }
 
+import { fetchRoleList, type RoleModel } from "@/utils/role";
+
+const roleList = ref<RoleModel[]>([]);
+
+function getRoleDisplayName(roleCode: string): string {
+	if (!roleCode) return "Unassigned";
+	if (roleCode === "SA" || roleCode === "Superadmin") return "Superadmin";
+	if (roleCode === "ADM" || roleCode === "Administrator") return "Administrator";
+	if (roleCode === "MGR" || roleCode === "Manager") return "Manager";
+	if (roleCode === "ENG" || roleCode === "Engineer") return "Engineer";
+	const found = roleList.value.find(r => r.code === roleCode || r.name === roleCode);
+	return found ? found.name : roleCode;
+}
+
+function getRoleChipType(role: string) {
+	switch (role) {
+		case "SA":
+		case "Superadmin":
+			return "error";
+		case "ADM":
+		case "Administrator":
+			return "info";
+		case "MGR":
+		case "Manager":
+			return "warning";
+		case "ENG":
+		case "Engineer":
+			return "success";
+		default:
+			return "default";
+	}
+}
+
 // Re-fetch users whenever filters change
 watch([searchQuery, roleFilter, filterStatus], () => {
 	fetchUsers();
 });
 
-onMounted(() => {
+onMounted(async () => {
+	roleList.value = await fetchRoleList();
 	fetchUsers();
 });
 
@@ -91,40 +138,50 @@ function handleCreateUser() {
 	router.push("/user/form");
 }
 
-function viewUserProfile(code: string) {
-	router.push(`/user/profile?code=${code}`);
+function viewUserProfile(guid: string) {
+	router.push(`/user/profile?code=${guid}`);
 }
 
-async function toggleUserStatus(user: UserModel) {
+import { useSnackbarStore } from "@/stores/snackbar.store";
+
+const snackbar = useSnackbarStore();
+
+function isSelf(user: UserModel) {
+	return user.guid === authStore.currentUser?.guid || user.email === authStore.currentUser?.email;
+}
+
+function promptToggleStatus(user: UserModel) {
+	if (isSelf(user)) {
+		snackbar.error("You cannot deactivate your own account.");
+		return;
+	}
+	selectedUserForStatus.value = user;
+	showStatusModal.value = true;
+}
+
+async function confirmToggleStatus() {
+	if (!selectedUserForStatus.value) return;
+	statusLoading.value = true;
 	try {
+		const user = selectedUserForStatus.value;
 		if (user.isActive) {
 			await userApi.deactivateUser(user.guid);
 		} else {
 			await userApi.activateUser(user.guid);
 		}
-		// Refresh list after toggling status
-		fetchUsers();
+		showStatusModal.value = false;
+		selectedUserForStatus.value = null;
+		await fetchUsers();
 	} catch (e) {
 		console.error("Failed to update user status:", e);
-	}
-}
-
-function getRoleChipType(role: string) {
-	switch (role) {
-		case "Superadmin":
-			return "error";
-		case "Manager":
-			return "warning";
-		case "Administrator":
-			return "info";
-		default:
-			return "default";
+	} finally {
+		statusLoading.value = false;
 	}
 }
 
 function getRandomAvatarBg(name: string) {
 	const colors = ["#5058F2", "#06B6D4", "#10B981", "#F59E0B", "#6366F1"];
-	const index = name.length % colors.length;
+	const index = (name || "").length % colors.length;
 	return { backgroundColor: colors[index] };
 }
 </script>
@@ -138,8 +195,9 @@ function getRandomAvatarBg(name: string) {
 					Manage internal technicians, support staff, and system administrative roles
 				</p>
 			</div>
-			<button class="btn btn--primary" @click="handleCreateUser">
-				<i class="mdi mdi-plus"></i> Add Employee
+			<button class="btn btn--primary add-employee-btn" @click="handleCreateUser" title="Add Employee">
+				<i class="mdi mdi-plus"></i>
+				<span class="btn-text">Add Employee</span>
 			</button>
 		</div>
 
@@ -159,10 +217,9 @@ function getRandomAvatarBg(name: string) {
 				<FilterPanel show-reset align="right" @reset="resetFilters">
 					<Select v-model="roleFilter" label="Role">
 						<option value="all">All Roles</option>
-						<option value="SA">Superadmin</option>
-						<option value="Administrator">Administrator</option>
-						<option value="Manager">Manager</option>
-						<option value="Engineer">Engineer</option>
+						<option v-for="role in roleList" :key="role.code" :value="role.code">
+							{{ role.name }}
+						</option>
 					</Select>
 
 					<Select v-model="filterStatus" label="Status">
@@ -178,31 +235,44 @@ function getRandomAvatarBg(name: string) {
 			<Table
 				paginate
 				hover
+				storageKey="employee-directory"
 				:headers="headers"
 				:items="users"
 				:loading="loading"
+				:search-query="searchQuery"
 				emptyMessage="No employees found matching the search matrix."
-				@row-click="(user) => viewUserProfile(user.code)"
+				@row-click="(user) => viewUserProfile(user.guid)"
 			>
 				<template #item-employee="{ item: user }">
 					<div class="employee-cell">
-						<div class="employee-cell__avatar" :style="getRandomAvatarBg(user.name)">
-							{{ user.name[0] }}
+						<div
+							class="employee-cell__avatar"
+							:class="user.isActive ? 'employee-cell__avatar--active' : 'employee-cell__avatar--inactive'"
+							:style="!user.profileImage ? getRandomAvatarBg(user.name) : {}"
+						>
+							<img v-if="user.profileImage" :src="getAvatarUrl(user.profileImage)" class="employee-cell__avatar-img" alt="Avatar" />
+							<span v-else>{{ user.name ? user.name[0].toUpperCase() : 'U' }}</span>
 						</div>
 						<div class="employee-cell__info">
-							<span class="employee-cell__name">{{ user.name }}</span>
-							<span class="employee-cell__title">GS Technical Dept</span>
+							<div style="display: flex; align-items: center;">
+								<span class="employee-cell__name">
+									<HighlightText :text="user.name" :query="searchQuery" />
+								</span>
+								<Badge v-if="user.guid === authStore.currentUser?.guid || user.email === authStore.currentUser?.email" type="info" style="margin-left: 6px; font-size: 10px; padding: 2px 6px;">You</Badge>
+							</div>
 						</div>
 					</div>
 				</template>
 				<template #item-code="{ item: user }">
-					<span class="u-font-mono">{{ user.code }}</span>
+					<span class="u-font-mono">
+						<HighlightText :text="user.code" :query="searchQuery" />
+					</span>
 				</template>
 				<template #item-role="{ item: user }">
-					<Badge :type="getRoleChipType(user.role)">{{ user.role }}</Badge>
+					<Badge :type="getRoleChipType(user.role)">{{ getRoleDisplayName(user.role) }}</Badge>
 				</template>
 				<template #item-email="{ item: user }">
-					{{ user.email }}
+					<HighlightText :text="user.email" :query="searchQuery" />
 				</template>
 				<template #item-status="{ item }">
 					<Badge :type="item.isActive ? 'success' : 'error'">
@@ -213,15 +283,17 @@ function getRandomAvatarBg(name: string) {
 					<div style="display: flex; gap: 4px; justify-content: flex-end;">
 						<button
 							class="btn btn--icon"
-							@click.stop="viewUserProfile(user.code)"
+							@click.stop="viewUserProfile(user.guid)"
 							title="View Profile / Edit"
 						>
 							<i class="mdi mdi-account-edit-outline"></i>
 						</button>
 						<button
 							class="btn btn--icon btn--icon-danger"
-							@click.stop="toggleUserStatus(user)"
-							:title="user.isActive ? 'Suspend' : 'Activate'"
+							:disabled="isSelf(user)"
+							:style="isSelf(user) ? 'opacity: 0.35; cursor: not-allowed;' : ''"
+							@click.stop="promptToggleStatus(user)"
+							:title="isSelf(user) ? 'You cannot deactivate your own account' : (user.isActive ? 'Suspend' : 'Activate')"
 						>
 							<i
 								class="mdi"
@@ -236,6 +308,29 @@ function getRandomAvatarBg(name: string) {
 				</template>
 			</Table>
 		</Card>
+
+		<!-- Confirmation Modal for Status Toggle -->
+		<Dialog v-model="showStatusModal" title="Confirm Account Status Change" maxWidth="420px">
+			<div style="padding: 12px 0; font-size: 14px; color: var(--colors-text-secondary); line-height: 1.5;">
+				<p style="margin: 0 0 8px 0;">
+					Are you sure you want to <strong>{{ selectedUserForStatus?.isActive ? 'Deactivate' : 'Activate' }}</strong>
+					the account for <strong>{{ selectedUserForStatus?.name }}</strong>?
+				</p>
+				<p v-if="selectedUserForStatus?.isActive" style="margin: 0; font-size: 12px; color: var(--colors-text-muted);">
+					Inactive accounts will not be able to authenticate or access the system.
+				</p>
+			</div>
+			<template #footer>
+				<Button variant="outlined" @click="showStatusModal = false" :disabled="statusLoading">Cancel</Button>
+				<Button
+					:variant="selectedUserForStatus?.isActive ? 'outlined' : 'primary'"
+					@click="confirmToggleStatus"
+					:loading="statusLoading"
+				>
+					Confirm {{ selectedUserForStatus?.isActive ? 'Deactivate' : 'Activate' }}
+				</Button>
+			</template>
+		</Dialog>
 	</div>
 </template>
 
@@ -255,10 +350,14 @@ function getRandomAvatarBg(name: string) {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
 		gap: var(--spacing-md);
+		width: 100%;
 	}
 	&__title-area {
+		flex: 1;
+		min-width: 0;
+
 		h1 {
 			font-size: 24px;
 			font-weight: 700;
@@ -269,6 +368,20 @@ function getRandomAvatarBg(name: string) {
 			font-size: 13px;
 			color: var(--colors-text-muted);
 			margin: 0;
+		}
+	}
+}
+
+.add-employee-btn {
+	flex-shrink: 0;
+	white-space: nowrap;
+
+	@media (max-width: 640px) {
+		padding: 8px 12px !important;
+		min-width: 40px;
+		
+		.btn-text {
+			display: none;
 		}
 	}
 }
@@ -302,6 +415,26 @@ function getRandomAvatarBg(name: string) {
 		justify-content: center;
 		text-transform: uppercase;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+		overflow: hidden;
+		border: 2px solid transparent;
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		flex-shrink: 0;
+
+		&--active {
+			border-color: #10B981 !important;
+			box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15) !important;
+		}
+
+		&--inactive {
+			border-color: #F43F5E !important;
+			box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.15) !important;
+		}
+
+		&-img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
 	}
 	&__info {
 		display: flex;

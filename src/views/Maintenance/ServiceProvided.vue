@@ -226,8 +226,8 @@ function formatPrice(value: number) {
 					</span>
 				</template>
 				<template #item-status="{ item }">
-					<Badge :type="item.isActive ? 'success' : 'default'">
-						{{ item.isActive ? "Active" : "Disabled" }}
+					<Badge :type="item.isActive ? 'success' : 'error'">
+						{{ item.isActive ? "Active" : "Inactive" }}
 					</Badge>
 				</template>
 				<template #item-actions="{ item }">

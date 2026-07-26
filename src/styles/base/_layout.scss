@@ -700,14 +700,11 @@
 // Global mobile overrides for common view classes
 @media (max-width: 767px) {
 	.maintenance-view__header {
-		flex-direction: column;
-		align-items: flex-start !important;
-		gap: var(--spacing-sm) !important;
-		
-		.btn {
-			width: 100%;
-			justify-content: center;
-		}
+		display: flex;
+		flex-direction: row !important;
+		justify-content: space-between;
+		align-items: center !important;
+		gap: var(--spacing-md) !important;
 	}
 
 	.filter-bar {

@@ -8,6 +8,7 @@ import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Badge from "@/components/Badge.vue";
 import { customerApi } from "@/api/customer/customer.api";
+import HighlightText from "@/components/HighlightText.vue";
 
 const headers: TableHeader[] = [
 	{ key: "status", label: "Status" },
@@ -166,19 +167,22 @@ function countryFormatAccount(acc: string) {
 				:headers="headers"
 				:items="filteredCustomers"
 				:loading="loading"
+				:search-query="searchQuery"
 				emptyMessage="No customer records matching matrix metrics."
 				@row-click="(customer) => viewCustomerDetail(customer.code)"
 			>
 				<template #item-customer="{ item: customer }">
 					<div class="employee-cell">
 						<div class="employee-cell__avatar" :style="getAvatarStyle(customer.name)">
-							{{ customer.name[0] }}
+							{{ customer.name ? customer.name[0].toUpperCase() : 'C' }}
 						</div>
 						<div class="employee-cell__info">
-							<span class="employee-cell__name">{{ customer.name }}</span>
-							<span class="employee-cell__title"
-								>System Code: {{ customer.code }}</span
-							>
+							<span class="employee-cell__name">
+								<HighlightText :text="customer.name" :query="searchQuery" />
+							</span>
+							<span class="employee-cell__title">
+								System Code: <HighlightText :text="customer.code" :query="searchQuery" />
+							</span>
 						</div>
 					</div>
 				</template>
@@ -187,7 +191,7 @@ function countryFormatAccount(acc: string) {
 						v-if="customer.accountNo"
 						class="u-font-mono u-font-weight-bold u-text-primary"
 					>
-						{{ countryFormatAccount(customer.accountNo) }}
+						<HighlightText :text="countryFormatAccount(customer.accountNo)" :query="searchQuery" />
 					</span>
 					<span v-else class="u-text-muted">—</span>
 				</template>

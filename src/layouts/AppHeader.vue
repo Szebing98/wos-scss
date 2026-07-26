@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { computed } from "vue";
+import { useRoute } from "vue-router";
 import type { MeResponse } from "@/api/auth/auth.types";
 import { getAvatarUrl } from "@/utils/avatar";
 
-defineProps<{
+const props = defineProps<{
 	currentUser: MeResponse | null;
 }>();
 
@@ -11,7 +13,16 @@ const emit = defineEmits<{
 	(e: "open-logout"): void;
 }>();
 
+const route = useRoute();
 const isAccountOpenMobile = defineModel<boolean>("isAccountOpenMobile", { default: false });
+
+const isOwnProfileActive = computed(() => {
+	if (route.path !== "/user/profile") return false;
+	if (route.query.mode === "new") return false;
+	const code = route.query.code as string;
+	if (!code) return true;
+	return !!(props.currentUser?.guid && code === props.currentUser.guid);
+});
 
 function handleLogoutClick() {
 	isAccountOpenMobile.value = false;
@@ -65,6 +76,9 @@ function handleLogoutClick() {
 					<router-link
 						to="/user/profile"
 						class="account-dropdown__item"
+						:class="{ 'account-dropdown__item--active': isOwnProfileActive }"
+						active-class=""
+						exact-active-class=""
 						@click="isAccountOpenMobile = false"
 					>
 						<i class="mdi mdi-account-cog-outline"></i> My Profile

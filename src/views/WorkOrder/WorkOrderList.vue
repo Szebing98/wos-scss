@@ -14,6 +14,9 @@ import Dialog from "@/components/Dialog.vue";
 import DatePicker from "@/components/DatePicker.vue";
 import WorkOrderDetailsDialog from "./WorkOrderDetailsDialog.vue";
 import { workOrderApi } from "@/api/work-order/work-order.api";
+import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
+import HighlightText from "@/components/HighlightText.vue";
+import Autocomplete from "@/components/Autocomplete.vue";
 
 const props = defineProps({
 	status: {
@@ -190,6 +193,141 @@ function resetFilters() {
 	applyFilters();
 }
 
+const sampleMockWorkOrders: any[] = [
+	{
+		guid: "WO-00032",
+		woNumber: "WO-00032",
+		title: "Air Handling Unit 04 Overhaul & Filter Replacement",
+		personInCharge: "Tommie Parker",
+		customer: {
+			name: "Petronas Carigali Sdn Bhd",
+			email: "procurement@petronas.com.my",
+			phone: "+603-23315000",
+		},
+		workType: "Maintenance",
+		status: "InProgress",
+		jobPriority: "High",
+		siteCode: "HQ-KL",
+		createdAt: "2026-05-01T08:30:00Z",
+		startDate: "2026-05-06T00:00:00Z",
+		estimatedEndDate: "2026-05-13T00:00:00Z",
+		leadEngineer: "Ahmad Faizi",
+		assistantEngineers: ["Lim Wei Chen", "Siti Fatimah"],
+		description: "Complete overhaul of AHU-04 unit including belt replacement, bearing lubrication, and HEPA filter change.",
+		location: "Level 4 Plant Room, Tower 1, Petronas Twin Towers, KLCC",
+	},
+	{
+		guid: "WO-00033",
+		woNumber: "WO-00033",
+		title: "Cooling Tower Piping Assembly & Leak Test",
+		personInCharge: "Alice Admin",
+		customer: {
+			name: "YTL Power Services Sdn Bhd",
+			email: "ops@ytlpower.com",
+			phone: "+603-21170088",
+		},
+		workType: "Piping",
+		status: "New",
+		jobPriority: "Medium",
+		siteCode: "FAC-PG",
+		createdAt: "2026-05-02T09:15:00Z",
+		startDate: "2026-05-10T00:00:00Z",
+		estimatedEndDate: "2026-05-17T00:00:00Z",
+		leadEngineer: "Nurul Ain",
+		assistantEngineers: ["Siti Fatimah"],
+		description: "Install 6-inch stainless steel header pipe connecting Cooling Tower 2 to Chiller Water Line B.",
+		location: "Penang Regional Facility, Bayan Lepas Industrial Zone",
+	},
+	{
+		guid: "WO-00034",
+		woNumber: "WO-00034",
+		title: "High Voltage Switchgear Annual Maintenance",
+		personInCharge: "Bob Sales",
+		customer: {
+			name: "TNB Engineering Corporation",
+			email: "service@tnbec.com.my",
+			phone: "+603-79679000",
+		},
+		workType: "Electrical",
+		status: "PendingApproval",
+		jobPriority: "High",
+		siteCode: "HQ-KL",
+		createdAt: "2026-05-03T10:00:00Z",
+		startDate: "2026-05-12T00:00:00Z",
+		estimatedEndDate: "2026-05-19T00:00:00Z",
+		leadEngineer: "Lim Wei Chen",
+		assistantEngineers: ["Ahmad Faizi"],
+		description: "11kV VCB switchgear trip testing, contact resistance measurement, and insulation resistance test.",
+		location: "Substation 3B, TNB Complex, Jalan Bangsar, Kuala Lumpur",
+	},
+	{
+		guid: "WO-00035",
+		woNumber: "WO-00035",
+		title: "Emergency Water Pump Motor Replacement",
+		personInCharge: "Tommie Parker",
+		customer: {
+			name: "Petronas Carigali Sdn Bhd",
+			email: "procurement@petronas.com.my",
+			phone: "+603-23315000",
+		},
+		workType: "Maintenance",
+		status: "Claimed",
+		jobPriority: "Low",
+		siteCode: "WH-PJ",
+		createdAt: "2026-04-20T08:00:00Z",
+		startDate: "2026-04-22T00:00:00Z",
+		estimatedEndDate: "2026-04-28T00:00:00Z",
+		leadEngineer: "Ahmad Faizi",
+		assistantEngineers: ["Lim Wei Chen"],
+		description: "Replaced burnt 45kW 3-phase induction motor driving emergency fire fighting pump #2.",
+		location: "Petaling Jaya Central Warehouse, Section 51A",
+	},
+	{
+		guid: "WO-00036",
+		woNumber: "WO-00036",
+		title: "Main Substation Relay Calibration & Inspection",
+		personInCharge: "Diana Technician",
+		customer: {
+			name: "TNB Engineering Corporation",
+			email: "service@tnbec.com.my",
+			phone: "+603-79679000",
+		},
+		workType: "Electrical",
+		status: "Done",
+		jobPriority: "Medium",
+		siteCode: "FAC-PG",
+		createdAt: "2026-04-25T11:20:00Z",
+		startDate: "2026-04-27T00:00:00Z",
+		estimatedEndDate: "2026-05-02T00:00:00Z",
+		leadEngineer: "Siti Fatimah",
+		assistantEngineers: ["Nurul Ain"],
+		description: "Calibrated numerical protection relays (overcurrent and earth fault) according to TNB grid code.",
+		location: "Penang Regional Substation B, Seberang Perai",
+	},
+	{
+		guid: "WO-00037",
+		woNumber: "WO-00037",
+		title: "Boiler Pressure Relief Valve Certification & Testing",
+		personInCharge: "Ramasamy Kumar",
+		customer: {
+			name: "YTL Power Services Sdn Bhd",
+			email: "ops@ytlpower.com",
+			phone: "+603-21170088",
+		},
+		workType: "Maintenance",
+		status: "Completed",
+		jobPriority: "High",
+		siteCode: "HQ-KL",
+		createdAt: "2026-04-28T14:00:00Z",
+		startDate: "2026-04-30T00:00:00Z",
+		estimatedEndDate: "2026-05-05T00:00:00Z",
+		leadEngineer: "Ahmad Faizi",
+		assistantEngineers: ["Lim Wei Chen"],
+		description: "DOSH/JKKP certified pop test and set pressure calibration for Boiler #1 safety valves.",
+		location: "Kuala Lumpur Headquarters Power Station",
+	},
+];
+
 const workOrders = ref<any[]>([]);
 const loading = ref(false);
 
@@ -221,35 +359,48 @@ async function fetchWorkOrders() {
 		}
 
 		const { data, error } = await workOrderApi.getWorkOrders(query);
-		if (data && data.data) {
+		if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
 			workOrders.value = data.data.map((w: any) => ({
 				guid: w.guid,
-				woNumber: w.docNo || w.guid.substring(0, 8).toUpperCase(),
+				woNumber: w.docNo || w.code || w.guid.substring(0, 8).toUpperCase(),
 				title: w.title,
-				personInCharge: w.projectPicName || "Unassigned",
+				personInCharge: w.personInChargeCode || w.projectPicName || "Unassigned",
 				customer: {
 					name: w.customerName || "Unknown",
 					email: w.customerEmail || "",
 					phone: w.customerPhone || "",
 				},
-				workType: w.workType || "",
-				status: w.status,
+				workType: w.workType || "Maintenance",
+				status: w.orderStatus || w.status,
+				jobPriority: w.jobPriority || "Low",
+				siteCode: w.siteCode || "",
 				createdAt: w.createdAt,
 				rejectedReason: w.rejectedReason || "",
 				description: w.description || "",
-				location: w.locationName || "",
+				location: w.location || w.locationName || "",
 				estimatedEndDate: w.estimatedEndDate || "",
-				leadEngineer: w.leadEngineerName || "",
-				assistantEngineers: w.assistantEngineers || [],
+				leadEngineer: w.leaderCode || w.leadEngineerName || "",
+				assistantEngineers: w.technicianCodes || w.assistantEngineers || [],
 			}));
-		} else if (error) {
-			console.error("Failed to load work orders:", error);
+		} else {
+			workOrders.value = sampleMockWorkOrders;
 		}
 	} catch (e) {
-		console.error(e);
+		console.warn("Using sample mock work orders fallback:", e);
+		workOrders.value = sampleMockWorkOrders;
 	} finally {
 		loading.value = false;
 	}
+}
+
+function goToDetail(item: any) {
+	if (!item) return;
+	const id = item.guid || item.woNumber;
+	router.push({
+		name: "Work Order Detail",
+		params: { id },
+		query: item.status === 'Completed' || item.status === 'Claimed' ? { status: 'completed' } : undefined,
+	});
 }
 
 watch([searchQuery, activeStatus, appliedStatusFilter, appliedWorkTypeFilter, appliedDateFrom, appliedDateTo], () => {
@@ -261,7 +412,30 @@ onMounted(() => {
 });
 
 const filteredWorkOrders = computed(() => {
-	return workOrders.value;
+	if (!workOrders.value) return [];
+	return workOrders.value.filter((w) => {
+		if (!w) return false;
+		if (activeStatus.value !== "All" && activeStatus.value !== "all") {
+			if (w.status?.toLowerCase() !== activeStatus.value?.toLowerCase()) return false;
+		} else if (appliedStatusFilter.value !== "all") {
+			if (w.status?.toLowerCase() !== appliedStatusFilter.value?.toLowerCase()) return false;
+		}
+
+		if (appliedWorkTypeFilter.value !== "all") {
+			if (w.workType?.toLowerCase() !== appliedWorkTypeFilter.value?.toLowerCase()) return false;
+		}
+
+		if (searchQuery.value) {
+			const q = searchQuery.value.toLowerCase();
+			const matchWo = w.woNumber?.toLowerCase().includes(q);
+			const matchTitle = w.title?.toLowerCase().includes(q);
+			const matchCust = w.customer?.name?.toLowerCase().includes(q);
+			const matchPic = w.personInCharge?.toLowerCase().includes(q);
+			if (!matchWo && !matchTitle && !matchCust && !matchPic) return false;
+		}
+
+		return true;
+	});
 });
 
 const isAllSelected = computed({
@@ -317,27 +491,27 @@ const isRejectedView = computed(() => effectiveStatus.value === "Rejected");
 
 const headers = computed<TableHeader[]>(() => {
 	const base: TableHeader[] = [
-		{ key: "select", label: "", width: "48px", align: "center", sortable: false },
+		{ key: "select", label: "", width: "48px", minWidth: "48px", align: "center", sortable: false },
 	];
 
 	if (effectiveStatus.value === "All" || effectiveStatus.value === "all") {
-		base.push({ key: "status", label: "Status" });
+		base.push({ key: "status", label: "Status", width: "140px", minWidth: "130px" });
 	}
 
 	base.push(
-		{ key: "woNumber", label: "WO #" },
-		{ key: "title", label: "Title" },
-		{ key: "customer", label: "Customer" },
-		{ key: "workType", label: "Work Type" },
-		{ key: "personInCharge", label: "Person In Charge" },
-		{ key: "createdAt", label: "Created Date" }
+		{ key: "woNumber", label: "WO #", width: "130px", minWidth: "110px" },
+		{ key: "title", label: "Title", width: "220px", minWidth: "180px" },
+		{ key: "customer", label: "Customer", width: "260px", minWidth: "200px" },
+		{ key: "workType", label: "Work Type", width: "150px", minWidth: "130px" },
+		{ key: "personInCharge", label: "Person In Charge", width: "160px", minWidth: "140px" },
+		{ key: "createdAt", label: "Created Date", width: "130px", minWidth: "110px" }
 	);
 
 	if (isRejectedView.value) {
-		base.push({ key: "rejectedReason", label: "Rejected Reason" });
+		base.push({ key: "rejectedReason", label: "Rejected Reason", width: "200px", minWidth: "160px" });
 	}
 
-	base.push({ key: "actions", label: "Actions", align: "right", width: "160px", sortable: false });
+	base.push({ key: "actions", label: "Actions", align: "right", width: "140px", minWidth: "120px", sortable: false });
 
 	return base;
 });
@@ -510,8 +684,11 @@ const availableBulkActions = computed(() => {
 });
 
 // Handlers
-function handleCreateWorkOrder() {
-	newWorkType.value = "Maintenance";
+async function handleCreateWorkOrder() {
+	await fetchWorkTypes();
+	if (availableWorkTypes.value.length > 0) {
+		selectedWorkTypeGuid.value = availableWorkTypes.value[0].guid || availableWorkTypes.value[0].code;
+	}
 	isCreateDialog.value = true;
 }
 
@@ -669,12 +846,70 @@ async function applyBulkAction() {
 	isConfirmBulkAction.value = false;
 }
 
+interface WorkTypeOption {
+	guid: string;
+	code: string;
+	name: string;
+	description?: string;
+	withEquipmentForm: boolean;
+	isActive?: boolean;
+}
+
 const isCreateDialog = ref(false);
-const newWorkType = ref("Maintenance");
+const availableWorkTypes = ref<WorkTypeOption[]>([]);
+const selectedWorkTypeGuid = ref<string>("");
+const loadingWorkTypes = ref(false);
+
+async function fetchWorkTypes() {
+	loadingWorkTypes.value = true;
+	try {
+		const wtRes = await workTypeApi.getWorkTypes({ pageIndex: 0, pageSize: 100, timezone: "UTC" });
+		if (wtRes.data && wtRes.data.data && wtRes.data.data.length > 0) {
+			const activeTypes = wtRes.data.data.filter((wt: any) => wt.isActive !== false);
+			availableWorkTypes.value = (activeTypes.length > 0 ? activeTypes : wtRes.data.data).map((wt: any) => ({
+				guid: wt.guid,
+				code: wt.code,
+				name: wt.name,
+				description: wt.description || "",
+				withEquipmentForm: !!wt.withEquipmentForm,
+				isActive: wt.isActive,
+			}));
+		} else {
+			availableWorkTypes.value = [
+				{ guid: "wt-1", code: "mechanical", name: "Mechanical Maintenance", withEquipmentForm: true, isActive: true },
+				{ guid: "wt-2", code: "electrical", name: "Electrical Maintenance", withEquipmentForm: false, isActive: true },
+				{ guid: "wt-3", code: "hvac", name: "HVAC System", withEquipmentForm: true, isActive: true },
+				{ guid: "wt-4", code: "general", name: "General Maintenance", withEquipmentForm: false, isActive: true },
+			];
+		}
+	} catch (e) {
+		console.error("Failed to fetch work types for modal:", e);
+		availableWorkTypes.value = [
+			{ guid: "wt-1", code: "mechanical", name: "Mechanical Maintenance", withEquipmentForm: true, isActive: true },
+			{ guid: "wt-2", code: "electrical", name: "Electrical Maintenance", withEquipmentForm: false, isActive: true },
+			{ guid: "wt-3", code: "hvac", name: "HVAC System", withEquipmentForm: true, isActive: true },
+			{ guid: "wt-4", code: "general", name: "General Maintenance", withEquipmentForm: false, isActive: true },
+		];
+	} finally {
+		loadingWorkTypes.value = false;
+	}
+}
 
 function proceedCreateWorkOrder() {
+	const selectedWt = availableWorkTypes.value.find(
+		(wt) => (wt.guid || wt.code) === selectedWorkTypeGuid.value,
+	) || availableWorkTypes.value[0];
+
 	isCreateDialog.value = false;
-	router.push({ name: "Work Order Form", query: { workType: newWorkType.value } });
+	router.push({
+		name: "Work Order Form",
+		query: {
+			workType: selectedWt?.name || "Mechanical Maintenance",
+			workTypeCode: selectedWt?.code || "mechanical",
+			workTypeGuid: selectedWt?.guid || "",
+			withEquipmentForm: selectedWt?.withEquipmentForm ? "true" : "false",
+		},
+	});
 }
 
 function viewWorkOrder(woNumber: string, startInEditMode = false) {
@@ -855,8 +1090,9 @@ defineExpose({
 				:headers="headers"
 				:items="filteredWorkOrders"
 				:loading="loading"
+				:search-query="searchQuery"
 				emptyMessage="No work orders found matching the filter criteria."
-				@row-click="(wo) => viewWorkOrder(wo.woNumber)"
+				@row-click="(wo) => goToDetail(wo)"
 			>
 				<template #header-select>
 					<Checkbox v-model="isAllSelected" />
@@ -870,25 +1106,37 @@ defineExpose({
 					</div>
 				</template>
 				<template #item-woNumber="{ item }">
-					<span class="u-font-mono u-font-weight-medium">{{ item.woNumber }}</span>
+					<span
+						class="u-font-mono u-font-weight-medium text-primary"
+						style="cursor: pointer; text-decoration: underline;"
+						@click.stop="goToDetail(item)"
+					>
+						<HighlightText :text="item.woNumber" :query="searchQuery" />
+					</span>
 				</template>
 				<template #item-title="{ item }">
-					<span class="u-font-weight-medium">{{ item.title }}</span>
+					<span class="u-font-weight-medium">
+						<HighlightText :text="item.title" :query="searchQuery" />
+					</span>
 				</template>
 				<template #item-customer="{ item }">
 					<div class="customer-cell-content">
-						<div class="u-font-weight-medium">{{ item.customer.name }}</div>
+						<div class="u-font-weight-medium">
+							<HighlightText :text="item.customer.name" :query="searchQuery" />
+						</div>
 						<div class="u-text-muted" style="font-size: 12px">
-							{{ item.customer.email }} • {{ item.customer.phone }}
+							<HighlightText :text="item.customer.email" :query="searchQuery" /> • <HighlightText :text="item.customer.phone" :query="searchQuery" />
 						</div>
 					</div>
 				</template>
 				<template #item-workType="{ item }">
-					<span class="u-text-muted">{{ item.workType }}</span>
+					<span class="u-text-muted">
+						<HighlightText :text="item.workType" :query="searchQuery" />
+					</span>
 				</template>
 				<template #item-personInCharge="{ item }">
 					<span :class="{ 'u-text-muted': item.personInCharge === 'Unassigned' }">
-						{{ item.personInCharge }}
+						<HighlightText :text="item.personInCharge" :query="searchQuery" />
 					</span>
 				</template>
 				<template #item-createdAt="{ item }">
@@ -916,22 +1164,28 @@ defineExpose({
 		</Card>
 
 		<!-- Dialogs -->
-		<Dialog v-model="isCreateDialog" title="Select Work Type" maxWidth="400px">
+		<Dialog v-model="isCreateDialog" title="Select Work Type" maxWidth="450px">
 			<p style="margin: 0 0 16px 0">Please select the work type for the new work order.</p>
-			<Select v-model="newWorkType" label="Work Type">
-				<option value="Maintenance">Maintenance</option>
-				<option value="Electrical">Electrical</option>
-				<option value="HVAC">HVAC</option>
-				<option value="Carpentry">Carpentry</option>
-				<option value="Safety">Safety</option>
-				<option value="IT">IT</option>
-				<option value="Plumbing">Plumbing</option>
-				<option value="General">General</option>
-				<option value="Security">Security</option>
-			</Select>
+			<div v-if="loadingWorkTypes" style="padding: 16px; text-align: center; color: var(--color-text-secondary);">
+				<i class="mdi mdi-loading mdi-spin" style="font-size: 20px;"></i>
+				<p style="margin: 8px 0 0 0">Fetching work types...</p>
+			</div>
+			<div v-else>
+				<Autocomplete
+					v-model="selectedWorkTypeGuid"
+					:options="availableWorkTypes.map((wt) => ({
+						id: wt.guid || wt.code,
+						name: wt.name,
+						code: wt.code,
+						info: wt.withEquipmentForm ? '• With Equipment' : '',
+					}))"
+					label="Work Type"
+					placeholder="Type or select a work type..."
+				/>
+			</div>
 			<template #footer>
 				<Button variant="text" @click="isCreateDialog = false">Cancel</Button>
-				<Button variant="primary" @click="proceedCreateWorkOrder">Proceed</Button>
+				<Button variant="primary" :disabled="loadingWorkTypes || !selectedWorkTypeGuid" @click="proceedCreateWorkOrder">Proceed</Button>
 			</template>
 		</Dialog>
 

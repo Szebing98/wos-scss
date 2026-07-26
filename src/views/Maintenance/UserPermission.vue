@@ -169,15 +169,21 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import Textbox from "@/components/Textbox.vue";
+import http from "@/utils/http";
+
+const route = useRoute();
 
 interface UserModel {
+	guid?: string;
 	code: string;
 	name: string;
 	email: string;
 }
 
 interface PermissionModel {
+	guid?: string;
 	code: string;
 	action: string;
 	subject: string;
@@ -209,41 +215,44 @@ const filteredAutocompleteUsers = computed(() => {
 const users = ref<UserModel[]>([]);
 const allPermissions = ref<PermissionModel[]>([]);
 
-// 利用 Set 和 Map，完美复刻 C# HashSet 和 Dictionary 的极速检索
 const inheritedPermissions = ref<Set<string>>(new Set());
 const userOverrides = ref<Map<string, "allow" | "deny">>(new Map());
 
-// 1. 加载用户列表
+// 1. Load users
 async function loadUsers() {
 	try {
-		const response = await fetch("api/users");
-		if (response.ok) users.value = await response.json();
-		else throw new Error();
-	} catch {
-		users.value = [
-			{ code: "USR-001", name: "Alice Johnson", email: "alice@wos.com" },
-			{ code: "USR-002", name: "Bob Smith", email: "bob@wos.com" },
-			{ code: "USR-003", name: "Charlie Davis", email: "charlie@wos.com" },
-		];
+		const res = await http.get("/user", { params: { pageSize: 100 } });
+		const data = res.data?.data || res.data || [];
+		if (Array.isArray(data)) {
+			users.value = data.map((u: any) => ({
+				guid: u.guid,
+				code: u.code || u.guid.substring(0, 8).toUpperCase(),
+				name: u.name || u.displayName || u.profile?.displayName || "Unknown User",
+				email: u.email || "",
+			}));
+		}
+	} catch (e) {
+		console.error("Failed to load users", e);
+		users.value = [];
 	}
 }
 
-// 2. 加载全量原子权限定义
+// 2. Load abilities
 async function loadAllPermissions() {
 	try {
-		const response = await fetch("api/permissions");
-		if (response.ok) allPermissions.value = await response.json();
-		else throw new Error();
-	} catch {
-		allPermissions.value = [
-			{ code: "user_read", subject: "User", action: "read", inverted: false },
-			{ code: "user_create", subject: "User", action: "create", inverted: false },
-			{ code: "user_update", subject: "User", action: "update", inverted: false },
-			{ code: "wo_read", subject: "WorkOrder", action: "read", inverted: false },
-			{ code: "wo_create", subject: "WorkOrder", action: "create", inverted: false },
-			{ code: "wo_update", subject: "WorkOrder", action: "update", inverted: false },
-			{ code: "wo_delete", subject: "WorkOrder", action: "delete", inverted: false },
-		];
+		const res = await http.get("/abilities");
+		const data = res.data?.data || res.data || [];
+		if (Array.isArray(data)) {
+			allPermissions.value = data.map((p: any) => ({
+				guid: p.guid,
+				code: p.code || `${p.action}_${p.subject}`,
+				action: p.action,
+				subject: p.subject,
+				inverted: p.inverted ?? false,
+			}));
+		}
+	} catch (e) {
+		console.error("Failed to load abilities", e);
 	}
 }
 
@@ -259,31 +268,22 @@ async function handleUserSelection(user: UserModel) {
 	userOverrides.value.clear();
 
 	try {
-		const effectiveRes = await fetch(`api/permissions/users/${user.code}`);
-		const overridesRes = await fetch(`api/permissions/users/${user.code}/overrides`);
-
-		if (overridesRes.ok) {
-			const directOverrides: PermissionModel[] = await overridesRes.json();
-			directOverrides.forEach((o) => {
-				if (o.inverted) {
-					const normalCode = o.code.replace("block_", "").replace("_deny", "");
-					userOverrides.value.set(normalCode, "deny");
-				} else {
-					userOverrides.value.set(o.code, "allow");
-				}
-			});
+		if (user.guid) {
+			const res = await http.get(`/abilities/users/${user.guid}`);
+			const userAbilities: PermissionModel[] = res.data?.data || res.data || [];
+			if (Array.isArray(userAbilities)) {
+				userAbilities.forEach((p) => {
+					const code = p.code || `${p.action}_${p.subject}`;
+					if (p.inverted) {
+						userOverrides.value.set(code, "deny");
+					} else {
+						userOverrides.value.set(code, "allow");
+					}
+				});
+			}
 		}
-
-		if (effectiveRes.ok) {
-			const effectivePerms: PermissionModel[] = await effectiveRes.json();
-			effectivePerms.forEach((p) => {
-				if (!userOverrides.value.has(p.code)) {
-					inheritedPermissions.value.add(p.code);
-				}
-			});
-		}
-	} catch {
-		console.warn("Using decoupled reactive matrix baseline.");
+	} catch (e) {
+		console.error("Failed to load user abilities", e);
 	} finally {
 		isLoadingPermissions.value = false;
 	}
@@ -301,19 +301,32 @@ function handleClickOutside(e: MouseEvent) {
 	}
 }
 
-onMounted(() => {
-	loadUsers();
-	loadAllPermissions();
+onMounted(async () => {
+	await loadUsers();
+	await loadAllPermissions();
 	document.addEventListener("mousedown", handleClickOutside);
+
+	const targetUserQuery = route.query.user as string;
+	if (targetUserQuery && users.value.length > 0) {
+		const target = users.value.find(
+			(u) =>
+				u.guid === targetUserQuery ||
+				u.code === targetUserQuery ||
+				u.code.toLowerCase() === targetUserQuery.toLowerCase() ||
+				u.email.toLowerCase() === targetUserQuery.toLowerCase()
+		);
+		if (target) {
+			handleUserSelection(target);
+		}
+	}
 });
 
-// 4. 清理反向规则，只输出标准的 UI 行
 const filteredGroupedPermissions = computed(() => {
 	const result: Record<string, PermissionModel[]> = {};
 	if (!allPermissions.value) return result;
 
 	allPermissions.value
-		.filter((x) => !x.inverted) // 只显现正向操作项
+		.filter((x) => !x.inverted)
 		.forEach((x) => {
 			const query = searchQuery.value.toLowerCase();
 			const matches =
@@ -343,7 +356,6 @@ function getInheritedStatusText(code: string): string {
 	return inheritedPermissions.value.has(code) ? "Group Policy: ALLOWED" : "Group Policy: DENIED";
 }
 
-// 动态追加高亮边缘线
 function getRowClass(code: string): string {
 	const val = userOverrides.value.get(code);
 	if (val === "allow") return "override-box--allow";
@@ -351,46 +363,30 @@ function getRowClass(code: string): string {
 	return "";
 }
 
-// 5. 反向压缩 Payload 并同步至 Bun API
 async function saveOverrides() {
-	if (!selectedUser.value) return;
+	if (!selectedUser.value?.guid) return;
 	isSaving.value = true;
 
 	try {
-		const syncCodes: string[] = [];
-
-		userOverrides.value.forEach((overrideType, normalCode) => {
-			if (overrideType === "allow") {
-				syncCodes.push(normalCode);
-			} else if (overrideType === "deny") {
-				const normalPerm = allPermissions.value.find((x) => x.code === normalCode);
-				if (normalPerm) {
-					const invertedPerm = allPermissions.value.find(
-						(x) =>
-							x.subject === normalPerm.subject &&
-							x.action === normalPerm.action &&
-							x.inverted,
-					);
-					syncCodes.push(invertedPerm ? invertedPerm.code : `block_${normalCode}`);
-				}
+		const selectedAbilities: Array<{ action: string; subject: string; inverted: boolean }> = [];
+		userOverrides.value.forEach((overrideType, code) => {
+			const perm = allPermissions.value.find((p) => p.code === code);
+			if (perm) {
+				selectedAbilities.push({
+					action: perm.action,
+					subject: perm.subject,
+					inverted: overrideType === "deny",
+				});
 			}
 		});
 
-		const payload = { permission_codes: syncCodes };
-		const response = await fetch(`api/permissions/users/${selectedUser.value.code}/sync`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(payload),
+		await http.put(`/abilities/users/${selectedUser.value.guid}`, {
+			abilities: selectedAbilities,
 		});
-
-		if (response.ok) {
-			alert(`Authorization overrides for ${selectedUser.value.name} successfully deployed!`);
-		} else {
-			const err = await response.text();
-			alert(`Deployment failed: ${err}`);
-		}
-	} catch (ex: any) {
-		alert(`Operation encountered an error: ${ex.message}`);
+		alert(`Authorization overrides for ${selectedUser.value.name} successfully deployed!`);
+	} catch (e) {
+		console.error("Failed to save user overrides", e);
+		alert("Deployment failed: An error occurred.");
 	} finally {
 		isSaving.value = false;
 	}

@@ -6,7 +6,8 @@ interface Props {
 		| "error"
 		| "info"
 		| "default"
-		| "disabled";
+		| "disabled"
+		| "primary";
 	icon?: string;
 }
 

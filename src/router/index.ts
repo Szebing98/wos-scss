@@ -32,7 +32,7 @@ const routes = [
 	{
 		path: "/",
 		component: MainLayout,
-		redirect: "/",
+		redirect: "/dashboard",
 		children: [
 			{
 				path: "dashboard",
@@ -95,17 +95,23 @@ const routes = [
 				meta: { requiresAuth: true },
 			},
 			{
-				path: "parts",
-				name: "Part Replaced",
-				component: () => import("@/views/Maintenance/PartReplaced.vue"),
+				path: "site",
+				name: "Site",
+				component: () => import("@/views/Maintenance/Site.vue"),
 				meta: { requiresAuth: true },
 			},
-			{
-				path: "services",
-				name: "Service Provided",
-				component: () => import("@/views/Maintenance/ServiceProvided.vue"),
-				meta: { requiresAuth: true },
-			},
+			// {
+			// 	path: "parts",
+			// 	name: "Part Info",
+			// 	component: () => import("@/views/Maintenance/PartInfo.vue"),
+			// 	meta: { requiresAuth: true },
+			// },
+			// {
+			// 	path: "services",
+			// 	name: "Service Provided",
+			// 	component: () => import("@/views/Maintenance/ServiceProvided.vue"),
+			// 	meta: { requiresAuth: true },
+			// },
 			{
 				path: "doc-no-format",
 				name: "Document No. Format",
@@ -138,6 +144,11 @@ const routes = [
 			{
 				path: "profile",
 				name: "User Profile",
+				component: () => import("@/views/User/UserProfile.vue"),
+			},
+			{
+				path: "form",
+				name: "User Form",
 				component: () => import("@/views/User/UserProfile.vue"),
 			},
 		],

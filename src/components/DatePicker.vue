@@ -178,7 +178,12 @@ onUnmounted(() => {
 <template>
 	<div class="textbox-field datepicker-field" ref="datepickerRef">
 		<label v-if="label" class="textbox-field__label">
-			{{ label }}
+			<template v-if="label.includes('*')">
+				{{ label.replace('*', '').trim() }} <span class="required-asterisk">*</span>
+			</template>
+			<template v-else>
+				{{ label }}
+			</template>
 		</label>
 
 		<div

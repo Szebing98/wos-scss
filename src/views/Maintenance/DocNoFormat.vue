@@ -1,30 +1,33 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import Dialog from "@/components/Dialog.vue";
 import Card from "@/components/Card.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Select from "@/components/Select.vue";
 import Textbox from "@/components/Textbox.vue";
-import Badge from "@/components/Badge.vue";
+import type { DocNoFormatModel } from "@/api/maintenance/doc-no-format/doc-no-format.types";
 
-interface DocNoFormatModel {
-	id: number;
-	module: string;
-	prefix: string;
-	dateFormat: string;
-	delimiter: string;
-	padding: number;
-	nextNumber: number;
-	isActive: boolean;
-}
+import http from "@/utils/http";
 
 const searchString = ref("");
 const filterActive = ref("all");
 const isNewRecord = ref(false);
 const isDialogOpen = ref(false);
+const isLoading = ref(false);
+const isDeleting = ref(false);
 const selectedFormat = ref<DocNoFormatModel | null>(null);
 
-const formData = ref<DocNoFormatModel>({
+const formData = ref<{
+	id?: number;
+	module?: string;
+	prefix?: string;
+	dateFormat?: string;
+	delimiter?: string;
+	padding?: number;
+	nextNumber?: number;
+	isActive?: boolean;
+	customerCode?: string | null;
+}>({
 	id: 0,
 	module: "",
 	prefix: "",
@@ -33,40 +36,31 @@ const formData = ref<DocNoFormatModel>({
 	padding: 4,
 	nextNumber: 1,
 	isActive: true,
+	customerCode: null,
 });
 
-const formats = ref<DocNoFormatModel[]>([
-	{
-		id: 1,
-		module: "INV",
-		prefix: "INV",
-		dateFormat: "YYYYMM",
-		delimiter: "-",
-		padding: 4,
-		nextNumber: 1,
-		isActive: true,
-	},
-	{
-		id: 2,
-		module: "PO",
-		prefix: "PO",
-		dateFormat: "YYYYMMDD",
-		delimiter: "/",
-		padding: 5,
-		nextNumber: 25,
-		isActive: true,
-	},
-	{
-		id: 3,
-		module: "DO",
-		prefix: "DO",
-		dateFormat: "YYMM",
-		delimiter: "",
-		padding: 4,
-		nextNumber: 120,
-		isActive: true,
-	},
-]);
+const formats = ref<DocNoFormatModel[]>([]);
+
+async function loadFormats() {
+	isLoading.value = true;
+	try {
+		const res = await http.get("/doc-no-format", { params: { pageSize: 100 } });
+		const rawData = res?.data?.data || res?.data?.items || res?.data || [];
+		formats.value = Array.isArray(rawData) ? rawData : [];
+		if (!selectedFormat.value && formats.value.length > 0) {
+			selectedFormat.value = formats.value[0];
+		}
+	} catch (err) {
+		console.error("Failed to load DocNoFormat list:", err);
+		formats.value = [];
+	} finally {
+		isLoading.value = false;
+	}
+}
+
+onMounted(() => {
+	loadFormats();
+});
 
 const filteredFormats = computed(() => {
 	if (!formats.value) return [];
@@ -89,14 +83,15 @@ const filteredFormats = computed(() => {
 
 function resetFilter() {
 	filterActive.value = "all";
+	searchString.value = "";
 }
 
 function selectFormat(item: DocNoFormatModel) {
 	selectedFormat.value = item;
 }
 
-function generatePreview(format: DocNoFormatModel) {
-	if (!format) return "---";
+function generatePreview(format?: Partial<DocNoFormatModel> | null) {
+	if (!format || !format.prefix) return "---";
 
 	let datePart = "";
 	const date = new Date();
@@ -115,22 +110,26 @@ function generatePreview(format: DocNoFormatModel) {
 			case "YYMM":
 				datePart = `${String(year).slice(-2)}${month}`;
 				break;
-			default:
-				datePart = "";
+			case "YYYY":
+				datePart = `${year}`;
+				break;
 		}
 	}
 
-	const delimiter = format.delimiter ?? "";
-	const runningNo = String(format.nextNumber).padStart(format.padding, "0");
+	const paddedNumber = String(format.nextNumber || 1).padStart(format.padding || 4, "0");
 
-	const parts: string[] = [format.prefix];
-	if (datePart) parts.push(datePart);
-	parts.push(runningNo);
+	let result = format.prefix;
 
-	return parts.filter((p) => p !== "").join(delimiter);
+	if (datePart) {
+		result += (format.delimiter ?? "") + datePart;
+	}
+
+	result += (format.delimiter ?? "") + paddedNumber;
+
+	return result;
 }
 
-function prepareNewFormat() {
+function openCreateModal() {
 	isNewRecord.value = true;
 	formData.value = {
 		id: 0,
@@ -141,6 +140,7 @@ function prepareNewFormat() {
 		padding: 4,
 		nextNumber: 1,
 		isActive: true,
+		customerCode: null,
 	};
 	isDialogOpen.value = true;
 }
@@ -148,40 +148,62 @@ function prepareNewFormat() {
 function openEditModal() {
 	if (!selectedFormat.value) return;
 	isNewRecord.value = false;
-	formData.value = { ...selectedFormat.value };
+	formData.value = {
+		...selectedFormat.value,
+		dateFormat: selectedFormat.value.dateFormat || "",
+	};
 	isDialogOpen.value = true;
 }
 
-function saveFormat() {
-	if (!formData.value.module || !formData.value.prefix) {
+async function saveFormat() {
+	if (!formData.value.module?.trim() || !formData.value.prefix?.trim()) {
 		alert("Module Code and Prefix are mandatory fields.");
 		return;
 	}
 
-	if (isNewRecord.value) {
-		const duplicate = formats.value.some(
-			(x) => x.module.toLowerCase() === formData.value.module.toLowerCase(),
-		);
-		if (duplicate) {
-			alert(`The module code [${formData.value.module.toUpperCase()}] already exists.`);
-			return;
+	const payload = {
+		module: formData.value.module.trim().toUpperCase(),
+		prefix: formData.value.prefix.trim(),
+		dateFormat: formData.value.dateFormat || "",
+		delimiter: formData.value.delimiter ?? "-",
+		padding: Number(formData.value.padding) || 4,
+		nextNumber: Number(formData.value.nextNumber) || 1,
+		isActive: formData.value.isActive ?? true,
+		customerCode: formData.value.customerCode || null,
+	};
+
+	try {
+		if (isNewRecord.value) {
+			await http.post("/doc-no-format", payload);
+		} else if (selectedFormat.value?.id) {
+			await http.put(`/doc-no-format/${selectedFormat.value.id}`, payload);
 		}
-		formData.value.id = Date.now();
-		formats.value.push({ ...formData.value });
-		selectedFormat.value = formats.value[formats.value.length - 1];
-	} else {
-		const index = formats.value.findIndex((x) => x.id === formData.value.id);
-		if (index !== -1) {
-			formats.value[index] = { ...formData.value };
-			selectedFormat.value = formats.value[index];
-		}
+		isDialogOpen.value = false;
+		await loadFormats();
+	} catch (e) {
+		console.error("Failed to save format:", e);
 	}
-	isDialogOpen.value = false;
 }
 
-function deleteFormat(item: DocNoFormatModel) {
-	formats.value = formats.value.filter((x) => x.id !== item.id);
-	selectedFormat.value = null;
+function prepareNewFormat() {
+	openCreateModal();
+}
+
+function promptDelete(item: DocNoFormatModel) {
+	selectedFormat.value = item;
+	isDeleting.value = true;
+}
+
+async function executeDelete() {
+	if (!selectedFormat.value?.id) return;
+	try {
+		await http.delete(`/doc-no-format/${selectedFormat.value.id}`);
+		selectedFormat.value = null;
+		isDeleting.value = false;
+		await loadFormats();
+	} catch (e) {
+		console.error("Failed to delete format:", e);
+	}
 }
 </script>
 
@@ -195,7 +217,7 @@ function deleteFormat(item: DocNoFormatModel) {
 				</p>
 			</div>
 			<button class="btn btn--primary" @click="prepareNewFormat">
-				<i class="mdi mdi-plus"></i> New Format
+				<i class="mdi mdi-plus"></i> New Format Rule
 			</button>
 		</div>
 
@@ -252,14 +274,14 @@ function deleteFormat(item: DocNoFormatModel) {
 								generatePreview(selectedFormat)
 							}}</span>
 						</div>
-						<Badge type="info" icon="mdi-xml">Sample Output</Badge>
+						<Badge type="info" icon="mdi-xml">Auto Generated Output</Badge>
 					</div>
 
 					<Card class="panel-card--readonly mt-md">
 						<div class="panel-card__header">
 							<h2>Configuration Rules</h2>
 							<button
-								class="btn btn--icon-edit"
+								class="btn btn--outlined"
 								@click="openEditModal"
 								title="Edit Configuration"
 							>
@@ -289,14 +311,14 @@ function deleteFormat(item: DocNoFormatModel) {
 							<div class="readonly-item">
 								<span class="readonly-item__label">Delimiter Splitting</span>
 								<span class="readonly-item__value u-font-mono">{{
-									selectedFormat.delimiter || "None (Seamless String)"
+									selectedFormat.delimiter !== "" ? selectedFormat.delimiter : "None (Seamless String)"
 								}}</span>
 							</div>
 							<div class="readonly-item">
 								<span class="readonly-item__label">Running No. Digits</span>
 								<span class="readonly-item__value"
 									>{{ selectedFormat.padding }} Digits (e.g.
-									{{ "0".repeat(selectedFormat.padding - 1) }}1)</span
+									{{ "0".repeat(Math.max(0, selectedFormat.padding - 1)) }}1)</span
 								>
 							</div>
 							<div class="readonly-item">
@@ -318,7 +340,7 @@ function deleteFormat(item: DocNoFormatModel) {
 						>
 							<button
 								class="btn btn--danger-text"
-								@click="deleteFormat(selectedFormat)"
+								@click="promptDelete(selectedFormat)"
 							>
 								<i class="mdi mdi-delete-outline"></i> Delete Format Rule
 							</button>
@@ -333,6 +355,7 @@ function deleteFormat(item: DocNoFormatModel) {
 			</div>
 		</div>
 
+		<!-- Dialog Modal for Create / Edit -->
 		<Dialog v-model="isDialogOpen">
 			<template #header>
 				<h3>{{ isNewRecord ? "Create New" : "Edit" }} Numbering Format</h3>
@@ -350,7 +373,7 @@ function deleteFormat(item: DocNoFormatModel) {
 					<Textbox
 						v-model="formData.module"
 						:disabled="!isNewRecord"
-						placeholder="e.g. INV, PO, WO"
+						placeholder="e.g. WO, INV, PO, QT"
 					/>
 				</div>
 				<div class="form-group">
@@ -359,16 +382,17 @@ function deleteFormat(item: DocNoFormatModel) {
 					>
 					<Textbox
 						v-model="formData.prefix"
-						placeholder="e.g. TECH, MYS"
+						placeholder="e.g. WO, INV, TECH"
 					/>
 				</div>
 				<div class="form-group">
-					<label class="form-group__label">Date Format Pattern</label>
+					<label class="form-group__label">Date Format Pattern (dateFormat)</label>
 					<Select v-model="formData.dateFormat">
-						<option value="YYYYMMDD">YYYYMMDD (e.g. 20260616)</option>
-						<option value="YYYYMM">YYYYMM (e.g. 202606)</option>
-						<option value="YYMM">YYMM (e.g. 2606)</option>
-						<option value="">None (Disable)</option>
+						<option value="YYYYMMDD">YYYYMMDD (e.g. 20260726)</option>
+						<option value="YYYYMM">YYYYMM (e.g. 202607)</option>
+						<option value="YYMM">YYMM (e.g. 2607)</option>
+						<option value="YYYY">YYYY (e.g. 2026)</option>
+						<option value="">None (No date component)</option>
 					</Select>
 				</div>
 				<div class="form-group">
@@ -381,7 +405,7 @@ function deleteFormat(item: DocNoFormatModel) {
 					/>
 				</div>
 				<div class="form-group">
-					<label class="form-group__label">Serial Code Width</label>
+					<label class="form-group__label">Serial Code Width (padding)</label>
 					<Textbox
 						v-model.number="formData.padding"
 						type="number"
@@ -402,18 +426,32 @@ function deleteFormat(item: DocNoFormatModel) {
 					<label class="switch-toggle">
 						<input type="checkbox" v-model="formData.isActive" />
 						<span class="switch-toggle__slider"></span>
-						<span class="switch-toggle__label">Enable Global Automation Engine</span>
+						<span class="switch-toggle__label">Enable Document Number Automation</span>
 					</label>
 				</div>
 			</div>
 
 			<template #footer>
-				<button class="btn btn--text" @click="isDialogOpen = false">
+				<button class="btn btn--secondary" @click="isDialogOpen = false">
 					Cancel
 				</button>
 				<button class="btn btn--primary" @click="saveFormat">
 					Save Configuration
 				</button>
+			</template>
+		</Dialog>
+
+		<!-- Delete Confirmation Modal -->
+		<Dialog v-model="isDeleting">
+			<template #header>
+				<h3 style="color: #ef4444;">Delete Format Rule</h3>
+			</template>
+			<p>
+				Are you sure you want to delete the format rule for module <strong>{{ selectedFormat?.module }}</strong>?
+			</p>
+			<template #footer>
+				<button class="btn btn--secondary" @click="isDeleting = false">Cancel</button>
+				<button class="btn btn--danger" @click="executeDelete">Delete</button>
 			</template>
 		</Dialog>
 	</div>
@@ -439,32 +477,16 @@ function deleteFormat(item: DocNoFormatModel) {
 		gap: var(--spacing-md);
 	}
 	&__title-area {
+		h1 {
+			font-size: 24px;
+			font-weight: 700;
+			margin: 0 0 4px 0;
+			color: var(--colors-text-primary);
+		}
 		p {
 			font-size: 13px;
 			color: var(--colors-text-muted);
 			margin: 0;
-		}
-	}
-}
-
-.title-with-action {
-	@include flex-row($align: center, $gap: 12px);
-	h1 {
-		font-size: 24px;
-		font-weight: 700;
-		margin: 0;
-		color: var(--text-main);
-	}
-
-	.icon-action-btn--primary {
-		background-color: rgba(80, 88, 242, 0.08);
-		color: var(--colors-brand-primary);
-		border-radius: 50%;
-		width: 32px;
-		height: 32px;
-		&:hover {
-			background-color: var(--colors-brand-primary);
-			color: white;
 		}
 	}
 }
@@ -556,23 +578,7 @@ function deleteFormat(item: DocNoFormatModel) {
 		h2 {
 			margin: 0;
 			font-size: 16px;
-		}
-	}
-	.icon-action-btn--edit {
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--colors-brand-primary);
-		background: var(--colors-surface-hover);
-		padding: 4px 12px;
-		border-radius: 6px;
-		gap: 4px;
-		display: inline-flex;
-		align-items: center;
-		border: none;
-		cursor: pointer;
-		&:hover {
-			background: var(--colors-brand-primary);
-			color: white;
+			font-weight: 700;
 		}
 	}
 }
@@ -681,21 +687,6 @@ function deleteFormat(item: DocNoFormatModel) {
 		font-weight: 600;
 		color: var(--colors-text-primary);
 	}
-	&__textarea {
-		width: 100%;
-		padding: 8px 12px;
-		border: 1px solid var(--colors-surface-border);
-		border-radius: 6px;
-		font-size: 13px;
-		outline: none;
-		font-family: inherit;
-		box-sizing: border-box;
-		background: var(--colors-surface-background);
-		color: var(--colors-text-primary);
-		&:focus {
-			border-color: var(--colors-brand-primary);
-		}
-	}
 }
 .switch-toggle {
 	display: inline-flex;
@@ -738,6 +729,30 @@ function deleteFormat(item: DocNoFormatModel) {
 	}
 }
 
+.btn--danger-text {
+	background: transparent;
+	border: none;
+	color: #ef4444;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	border-radius: 6px;
+	&:hover {
+		background-color: rgba(239, 68, 68, 0.1);
+	}
+}
+
+.btn--danger {
+	background-color: #ef4444;
+	color: white;
+	&:hover {
+		background-color: #dc2626;
+	}
+}
 
 .empty-state {
 	height: 100%;

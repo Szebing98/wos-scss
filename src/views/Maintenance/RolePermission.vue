@@ -2,52 +2,100 @@
 import { ref, computed, onMounted } from "vue";
 import Textbox from "@/components/Textbox.vue";
 import Badge from "@/components/Badge.vue";
+import http from "@/utils/http";
 
 interface UserGroupModel {
+	guid?: string;
 	code: string;
 	name: string;
 	description: string;
 }
 
 interface PermissionModel {
+	guid?: string;
 	code: string;
 	action: string;
 	subject: string;
-	inverted: boolean;
+	inverted?: boolean;
 }
 
 const isLoadingGroups = ref(false);
 const isLoadingPermissions = ref(false);
 const isSaving = ref(false);
 
-const selectedGroupCode = ref("");
+const selectedGroup = ref<UserGroupModel | null>(null);
 const searchQuery = ref("");
 
 const groups = ref<UserGroupModel[]>([]);
 const allPermissions = ref<PermissionModel[]>([]);
 const selectedPermissionCodes = ref<Set<string>>(new Set());
 
+const defaultSystemPermissions: PermissionModel[] = [
+	{ code: "read:WorkOrder", subject: "WorkOrder", action: "read" },
+	{ code: "create:WorkOrder", subject: "WorkOrder", action: "create" },
+	{ code: "update:WorkOrder", subject: "WorkOrder", action: "update" },
+	{ code: "delete:WorkOrder", subject: "WorkOrder", action: "delete" },
+	{ code: "list:WorkOrder", subject: "WorkOrder", action: "list" },
+
+	{ code: "read:Customer", subject: "Customer", action: "read" },
+	{ code: "create:Customer", subject: "Customer", action: "create" },
+	{ code: "update:Customer", subject: "Customer", action: "update" },
+	{ code: "delete:Customer", subject: "Customer", action: "delete" },
+	{ code: "list:Customer", subject: "Customer", action: "list" },
+
+	{ code: "read:User", subject: "User", action: "read" },
+	{ code: "create:User", subject: "User", action: "create" },
+	{ code: "update:User", subject: "User", action: "update" },
+	{ code: "delete:User", subject: "User", action: "delete" },
+	{ code: "list:User", subject: "User", action: "list" },
+
+	{ code: "read:Location", subject: "Location", action: "read" },
+	{ code: "update:Location", subject: "Location", action: "update" },
+	{ code: "manage:Location", subject: "Location", action: "manage" },
+	{ code: "list:Location", subject: "Location", action: "list" },
+
+	{ code: "read:Site", subject: "Site", action: "read" },
+	{ code: "create:Site", subject: "Site", action: "create" },
+	{ code: "update:Site", subject: "Site", action: "update" },
+	{ code: "delete:Site", subject: "Site", action: "delete" },
+	{ code: "list:Site", subject: "Site", action: "list" },
+
+	{ code: "read:WorkType", subject: "WorkType", action: "read" },
+	{ code: "create:WorkType", subject: "WorkType", action: "create" },
+	{ code: "update:WorkType", subject: "WorkType", action: "update" },
+	{ code: "delete:WorkType", subject: "WorkType", action: "delete" },
+	{ code: "list:WorkType", subject: "WorkType", action: "list" },
+
+	{ code: "read:DocNoFormat", subject: "DocNoFormat", action: "read" },
+	{ code: "create:DocNoFormat", subject: "DocNoFormat", action: "create" },
+	{ code: "update:DocNoFormat", subject: "DocNoFormat", action: "update" },
+	{ code: "list:DocNoFormat", subject: "DocNoFormat", action: "list" },
+
+	{ code: "read:Ability", subject: "Ability", action: "read" },
+	{ code: "update:Ability", subject: "Ability", action: "update" },
+];
+
 async function loadGroups() {
 	isLoadingGroups.value = true;
 	try {
-		const response = await fetch("api/user-groups");
-		if (response.ok) {
-			groups.value = await response.json();
-		} else {
-			throw new Error();
+		const res = await http.get("/user-groups");
+		const data = res.data?.data || res.data || [];
+		groups.value = Array.isArray(data) ? data : [];
+		if (groups.value.length > 0 && !selectedGroup.value) {
+			handleGroupChange(groups.value[0]);
 		}
-	} catch {
+	} catch (e) {
+		console.error("Failed to load user groups", e);
 		groups.value = [
 			{ code: "SA", name: "Superadmin", description: "Complete system control" },
-			{
-				code: "Administrator",
-				name: "Administrator",
-				description: "Manage users and settings",
-			},
+			{ code: "Administrator", name: "Administrator", description: "Manage users and settings" },
 			{ code: "Manager", name: "Manager", description: "Manage engineers and schedules" },
 			{ code: "Engineer", name: "Engineer", description: "Execute work orders" },
 			{ code: "Sales", name: "Sales", description: "Manage customer requests" },
 		];
+		if (groups.value.length > 0 && !selectedGroup.value) {
+			handleGroupChange(groups.value[0]);
+		}
 	} finally {
 		isLoadingGroups.value = false;
 	}
@@ -55,41 +103,41 @@ async function loadGroups() {
 
 async function loadAllPermissions() {
 	try {
-		const response = await fetch("api/permissions");
-		if (response.ok) {
-			allPermissions.value = await response.json();
+		const res = await http.get("/abilities");
+		const data = res.data?.data || res.data || [];
+		if (Array.isArray(data) && data.length > 0) {
+			allPermissions.value = data.map((p: any) => ({
+				guid: p.guid,
+				code: p.code || `${p.action}:${p.subject}`,
+				action: p.action,
+				subject: p.subject,
+				inverted: p.inverted ?? false,
+			}));
+		} else {
+			allPermissions.value = defaultSystemPermissions;
 		}
-	} catch {
-		allPermissions.value = [
-			{ code: "user_read", subject: "User", action: "read", inverted: false },
-			{ code: "user_create", subject: "User", action: "create", inverted: false },
-			{ code: "user_update", subject: "User", action: "update", inverted: false },
-			{ code: "user_delete", subject: "User", action: "delete", inverted: false },
-			{ code: "wo_read", subject: "WorkOrder", action: "read", inverted: false },
-			{ code: "wo_create", subject: "WorkOrder", action: "create", inverted: false },
-			{ code: "wo_update", subject: "WorkOrder", action: "update", inverted: false },
-			{ code: "wo_delete", subject: "WorkOrder", action: "delete", inverted: false },
-			{ code: "customer_read", subject: "Customer", action: "read", inverted: false },
-			{ code: "customer_create", subject: "Customer", action: "create", inverted: false },
-			{ code: "customer_update", subject: "Customer", action: "update", inverted: false },
-			{ code: "report_read", subject: "Report", action: "read", inverted: false },
-		];
+	} catch (e) {
+		console.error("Failed to load abilities", e);
+		allPermissions.value = defaultSystemPermissions;
 	}
 }
 
-async function handleGroupChange(groupCode: string) {
-	selectedGroupCode.value = groupCode;
+async function handleGroupChange(group: UserGroupModel) {
+	selectedGroup.value = group;
 	isLoadingPermissions.value = true;
 	selectedPermissionCodes.value.clear();
 
 	try {
-		const response = await fetch(`api/permissions/groups/${groupCode}`);
-		if (response.ok) {
-			const groupPermissions: PermissionModel[] = await response.json();
-			groupPermissions.forEach((p) => selectedPermissionCodes.value.add(p.code));
+		const res = await http.get(`/abilities/groups/${group.code}`);
+		const groupPermissions: any[] = res.data?.data || res.data || [];
+		if (Array.isArray(groupPermissions)) {
+			groupPermissions.forEach((p) => {
+				const code = p.code || `${p.action}:${p.subject}`;
+				selectedPermissionCodes.value.add(code);
+			});
 		}
-	} catch {
-		console.warn(`Simulating empty authorization set for mock-role: ${groupCode}`);
+	} catch (e) {
+		console.error("Failed to load group abilities", e);
 	} finally {
 		isLoadingPermissions.value = false;
 	}
@@ -141,25 +189,18 @@ function toggleAllInSubject(subject: string, enable: boolean) {
 }
 
 async function saveGroupPermissions() {
-	if (!selectedGroupCode.value) return;
+	if (!selectedGroup.value?.code) return;
 	isSaving.value = true;
 
 	try {
-		const payload = { permission_codes: Array.from(selectedPermissionCodes.value) };
-		const response = await fetch(`api/permissions/groups/${selectedGroupCode.value}/sync`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(payload),
+		const abilityCodes = Array.from(selectedPermissionCodes.value);
+		await http.post(`/abilities/groups/${selectedGroup.value.code}/sync`, {
+			abilityCodes,
 		});
-
-		if (response.ok) {
-			alert(`Successfully updated permissions for role "${selectedGroupCode.value}"!`);
-		} else {
-			const err = await response.text();
-			alert(`Error saving group permissions: ${err}`);
-		}
-	} catch (ex: any) {
-		alert(`Operation failed: ${ex.message}`);
+		alert(`Successfully updated permissions for ${selectedGroup.value.name}!`);
+	} catch (e) {
+		console.error("Failed to save group permissions", e);
+		alert("Failed to save permissions.");
 	} finally {
 		isSaving.value = false;
 	}
@@ -183,7 +224,7 @@ onMounted(() => {
 			</div>
 			<button
 				class="btn btn--primary"
-				:disabled="!selectedGroupCode || isSaving"
+				:disabled="!selectedGroup || isSaving"
 				@click="saveGroupPermissions"
 			>
 				<i
@@ -208,8 +249,8 @@ onMounted(() => {
 						v-for="group in groups"
 						:key="group.code"
 						class="type-card"
-						:class="{ 'type-card--selected': selectedGroupCode === group.code }"
-						@click="handleGroupChange(group.code)"
+						:class="{ 'type-card--selected': selectedGroup?.code === group.code }"
+						@click="handleGroupChange(group)"
 					>
 						<div class="type-card__content">
 							<span class="type-card__name">{{ group.name }}</span>
@@ -221,7 +262,7 @@ onMounted(() => {
 			</div>
 
 			<div class="maintenance-grid__right-panel">
-				<div v-if="!selectedGroupCode" class="empty-state border-dashed">
+				<div v-if="!selectedGroup" class="empty-state border-dashed">
 					<i class="mdi mdi-shield-lock-outline empty-state__icon"></i>
 					<p>No Role Selected</p>
 					<span class="empty-state__sub">

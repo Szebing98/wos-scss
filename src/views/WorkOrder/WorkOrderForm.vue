@@ -7,11 +7,14 @@ import MultiSelect from "@/components/MultiSelect.vue";
 import Button from "@/components/Button.vue";
 import Badge from "@/components/Badge.vue";
 import DatePicker from "@/components/DatePicker.vue";
+import Autocomplete from "@/components/Autocomplete.vue";
 import { useRouter, useRoute } from "vue-router";
 import { customerApi } from "@/api/customer/customer.api";
 import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
 import { workOrderApi } from "@/api/work-order/work-order.api";
+import { siteApi } from "@/api/maintenance/site/site.api";
+import http from "@/utils/http";
 
 const router = useRouter();
 const route = useRoute();
@@ -21,25 +24,52 @@ const pageTitle = computed(() => (isEditMode.value ? "Edit Work Order" : "Create
 
 const now = new Date();
 const pad = (n: number) => String(n).padStart(2, "0");
-const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+const todayDateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T00:00`;
 
 const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-const nextWeekStr = `${nextWeek.getFullYear()}-${pad(nextWeek.getMonth() + 1)}-${pad(nextWeek.getDate())}T${pad(nextWeek.getHours())}:${pad(nextWeek.getMinutes())}`;
+const nextWeekDateStr = `${nextWeek.getFullYear()}-${pad(nextWeek.getMonth() + 1)}-${pad(nextWeek.getDate())}T00:00`;
+
+const JOB_PRIORITIES = [
+	{ value: "High", label: "High" },
+	{ value: "Medium", label: "Medium" },
+	{ value: "Low", label: "Low" },
+];
+
+const initialWorkType = (route.query.workType as string) || "Mechanical Maintenance";
+const initialWorkTypeCode = (route.query.workTypeCode as string) || "mechanical";
+const initialWorkTypeGuid = (route.query.workTypeGuid as string) || "";
+const initialWithEquipment = route.query.withEquipmentForm === "true";
 
 const formData = ref({
 	status: "Draft",
-	workType: route.query.workType || "Maintenance",
-	orderTypeCode: "mechanical",
+	workType: initialWorkType,
+	orderTypeCode: initialWorkTypeCode,
+	workTypeGuid: initialWorkTypeGuid,
+	withEquipmentForm: initialWithEquipment,
 	orderTypeItemCode: "",
 	title: "",
 	description: "",
 	customerCode: "",
-	salesAgent: "",
+	salesAgentCode: "",
 	personInChargeCode: "",
-	startDate: todayStr,
-	estimatedEndDate: nextWeekStr,
-	leadEngineerCode: "",
-	assistantEngineers: [],
+	jobPriority: "Low" as "High" | "Medium" | "Low",
+	siteCode: "",
+	location: "",
+	latitude: 0,
+	longitude: 0,
+	startDate: todayDateStr,
+	estimatedEndDate: nextWeekDateStr,
+	// Leader = was Lead Engineer
+	leaderCode: "",
+	// New: Leader II
+	leaderIICode: "",
+	// Technicians = was Assistant Engineers
+	technicianCodes: [] as string[],
+	contractNo: "",
+	contractStartDate: "",
+	contractEndDate: "",
+	customerPic: "",
+	customerPicPhone: "",
 
 	// Equipment
 	equipment: {
@@ -63,17 +93,62 @@ const formData = ref({
 		frameSize: "",
 	},
 
-	// Misc
-	contractNo: "",
-	location: "",
-	latitude: 0,
-	longitude: 0,
+	// Site Instructions files (min 2, max 3)
+	siteInstructionsFiles: [] as Array<{ name: string; url: string; type: string }>,
 });
 
+const workTypeList = ref<any[]>([]);
 const workTypeItems = ref<any[]>([]);
 const users = ref<any[]>([]);
 const customers = ref<any[]>([]);
+const sites = ref<any[]>([]);
 const loading = ref(false);
+
+// Site instructions file handling
+const siteInstructionsError = ref("");
+const siteInstructionsInput = ref<HTMLInputElement | null>(null);
+
+function onSiteInstructionsChange(e: Event) {
+	const input = e.target as HTMLInputElement;
+	if (!input.files) return;
+	const files = Array.from(input.files);
+	const current = formData.value.siteInstructionsFiles;
+	const remaining = 3 - current.length;
+	const toAdd = files.slice(0, remaining);
+
+	for (const file of toAdd) {
+		const url = URL.createObjectURL(file);
+		current.push({ name: file.name, url, type: file.type });
+	}
+	siteInstructionsError.value = "";
+}
+
+function removeSiteInstruction(index: number) {
+	formData.value.siteInstructionsFiles.splice(index, 1);
+}
+
+function triggerSiteInstructionsUpload() {
+	siteInstructionsInput.value?.click();
+}
+
+async function fetchWorkTypeItems(workTypeGuid: string) {
+	if (!workTypeGuid) {
+		workTypeItems.value = [];
+		return;
+	}
+	try {
+		const res = await workTypeApi.getWorkTypeItems(workTypeGuid, { pageIndex: 0, pageSize: 100, timezone: "UTC" } as any);
+		if (res.data && res.data.data) {
+			workTypeItems.value = res.data.data.map((item: any) => ({
+				code: item.code,
+				name: item.name,
+			}));
+		}
+	} catch (e) {
+		console.error("Failed to load work type items:", e);
+		workTypeItems.value = [];
+	}
+}
 
 async function loadOptions() {
 	try {
@@ -83,6 +158,10 @@ async function loadOptions() {
 			customers.value = custRes.data.data.map((c: any) => ({
 				code: c.code,
 				name: c.name,
+				contracts: c.contracts || [
+					{ contractNo: `CTR-${c.code}-01`, contractName: `Annual Maintenance (${c.code})`, startDate: "2026-01-01", endDate: "2026-12-31" },
+					{ contractNo: `CTR-${c.code}-02`, contractName: `Equipment Overhaul (${c.code})`, startDate: "2026-06-01", endDate: "2027-05-31" },
+				],
 			}));
 		}
 
@@ -92,16 +171,51 @@ async function loadOptions() {
 			users.value = userRes.data.data.map((u: any) => ({
 				code: u.displayCode || u.guid.substring(0, 8).toUpperCase(),
 				name: u.displayName || "Unknown",
+				role: (u.role || u.userGroup || u.description || "").toLowerCase(),
 			}));
 		}
 
 		// Fetch Work Types
 		const wtRes = await workTypeApi.getWorkTypes({ pageIndex: 0, pageSize: 100, timezone: "UTC" });
 		if (wtRes.data && wtRes.data.data) {
-			workTypeItems.value = wtRes.data.data.map((wt: any) => ({
+			workTypeList.value = wtRes.data.data.map((wt: any) => ({
+				guid: wt.guid,
 				code: wt.code,
 				name: wt.name,
+				withEquipmentForm: !!wt.withEquipmentForm,
 			}));
+
+			const match = workTypeList.value.find(
+				(wt) =>
+					(formData.value.workTypeGuid && wt.guid === formData.value.workTypeGuid) ||
+					wt.code.toLowerCase() === formData.value.orderTypeCode.toLowerCase() ||
+					wt.name.toLowerCase() === formData.value.workType.toLowerCase(),
+			);
+
+			if (match) {
+				formData.value.workType = match.name;
+				formData.value.orderTypeCode = match.code;
+				formData.value.workTypeGuid = match.guid;
+				formData.value.withEquipmentForm = match.withEquipmentForm;
+				await fetchWorkTypeItems(match.guid);
+			}
+		}
+
+		// Fetch Sites from Maintenance Site API
+		try {
+			const res = await http.get("/site", { params: { pageSize: 100 } });
+			const rawSites = res?.data?.data || res?.data?.items || res?.data || [];
+			if (Array.isArray(rawSites) && rawSites.length > 0) {
+				sites.value = rawSites
+					.filter((s: any) => s.isActive !== false)
+					.map((s: any) => ({
+						code: s.code,
+						name: s.name,
+						guid: s.guid,
+					}));
+			}
+		} catch (e) {
+			console.error("Failed to load site list from Maintenance site API:", e);
 		}
 	} catch (e) {
 		console.error("Failed to load select options:", e);
@@ -110,7 +224,79 @@ async function loadOptions() {
 
 onMounted(async () => {
 	await loadOptions();
-	
+
+	// Fallback hardcoded data for UI testing
+	if (users.value.length === 0) {
+		users.value = [
+			{ code: "SAL-001", name: "David Tan", role: "sa" },
+			{ code: "SAL-002", name: "Jessica Lee", role: "sa" },
+			{ code: "MNG-001", name: "Ramasamy Kumar", role: "manager" },
+			{ code: "MNG-002", name: "Chen Wei Ming", role: "manager" },
+			{ code: "ENG-001", name: "Ahmad Faizi", role: "engineer" },
+			{ code: "ENG-002", name: "Nurul Ain", role: "engineer" },
+			{ code: "ENG-003", name: "Lim Wei Chen", role: "engineer" },
+			{ code: "ENG-004", name: "Siti Fatimah", role: "engineer" },
+			{ code: "ENG-005", name: "Kavitha Nair", role: "engineer" },
+		];
+	}
+	if (customers.value.length === 0) {
+		customers.value = [
+			{
+				code: "CUST-001",
+				name: "Petronas Carigali Sdn Bhd",
+				contracts: [
+					{ contractNo: "CTR-PET-2026-01", contractName: "Offshore Equipment Maintenance 2026", startDate: "2026-01-01", endDate: "2026-12-31" },
+					{ contractNo: "CTR-PET-2026-02", contractName: "Facility Inspection & Overhaul", startDate: "2026-06-01", endDate: "2027-05-31" },
+				],
+			},
+			{
+				code: "CUST-002",
+				name: "YTL Power Services Sdn Bhd",
+				contracts: [
+					{ contractNo: "CTR-YTL-2026-01", contractName: "Power Plant Turbine Maintenance", startDate: "2026-03-01", endDate: "2027-02-28" },
+				],
+			},
+			{
+				code: "CUST-003",
+				name: "TNB Engineering Corporation",
+				contracts: [
+					{ contractNo: "CTR-TNB-2026-01", contractName: "Substation Transformer Overhaul", startDate: "2026-02-15", endDate: "2026-11-15" },
+				],
+			},
+		];
+	}
+	if (workTypeList.value.length === 0) {
+		workTypeList.value = [
+			{ guid: "wt-1", code: "mechanical", name: "Mechanical Maintenance", withEquipmentForm: true },
+			{ guid: "wt-2", code: "electrical", name: "Electrical Maintenance", withEquipmentForm: false },
+			{ guid: "wt-3", code: "hvac", name: "HVAC System", withEquipmentForm: true },
+			{ guid: "wt-4", code: "general", name: "General Maintenance", withEquipmentForm: false },
+		];
+		if (!formData.value.workTypeGuid) {
+			const match = workTypeList.value.find(
+				(wt) => wt.code.toLowerCase() === formData.value.orderTypeCode.toLowerCase(),
+			) || workTypeList.value[0];
+			formData.value.workTypeGuid = match.guid;
+			formData.value.withEquipmentForm = match.withEquipmentForm;
+		}
+	}
+	if (workTypeItems.value.length === 0) {
+		workTypeItems.value = [
+			{ code: "WT-001", name: "Preventive Maintenance" },
+			{ code: "WT-002", name: "Corrective Maintenance" },
+			{ code: "WT-003", name: "New Installation" },
+			{ code: "WT-004", name: "Inspection & Testing" },
+		];
+	}
+	if (sites.value.length === 0) {
+		sites.value = [
+			{ code: "HQ-KL", name: "Kuala Lumpur Headquarters" },
+			{ code: "WH-PJ", name: "Petaling Jaya Warehouse" },
+			{ code: "FAC-PG", name: "Penang Regional Facility" },
+			{ code: "PLT-JB", name: "Johor Bahru Plant" },
+		];
+	}
+
 	const id = route.params.id;
 	if (id && typeof id === "string") {
 		try {
@@ -122,16 +308,29 @@ onMounted(async () => {
 					status: w.status || "Draft",
 					workType: w.workType || "Maintenance",
 					orderTypeCode: w.orderTypeCode || "mechanical",
+					workTypeGuid: w.workTypeGuid || "",
+					withEquipmentForm: !!w.withEquipmentForm,
 					orderTypeItemCode: w.workTypeItem || "",
 					title: w.title || "",
 					description: w.description || "",
 					customerCode: w.customerCode || "",
-					salesAgent: w.salesAgentCode || "",
-					personInChargeCode: w.projectPicCode || "",
-					startDate: w.startDate || todayStr,
-					estimatedEndDate: w.estimatedEndDate || nextWeekStr,
-					leadEngineerCode: w.leadEngineerCode || "",
-					assistantEngineers: w.assistantEngineers || [],
+					salesAgentCode: w.salesAgentCode || "",
+					personInChargeCode: w.projectPicCode || w.personInChargeCode || "",
+					jobPriority: w.jobPriority || "Low",
+					siteCode: w.siteCode || "",
+					location: w.location || w.locationName || "",
+					latitude: w.latitude || 0,
+					longitude: w.longitude || 0,
+					startDate: w.startDate ? w.startDate.slice(0, 16) : todayDateStr,
+					estimatedEndDate: w.estimatedEndDate ? w.estimatedEndDate.slice(0, 16) : nextWeekDateStr,
+					leaderCode: w.leaderCode || w.leadEngineerCode || "",
+					leaderIICode: w.leaderIICode || "",
+					technicianCodes: w.technicianCodes || w.assistantEngineers || [],
+					contractNo: w.contractNo || "",
+					contractStartDate: w.contractStartDate ? w.contractStartDate.slice(0, 10) : "",
+					contractEndDate: w.contractEndDate ? w.contractEndDate.slice(0, 10) : "",
+					customerPic: w.customerPic || "",
+					customerPicPhone: w.customerPicPhone || "",
 					equipment: w.equipment ? {
 						name: w.equipment.name || "",
 						serialNo: w.equipment.serialNo || "",
@@ -150,11 +349,18 @@ onMounted(async () => {
 						phase: w.technical.phase || "",
 						frameSize: w.technical.frameSize || "",
 					} : { flowHead: "", brandName: "", serialNo: "", ratedVoltage: "", ratedSpeed: "", ratedCurrent: "", ratedPower: "", phase: "", frameSize: "" },
-					contractNo: w.contractNo || "",
-					location: w.locationName || "",
-					latitude: w.latitude || 0,
-					longitude: w.longitude || 0,
+					siteInstructionsFiles: [],
 				};
+
+				// Trigger contract lookup if edit mode has customerCode & contractNo
+				if (formData.value.customerCode) {
+					onCustomerChange();
+					if (w.contractNo) {
+						formData.value.contractNo = w.contractNo;
+						if (w.contractStartDate) formData.value.contractStartDate = w.contractStartDate.slice(0, 10);
+						if (w.contractEndDate) formData.value.contractEndDate = w.contractEndDate.slice(0, 10);
+					}
+				}
 			}
 		} catch (e) {
 			console.error("Failed to load work order edit data:", e);
@@ -170,7 +376,89 @@ const phases = [
 	{ id: "3", name: "Three Phase" },
 ];
 
-const isMechanical = computed(() => formData.value.orderTypeCode === "mechanical");
+const salesAgentUsers = computed(() => {
+	const filtered = users.value.filter((u: any) => {
+		const code = (u.code || "").toUpperCase();
+		const r = (u.role || u.userGroup || "").toLowerCase();
+		return (code.startsWith("SAL") || !code.startsWith("SA") || r.includes("sales")) && !code.startsWith("ADM") && !code.startsWith("MNG") && !code.startsWith("ENG");
+	});
+	return filtered;
+});
+
+const projectPicUsers = computed(() => {
+	const filtered = users.value.filter((u: any) => {
+		const code = (u.code || "").toUpperCase();
+		const r = (u.role || u.userGroup || "").toLowerCase();
+		return (code.startsWith("MNG") || code.startsWith("MGR") || code.startsWith("PM") || r === "manager" || r === "pm" || r.includes("manager")) && !code.startsWith("ADM") && !code.startsWith("SAL") && !code.startsWith("ENG");
+	});
+	return filtered;
+});
+
+const engineerUsers = computed(() => {
+	const filtered = users.value.filter((u: any) => {
+		const code = (u.code || "").toUpperCase();
+		const r = (u.role || u.userGroup || "").toLowerCase();
+		return (code.startsWith("ENG") || code.startsWith("TECH") || r === "engineer" || r === "eng" || r.includes("engineer")) && !code.startsWith("ADM") && !code.startsWith("SAL") && !code.startsWith("MNG");
+	});
+	return filtered;
+});
+
+const leaderOptions = computed(() => {
+	return engineerUsers.value.filter(
+		(u: any) => u.code !== formData.value.leaderIICode && !formData.value.technicianCodes.includes(u.code),
+	);
+});
+
+const leaderIIOptions = computed(() => {
+	return engineerUsers.value.filter(
+		(u: any) => u.code !== formData.value.leaderCode && !formData.value.technicianCodes.includes(u.code),
+	);
+});
+
+const technicianOptions = computed(() => {
+	return engineerUsers.value.filter(
+		(u: any) => u.code !== formData.value.leaderCode && u.code !== formData.value.leaderIICode,
+	);
+});
+
+const availableContracts = computed(() => {
+	if (!formData.value.customerCode) return [];
+	const cust = customers.value.find((c: any) => c.code === formData.value.customerCode);
+	return cust?.contracts || [];
+});
+
+function onCustomerChange() {
+	const contracts = availableContracts.value;
+	if (contracts.length > 0) {
+		onContractChange(contracts[0].contractNo);
+	} else {
+		formData.value.contractNo = "";
+		formData.value.contractStartDate = "";
+		formData.value.contractEndDate = "";
+	}
+}
+
+function onContractChange(contractNo: string) {
+	formData.value.contractNo = contractNo;
+	const selectedContract = availableContracts.value.find((c: any) => c.contractNo === contractNo);
+	if (selectedContract) {
+		formData.value.contractStartDate = selectedContract.startDate;
+		formData.value.contractEndDate = selectedContract.endDate;
+	}
+}
+
+const showEquipmentForm = computed(() => {
+	if (formData.value.withEquipmentForm) return true;
+	const code = (formData.value.orderTypeCode || "").toLowerCase();
+	const name = (formData.value.workType || "").toLowerCase();
+	return code === "mechanical" || name === "mechanical";
+});
+
+const isMechanical = computed(() => {
+	const code = (formData.value.orderTypeCode || "").toLowerCase();
+	const name = (formData.value.workType || "").toLowerCase();
+	return code === "mechanical" || name === "mechanical";
+});
 
 const formErrors = ref<Record<string, string>>({});
 
@@ -178,7 +466,6 @@ function validateForm() {
 	formErrors.value = {};
 	let isValid = true;
 
-	// Required fields for Request Approval
 	if (!formData.value.orderTypeItemCode) {
 		formErrors.value.orderTypeItemCode = "Work Type Item is required";
 		isValid = false;
@@ -187,8 +474,8 @@ function validateForm() {
 		formErrors.value.title = "Title is required";
 		isValid = false;
 	}
-	if (!formData.value.personInChargeCode) {
-		formErrors.value.personInChargeCode = "Person in Charge is required";
+	if (!formData.value.salesAgentCode) {
+		formErrors.value.salesAgentCode = "Sales Agent is required";
 		isValid = false;
 	}
 	if (!formData.value.startDate) {
@@ -199,24 +486,12 @@ function validateForm() {
 		formErrors.value.estimatedEndDate = "Estimated Date of Completion is required";
 		isValid = false;
 	}
-	if (!formData.value.leadEngineerCode) {
-		formErrors.value.leadEngineerCode = "Lead Engineer is required";
-		isValid = false;
-	}
 	if (!formData.value.description) {
 		formErrors.value.description = "Work Description is required";
 		isValid = false;
 	}
 	if (!formData.value.customerCode) {
 		formErrors.value.customerCode = "Customer is required";
-		isValid = false;
-	}
-	if (!formData.value.contractNo) {
-		formErrors.value.contractNo = "Contract No is required";
-		isValid = false;
-	}
-	if (!formData.value.location) {
-		formErrors.value.location = "Location is required";
 		isValid = false;
 	}
 
@@ -228,7 +503,7 @@ function validateForm() {
 		}
 	}
 
-	if (isMechanical.value) {
+	if (showEquipmentForm.value) {
 		if (!formData.value.equipment.name) {
 			formErrors.value["equipment.name"] = "Equipment Name is required";
 			isValid = false;
@@ -249,67 +524,94 @@ function validateForm() {
 			formErrors.value["equipment.equipmentType"] = "Equipment Type is required";
 			isValid = false;
 		}
-
-		if (!formData.value.technical.flowHead) {
-			formErrors.value["technical.flowHead"] = "Flow & Head is required";
-			isValid = false;
-		}
-		if (!formData.value.technical.brandName) {
-			formErrors.value["technical.brandName"] = "Brand Name is required";
-			isValid = false;
-		}
-		if (!formData.value.technical.serialNo) {
-			formErrors.value["technical.serialNo"] = "Serial No is required";
-			isValid = false;
-		}
-		if (!formData.value.technical.ratedVoltage) {
-			formErrors.value["technical.ratedVoltage"] = "Rated Voltage is required";
-			isValid = false;
-		}
-		if (!formData.value.technical.ratedSpeed) {
-			formErrors.value["technical.ratedSpeed"] = "Rated Speed is required";
-			isValid = false;
-		}
-		if (!formData.value.technical.ratedCurrent) {
-			formErrors.value["technical.ratedCurrent"] = "Rated Current is required";
-			isValid = false;
-		}
-		if (!formData.value.technical.ratedPower) {
-			formErrors.value["technical.ratedPower"] = "Rated Power is required";
-			isValid = false;
-		}
-		if (!formData.value.technical.phase) {
-			formErrors.value["technical.phase"] = "Phase is required";
-			isValid = false;
-		}
-		if (!formData.value.technical.frameSize) {
-			formErrors.value["technical.frameSize"] = "Frame Size is required";
-			isValid = false;
-		}
 	}
 
 	return isValid;
 }
 
-async function submitForm() {
+function buildBody(): Record<string, any> {
+	return {
+		workType: formData.value.workType,
+		workTypeItem: formData.value.orderTypeItemCode,
+		title: formData.value.title,
+		description: formData.value.description,
+		customerCode: formData.value.customerCode,
+		salesAgentCode: formData.value.salesAgentCode,
+		personInChargeCode: formData.value.personInChargeCode || undefined,
+		jobPriority: formData.value.jobPriority || undefined,
+		siteCode: formData.value.siteCode || undefined,
+		location: formData.value.location || undefined,
+		latitude: formData.value.latitude || undefined,
+		longitude: formData.value.longitude || undefined,
+		startDate: formData.value.startDate ? new Date(formData.value.startDate).toISOString() : undefined,
+		estimatedEndDate: formData.value.estimatedEndDate ? new Date(formData.value.estimatedEndDate).toISOString() : undefined,
+		leaderCode: formData.value.leaderCode || undefined,
+		leaderIICode: formData.value.leaderIICode || undefined,
+		technicianCodes: formData.value.technicianCodes,
+		contractNo: formData.value.contractNo || undefined,
+		contractStartDate: formData.value.contractStartDate ? new Date(formData.value.contractStartDate).toISOString() : undefined,
+		contractEndDate: formData.value.contractEndDate ? new Date(formData.value.contractEndDate).toISOString() : undefined,
+		customerPic: formData.value.customerPic || undefined,
+		customerPicPhone: formData.value.customerPicPhone || undefined,
+		equipment: showEquipmentForm.value ? [formData.value.equipment] : undefined,
+		technical: isMechanical.value ? formData.value.technical : undefined,
+	};
+}
+
+async function submitDraft() {
 	formErrors.value = {};
 	try {
 		loading.value = true;
 		const id = route.params.id;
+		const body = buildBody();
+		body.status = "Draft";
 		if (id && typeof id === "string") {
-			const { error } = await workOrderApi.updateDraft(id, formData.value as any);
+			const { error } = await workOrderApi.updateDraft(id, body);
 			if (error) {
-				alert(`Failed to update draft: ${error.error.message}`);
+				alert(`Failed to update draft: ${error.error?.message || error.message}`);
 				return;
 			}
 			alert("Work order draft updated successfully!");
 		} else {
-			const { error } = await workOrderApi.createDraft(formData.value as any);
+			const { error } = await workOrderApi.createDraft(body as any);
 			if (error) {
-				alert(`Failed to save draft: ${error.error.message}`);
+				alert(`Failed to save draft: ${error.error?.message || error.message}`);
 				return;
 			}
 			alert("Work order draft created successfully!");
+		}
+		router.back();
+	} catch (e) {
+		console.error(e);
+	} finally {
+		loading.value = false;
+	}
+}
+
+async function submitNew() {
+	if (!validateForm()) {
+		console.error("Validation failed", formErrors.value);
+		return;
+	}
+	try {
+		loading.value = true;
+		const id = route.params.id;
+		const body = buildBody();
+		body.status = "New";
+		if (id && typeof id === "string") {
+			const { error } = await workOrderApi.updateNew(id, body);
+			if (error) {
+				alert(`Failed to update work order: ${error.error?.message || error.message}`);
+				return;
+			}
+			alert("Work order submitted successfully (Status: New)!");
+		} else {
+			const { error } = await workOrderApi.createNew(body as any);
+			if (error) {
+				alert(`Failed to submit work order: ${error.error?.message || error.message}`);
+				return;
+			}
+			alert("Work order submitted successfully (Status: New)!");
 		}
 		router.back();
 	} catch (e) {
@@ -327,20 +629,22 @@ async function submitAndRequestApproval() {
 	try {
 		loading.value = true;
 		const id = route.params.id;
+		const body = buildBody();
+		body.status = "PendingApproval";
 		if (id && typeof id === "string") {
-			const { error } = await workOrderApi.updateNew(id, formData.value as any);
+			const { error } = await workOrderApi.updatePending(id, body);
 			if (error) {
-				alert(`Failed to update and submit: ${error.error.message}`);
+				alert(`Failed to request approval: ${error.error?.message || error.message}`);
 				return;
 			}
-			alert("Work order submitted successfully!");
+			alert("Work order submitted for approval (Status: Pending Approval)!");
 		} else {
-			const { error } = await workOrderApi.createNew(formData.value as any);
+			const { error } = await workOrderApi.createNew({ ...body, status: "PendingApproval" } as any);
 			if (error) {
-				alert(`Failed to submit: ${error.error.message}`);
+				alert(`Failed to request approval: ${error.error?.message || error.message}`);
 				return;
 			}
-			alert("Work order submitted successfully!");
+			alert("Work order submitted for approval (Status: Pending Approval)!");
 		}
 		router.back();
 	} catch (e) {
@@ -361,13 +665,13 @@ async function submitChanges() {
 		if (id && typeof id === "string") {
 			let res;
 			if (formData.value.status === "Draft") {
-				res = await workOrderApi.updateDraft(id, formData.value as any);
+				res = await workOrderApi.updateDraft(id, buildBody());
 			} else if (formData.value.status === "New") {
-				res = await workOrderApi.updateNew(id, formData.value as any);
+				res = await workOrderApi.updateNew(id, buildBody());
 			} else if (formData.value.status === "PendingApproval") {
-				res = await workOrderApi.updatePending(id, formData.value as any);
+				res = await workOrderApi.updatePending(id, buildBody());
 			} else {
-				res = await workOrderApi.updateProgress(id, formData.value as any);
+				res = await workOrderApi.updateProgress(id, buildBody());
 			}
 			if (res && res.error) {
 				alert(`Failed to save changes: ${res.error.error.message}`);
@@ -386,6 +690,12 @@ async function submitChanges() {
 function cancel() {
 	router.back();
 }
+
+const priorityColors: Record<string, string> = {
+	High: "error",
+	Medium: "warning",
+	Low: "info",
+};
 </script>
 
 <template>
@@ -398,8 +708,11 @@ function cancel() {
 			<div class="actions-area">
 				<Button variant="secondary" @click="cancel">Cancel</Button>
 				<template v-if="!isEditMode || formData.status === 'Draft'">
-					<Button variant="outlined" @click="submitForm">
+					<Button variant="outlined" @click="submitDraft">
 						<i class="mdi mdi-content-save-outline"></i> Save as Draft
+					</Button>
+					<Button variant="outlined" @click="submitNew">
+						<i class="mdi mdi-send-outline"></i> Submit
 					</Button>
 					<Button variant="primary" @click="submitAndRequestApproval">
 						<i class="mdi mdi-check"></i> Save & Request Approval
@@ -413,32 +726,69 @@ function cancel() {
 			</div>
 		</div>
 
+		<!-- Helper Banner -->
+		<div class="form-helper-banner">
+			<div class="form-helper-banner__icon">
+				<i class="mdi mdi-information"></i>
+			</div>
+			<div class="form-helper-banner__text">
+				<div class="helper-line">
+					<span class="helper-bullet">-</span>
+					<span><strong>Save as Draft</strong> creates a New editable work order. <em>(Required: Work Type, Title, Customer, Description)</em></span>
+				</div>
+				<div class="helper-line">
+					<span class="helper-bullet">-</span>
+					<span><strong>Submit</strong> creates a Work Order with status <strong>New</strong>.</span>
+				</div>
+				<div class="helper-line">
+					<span class="helper-bullet">-</span>
+					<span><strong>Save & Request Approval</strong> submits the work order for approval with status <strong>Pending Approval</strong>.</span>
+				</div>
+			</div>
+		</div>
+
 		<div class="form-grid">
 			<div class="form-grid__main">
 				<!-- Work Order Details -->
 				<Card>
 					<template #header>
 						<h2>Work Order Details</h2>
-						<Badge type="info" icon="mdi-clipboard-text-outline">{{
-							formData.workType
-						}}</Badge>
+						<div style="display: flex; gap: 8px; align-items: center;">
+							<Badge type="primary" icon="mdi-tools">{{ formData.workType }}</Badge>
+							<Badge
+								v-if="formData.jobPriority"
+								:type="priorityColors[formData.jobPriority] as any"
+								:icon="formData.jobPriority === 'High' ? 'mdi-alert-circle' : formData.jobPriority === 'Medium' ? 'mdi-alert' : 'mdi-information'"
+							>
+								{{ formData.jobPriority }} Priority
+							</Badge>
+						</div>
 					</template>
 					<div class="grid-row">
-						<div class="col-12">
+						<!-- Row 1: Job Priority + Work Type Item -->
+						<div class="col-6">
 							<Select
-								v-model="formData.orderTypeItemCode"
-								label="Work Type Item"
-								:error="formErrors.orderTypeItemCode"
+								v-model="formData.jobPriority"
+								label="Job Priority"
 							>
-								<option value="" disabled>Select Work Type Item</option>
-								<option
-									v-for="item in workTypeItems"
-									:key="item.code"
-									:value="item.code"
-								>
-									{{ item.name }}
+								<option value="">Select Priority</option>
+								<option v-for="p in JOB_PRIORITIES" :key="p.value" :value="p.value">
+									{{ p.label }}
 								</option>
 							</Select>
+						</div>
+						<div class="col-6">
+							<Autocomplete
+								v-model="formData.orderTypeItemCode"
+								:options="workTypeItems.map((item) => ({
+									id: item.code,
+									name: item.name,
+									code: item.code,
+								}))"
+								label="Work Type Item *"
+								placeholder="Search or select work type item..."
+								:error="formErrors.orderTypeItemCode"
+							/>
 						</div>
 						<div class="col-12">
 							<Textbox
@@ -448,41 +798,42 @@ function cancel() {
 								:error="formErrors.title"
 							/>
 						</div>
+
+						<!-- Row 2: Sales Agent + Person In Charge -->
 						<div class="col-6">
-							<Select
-								v-model="formData.salesAgent"
-								label="Sales Agent"
-								:error="formErrors.salesAgent"
-							>
-								<option value="" disabled>Select Sales Agent</option>
-								<option v-for="user in users" :key="user.code" :value="user.code">
-									{{ user.name }} ({{ user.code }})
-								</option>
-							</Select>
+							<Autocomplete
+								v-model="formData.salesAgentCode"
+								:options="salesAgentUsers.map((u) => ({
+									id: u.code,
+									name: u.name,
+									code: u.code,
+								}))"
+								label="Sales Agent *"
+								placeholder="Search or select Sales Agent..."
+								:error="formErrors.salesAgentCode"
+							/>
 						</div>
 						<div class="col-6">
-							<Select
+							<Autocomplete
 								v-model="formData.personInChargeCode"
-								label="Project Person In Charge *"
+								:options="projectPicUsers.map((u) => ({
+									id: u.code,
+									name: u.name,
+									code: u.code,
+								}))"
+								label="Project PIC"
+								placeholder="Search or select Project PIC..."
 								:error="formErrors.personInChargeCode"
-							>
-								<option value="" disabled>Select Person In Charge</option>
-								<option
-									v-for="user in users"
-									:key="user.code"
-									:value="user.code"
-									:disabled="user.code === formData.leadEngineerCode"
-								>
-									{{ user.name }} ({{ user.code }})
-								</option>
-							</Select>
+							/>
 						</div>
+
+						<!-- Row 3: Start Date + Estimated End Date -->
 						<div class="col-6">
 							<DatePicker
 								v-model="formData.startDate"
 								label="Start Date *"
 								:error="formErrors.startDate"
-								:enableTime="true"
+								:enableTime="false"
 							/>
 						</div>
 						<div class="col-6">
@@ -491,43 +842,48 @@ function cancel() {
 								label="Estimated Date of Completion *"
 								:min="formData.startDate"
 								:error="formErrors.estimatedEndDate"
-								:enableTime="true"
+								:enableTime="false"
 							/>
 						</div>
-						<div class="col-12">
-							<Select
-								v-model="formData.leadEngineerCode"
-								label="Lead Engineer *"
-								:error="formErrors.leadEngineerCode"
-							>
-								<option value="" disabled>Select Lead Engineer</option>
-								<option
-									v-for="user in users"
-									:key="user.code"
-									:value="user.code"
-									:disabled="
-										user.code === formData.personInChargeCode ||
-										formData.assistantEngineers.includes(user.code as never)
-									"
-								>
-									{{ user.name }} ({{ user.code }})
-								</option>
-							</Select>
+
+						<!-- Row 4: Leader + Leader II -->
+						<div class="col-6">
+							<Autocomplete
+								v-model="formData.leaderCode"
+								:options="leaderOptions.map((u) => ({
+									id: u.code,
+									name: u.name,
+									code: u.code,
+								}))"
+								label="Leader"
+								placeholder="Search or select Leader..."
+								:error="formErrors.leaderCode"
+							/>
 						</div>
+						<div class="col-6">
+							<Autocomplete
+								v-model="formData.leaderIICode"
+								:options="leaderIIOptions.map((u) => ({
+									id: u.code,
+									name: u.name,
+									code: u.code,
+								}))"
+								label="Leader II"
+								placeholder="Search or select Leader II..."
+							/>
+						</div>
+
+						<!-- Technicians -->
 						<div class="col-12 textbox-field">
 							<MultiSelect
-								v-model="formData.assistantEngineers"
-								:options="
-									users.filter(
-										(u) =>
-											u.code !== formData.leadEngineerCode &&
-											u.code !== formData.personInChargeCode,
-									)
-								"
-								label="Assistant Engineers"
-								placeholder="Search to add engineers..."
+								v-model="formData.technicianCodes"
+								:options="technicianOptions"
+								label="Technicians"
+								placeholder="Search to add technicians..."
 							/>
 						</div>
+
+						<!-- Work Description -->
 						<div class="col-12 textbox-field" style="margin-top: 8px">
 							<label class="custom-label">Work Description *</label>
 							<textarea
@@ -551,8 +907,77 @@ function cancel() {
 					</div>
 				</Card>
 
+				<!-- Site Instructions Attachments -->
+				<Card style="margin-top: var(--spacing-lg)">
+					<template #header>
+						<h2>Site Instructions</h2>
+						<Badge type="info" icon="mdi-paperclip">
+							{{ formData.siteInstructionsFiles.length }}/3 Files
+						</Badge>
+					</template>
+					<p class="section-subtitle">
+						Attach site instruction documents (e.g. PO, WhatsApp images). Minimum 2, maximum 3 files. <strong>Cannot be deleted once uploaded.</strong>
+					</p>
+
+					<div class="site-instructions-zone">
+						<div class="file-list" v-if="formData.siteInstructionsFiles.length > 0">
+							<div
+								v-for="(file, idx) in formData.siteInstructionsFiles"
+								:key="idx"
+								class="file-item"
+							>
+								<div class="file-item__preview">
+									<img
+										v-if="file.type.startsWith('image/')"
+										:src="file.url"
+										:alt="file.name"
+										class="file-item__thumb"
+									/>
+									<div v-else class="file-item__doc-icon">
+										<i class="mdi mdi-file-pdf-box"></i>
+									</div>
+								</div>
+								<div class="file-item__info">
+									<span class="file-item__name">{{ file.name }}</span>
+								</div>
+								<button
+									class="file-item__remove"
+									@click="removeSiteInstruction(idx)"
+									title="Remove file"
+								>
+									<i class="mdi mdi-close"></i>
+								</button>
+							</div>
+						</div>
+
+						<button
+							v-if="formData.siteInstructionsFiles.length < 3"
+							class="upload-trigger"
+							@click="triggerSiteInstructionsUpload"
+						>
+							<i class="mdi mdi-cloud-upload-outline"></i>
+							<span>Click to upload ({{ formData.siteInstructionsFiles.length }}/3)</span>
+							<small>Images, PDF, Word documents accepted</small>
+						</button>
+
+						<input
+							ref="siteInstructionsInput"
+							type="file"
+							accept="image/*,.pdf,.doc,.docx"
+							multiple
+							style="display: none"
+							@change="onSiteInstructionsChange"
+						/>
+
+						<div class="site-instructions__hint">
+							<i class="mdi mdi-information-outline"></i>
+							Minimum 2 files required when submitting for approval
+						</div>
+					</div>
+				</Card>
+
 				<!-- Equipment Information -->
-				<Card v-if="isMechanical" style="margin-top: var(--spacing-lg)">
+				<Card v-if="showEquipmentForm" style="margin-top: var(--spacing-lg)">
 					<template #header>
 						<h2>Equipment Information</h2>
 					</template>
@@ -698,6 +1123,7 @@ function cancel() {
 
 			<!-- Sidebar -->
 			<div class="form-grid__sidebar">
+				<!-- Customer Card -->
 				<Card>
 					<template #header>
 						<h2>Customer</h2>
@@ -708,6 +1134,7 @@ function cancel() {
 								v-model="formData.customerCode"
 								label="Customer *"
 								:error="formErrors.customerCode"
+								@change="onCustomerChange"
 							>
 								<option value="" disabled>Select Customer</option>
 								<option
@@ -720,30 +1147,92 @@ function cancel() {
 							</Select>
 						</div>
 						<div class="col-12">
-							<Textbox
+							<Select
 								v-model="formData.contractNo"
-								label="Contract No *"
-								placeholder="Enter Contract No"
-								:error="formErrors.contractNo"
+								label="Contract No"
+								:disabled="!formData.customerCode"
+								@change="(e: any) => onContractChange(e.target.value)"
+							>
+								<option value="">{{ availableContracts.length > 0 ? "Select Contract" : "No Contracts Available" }}</option>
+								<option
+									v-for="c in availableContracts"
+									:key="c.contractNo"
+									:value="c.contractNo"
+								>
+									{{ c.contractNo }} {{ c.contractName ? ' - ' + c.contractName : '' }}
+								</option>
+							</Select>
+						</div>
+						<div class="col-12">
+							<DatePicker
+								v-model="formData.contractStartDate"
+								label="Contract Start Date"
+								:enableTime="false"
+							/>
+						</div>
+						<div class="col-12">
+							<DatePicker
+								v-model="formData.contractEndDate"
+								label="Contract End Date"
+								:min="formData.contractStartDate"
+								:enableTime="false"
+							/>
+						</div>
+						<div class="col-12">
+							<Textbox
+								v-model="formData.customerPic"
+								label="Customer PIC"
+								placeholder="Enter Customer Person In Charge"
+							/>
+						</div>
+						<div class="col-12">
+							<Textbox
+								v-model="formData.customerPicPhone"
+								label="PIC Phone No."
+								placeholder="e.g. +60123456789"
 							/>
 						</div>
 					</div>
 				</Card>
 
+				<!-- Site Card -->
+				<Card style="margin-top: var(--spacing-lg)">
+					<template #header>
+						<h2>Site</h2>
+					</template>
+					<p class="section-subtitle">
+						Assign an operational site from Maintenance site list.
+					</p>
+					<div class="grid-row">
+						<div class="col-12">
+							<Autocomplete
+								v-model="formData.siteCode"
+								:options="sites.map((site) => ({
+									id: site.code,
+									name: site.name,
+									code: site.code,
+								}))"
+								label="Site"
+								placeholder="Search or select Site..."
+							/>
+						</div>
+					</div>
+				</Card>
+
+				<!-- Location Card -->
 				<Card style="margin-top: var(--spacing-lg)">
 					<template #header>
 						<h2>Location</h2>
 					</template>
 					<p class="section-subtitle">
-						Type to search the location or use the pin to mark the location map.
+						Enter custom location address and coordinates.
 					</p>
 					<div class="grid-row">
 						<div class="col-12">
 							<Textbox
 								v-model="formData.location"
-								label="Location *"
-								placeholder="Enter Location"
-								:error="formErrors.location"
+								label="Location"
+								placeholder="Enter Location Address"
 							>
 								<template #suffix>
 									<i
@@ -875,23 +1364,6 @@ function cancel() {
 	margin-bottom: 4px;
 }
 
-.checkbox-list {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 8px;
-	padding: 12px;
-	border: 1px solid var(--colors-surface-border);
-	border-radius: 8px;
-	background: var(--colors-surface-background);
-}
-.checkbox-list-item {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	cursor: pointer;
-	font-size: 13px;
-}
-
 .custom-textarea {
 	width: 100%;
 	padding: 10px 12px;
@@ -937,6 +1409,228 @@ function cancel() {
 	span {
 		font-size: 13px;
 		font-weight: 500;
+	}
+}
+
+.priority-indicator {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding-bottom: 2px;
+}
+
+// ========== Site Instructions Upload Zone ==========
+.site-instructions-zone {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-md);
+}
+
+.file-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.file-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	background: var(--colors-surface-background);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 8px;
+	transition: border-color 0.2s;
+
+	&:hover {
+		border-color: var(--colors-brand-primary);
+	}
+
+	&__preview {
+		width: 48px;
+		height: 48px;
+		flex-shrink: 0;
+		border-radius: 6px;
+		overflow: hidden;
+		background: var(--colors-surface-border);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	&__thumb {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	&__doc-icon {
+		font-size: 28px;
+		color: var(--colors-state-error);
+	}
+
+	&__info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	&__name {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--colors-text-primary);
+		display: block;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	&__remove {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: var(--colors-text-muted);
+		padding: 4px;
+		border-radius: 4px;
+		line-height: 1;
+		transition: color 0.2s, background-color 0.2s;
+
+		&:hover {
+			color: var(--colors-state-error);
+			background-color: rgba(239, 68, 68, 0.08);
+		}
+
+		i {
+			font-size: 18px;
+		}
+	}
+}
+
+.upload-trigger {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 28px 20px;
+	border: 2px dashed var(--colors-surface-border);
+	border-radius: 10px;
+	background: transparent;
+	cursor: pointer;
+	color: var(--colors-text-muted);
+	transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+	width: 100%;
+
+	&:hover {
+		border-color: var(--colors-brand-primary);
+		background-color: rgba(80, 88, 242, 0.04);
+		color: var(--colors-brand-primary);
+	}
+
+	i {
+		font-size: 28px;
+	}
+
+	span {
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	small {
+		font-size: 11px;
+	}
+}
+
+.site-instructions__hint {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--colors-text-muted);
+	background: rgba(80, 88, 242, 0.05);
+	border: 1px solid rgba(80, 88, 242, 0.15);
+	border-radius: 6px;
+	padding: 8px 12px;
+
+	i {
+		color: var(--colors-brand-primary);
+		font-size: 14px;
+	}
+}
+
+.textbox-field {
+	&__footer {
+		margin-top: 4px;
+	}
+
+	&__error {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 12px;
+		color: var(--colors-state-error);
+		margin: 0;
+	}
+
+	&__error-icon {
+		font-size: 14px;
+	}
+
+	&__error-text {
+		font-size: 12px;
+	}
+}
+
+.form-helper-banner {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	background: #eaf2ff;
+	border-left: 4px solid #3b82f6;
+	border-radius: 6px;
+	padding: 12px 16px;
+	margin-bottom: 20px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: #1e3a8a;
+
+	&__icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		background: #2563eb;
+		color: #ffffff;
+		font-size: 14px;
+		flex-shrink: 0;
+		margin-top: 2px;
+	}
+
+	&__text {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.helper-line {
+		display: flex;
+		gap: 6px;
+	}
+
+	.helper-bullet {
+		font-weight: bold;
+		color: #2563eb;
+	}
+
+	strong {
+		color: #1d4ed8;
+		font-weight: 600;
+	}
+
+	em {
+		font-style: normal;
+		color: #475569;
 	}
 }
 </style>

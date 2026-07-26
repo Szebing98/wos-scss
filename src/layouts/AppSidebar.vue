@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { reactive } from "vue";
+import { reactive, computed, watch } from "vue";
 import { useRoute } from "vue-router";
+import { useAuthStore } from "@/stores/auth.store";
 
 const props = defineProps<{
 	isMobile: boolean;
@@ -18,6 +19,20 @@ const emit = defineEmits<{
 }>();
 
 const route = useRoute();
+const authStore = useAuthStore();
+
+const isEmployeesActive = computed(() => {
+	if (route.path === "/user/list" || route.path === "/user/form" || route.query.mode === "new") {
+		return true;
+	}
+	if (route.path.startsWith("/user/profile")) {
+		const targetCode = route.query.code as string;
+		if (!targetCode) return false;
+		const currentGuid = authStore.currentUser?.guid || authStore.user?.guid;
+		return !!(currentGuid && targetCode !== currentGuid);
+	}
+	return false;
+});
 
 const groups = reactive({
 	workOrders: true,
@@ -29,20 +44,28 @@ function toggleGroup(key: "workOrders" | "maintenance") {
 		emit("update:isDocked", false);
 		emit("update:isTablet", false);
 		emit("update:isDesktop", true);
-		Object.keys(groups).forEach((k) => {
-			groups[k as keyof typeof groups] = false;
-		});
-		groups[key] = true;
-		return;
 	}
-	const isExpanding = !groups[key];
-	if (isExpanding) {
-		Object.keys(groups).forEach((k) => {
-			groups[k as keyof typeof groups] = false;
-		});
-	}
-	groups[key] = isExpanding;
+	groups.workOrders = key === "workOrders";
+	groups.maintenance = key === "maintenance";
 }
+
+function syncOpenGroupWithRoute(path: string) {
+	if (path.startsWith("/maintenance") || path.startsWith("/customer") || path.startsWith("/user")) {
+		groups.workOrders = false;
+		groups.maintenance = true;
+	} else {
+		groups.workOrders = true;
+		groups.maintenance = false;
+	}
+}
+
+watch(
+	() => route.path,
+	(newPath: string) => {
+		syncOpenGroupWithRoute(newPath);
+	},
+	{ immediate: true }
+);
 </script>
 
 <template>
@@ -165,6 +188,7 @@ function toggleGroup(key: "workOrders" | "maintenance") {
 			<router-link
 				class="nav__item"
 				to="/customer/list"
+				:class="{ 'nav__item--active': route.path.startsWith('/customer') }"
 				active-class="nav__item--active"
 				title="Customers"
 			>
@@ -176,7 +200,7 @@ function toggleGroup(key: "workOrders" | "maintenance") {
 			<router-link
 				class="nav__item"
 				to="/user/list"
-				active-class="nav__item--active"
+				:class="{ 'nav__item--active': isEmployeesActive }"
 				title="Employees"
 			>
 				<i class="mdi mdi-account-group nav__icon"></i>
@@ -215,18 +239,26 @@ function toggleGroup(key: "workOrders" | "maintenance") {
 					</li>
 					<li>
 						<router-link
+							to="/maintenance/site"
+							class="nav__child"
+							active-class="nav__child-active"
+							><span>Site</span></router-link
+						>
+					</li>
+					<li>
+						<router-link
 							to="/maintenance/work-types"
 							class="nav__child"
 							active-class="nav__child-active"
 							><span>Work Type</span></router-link
 						>
 					</li>
-					<li>
+					<!-- <li>
 						<router-link
 							to="/maintenance/parts"
 							class="nav__child"
 							active-class="nav__child-active"
-							><span>Parts Change</span></router-link
+							><span>Part Info</span></router-link
 						>
 					</li>
 					<li>
@@ -236,15 +268,15 @@ function toggleGroup(key: "workOrders" | "maintenance") {
 							active-class="nav__child-active"
 							><span>Service Provided</span></router-link
 						>
-					</li>
-					<li>
+					</li> -->
+					<!-- <li>
 						<router-link
 							to="/maintenance/doc-no-format"
 							class="nav__child"
 							active-class="nav__child-active"
 							><span>Doc No Format</span></router-link
 						>
-					</li>
+					</li> -->
 					<li>
 						<router-link
 							to="/maintenance/role-permission"

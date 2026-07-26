@@ -9,6 +9,7 @@ import AppSidebar from "./AppSidebar.vue";
 import AppFooter from "./AppFooter.vue";
 import LogoutDialog from "./LogoutDialog.vue";
 import Snackbar from "@/components/Snackbar.vue";
+import Breadcrumbs from "@/components/Breadcrumbs.vue";
 
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
@@ -127,6 +128,7 @@ onUnmounted(() => {
 			>
 				<!-- Content -->
 				<div class="app-content">
+					<Breadcrumbs />
 					<router-view />
 				</div>
 

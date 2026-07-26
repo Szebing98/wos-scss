@@ -14,8 +14,15 @@ defineEmits<{
 <template>
 	<div class="select-field">
 		<label v-if="label || $slots.label" class="select-field__label">
-            <slot name="label">{{ label }}</slot>
-        </label>
+			<slot name="label">
+				<template v-if="label && label.includes('*')">
+					{{ label.replace('*', '').trim() }} <span class="required-asterisk">*</span>
+				</template>
+				<template v-else>
+					{{ label }}
+				</template>
+			</slot>
+		</label>
 		<div class="select-wrapper">
 			<select 
 				:value="modelValue" 
