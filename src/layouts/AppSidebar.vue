@@ -50,7 +50,11 @@ function toggleGroup(key: "workOrders" | "maintenance") {
 }
 
 function syncOpenGroupWithRoute(path: string) {
-	if (path.startsWith("/maintenance") || path.startsWith("/customer") || path.startsWith("/user")) {
+	if (
+		path.startsWith("/maintenance") ||
+		path.startsWith("/customer") ||
+		path.startsWith("/user")
+	) {
 		groups.workOrders = false;
 		groups.maintenance = true;
 	} else {
@@ -64,7 +68,7 @@ watch(
 	(newPath: string) => {
 		syncOpenGroupWithRoute(newPath);
 	},
-	{ immediate: true }
+	{ immediate: true },
 );
 </script>
 

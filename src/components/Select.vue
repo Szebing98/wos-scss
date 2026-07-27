@@ -1,18 +1,153 @@
 <script setup lang="ts">
-defineProps<{
+import { ref, computed, watch, useSlots, onMounted, onUnmounted } from "vue";
+
+export interface SelectOption {
+	value: string | number;
+	label: string;
+	disabled?: boolean;
+}
+
+const props = defineProps<{
 	modelValue?: string | number;
+	options?: SelectOption[];
 	label?: string;
+	placeholder?: string;
 	disabled?: boolean;
 	error?: string;
 }>();
 
-defineEmits<{
-	(e: "update:modelValue", value: string): void;
+const emit = defineEmits<{
+	(e: "update:modelValue", value: any): void;
+	(e: "change", event: Event): void;
 }>();
+
+const slots = useSlots();
+const isOpen = ref(false);
+const containerRef = ref<HTMLElement | null>(null);
+const parsedSlotOptions = ref<SelectOption[]>([]);
+
+function getVNodeText(vnode: any): string {
+	if (!vnode) return "";
+	if (typeof vnode === "string" || typeof vnode === "number") return String(vnode);
+	if (typeof vnode.children === "string") return vnode.children;
+	if (Array.isArray(vnode.children)) {
+		return vnode.children.map(getVNodeText).join("").trim();
+	}
+	if (vnode.children?.default) {
+		try {
+			const res = vnode.children.default();
+			if (Array.isArray(res)) return res.map(getVNodeText).join("").trim();
+			return String(res);
+		} catch (e) {
+			return "";
+		}
+	}
+	return "";
+}
+
+function updateParsedOptions() {
+	if (props.options && props.options.length > 0) {
+		parsedSlotOptions.value = props.options;
+		return;
+	}
+	const defaultSlot = slots.default?.();
+	if (!defaultSlot) {
+		parsedSlotOptions.value = [];
+		return;
+	}
+
+	const list: SelectOption[] = [];
+
+	function parseVNode(vnode: any) {
+		if (!vnode) return;
+		if (Array.isArray(vnode)) {
+			vnode.forEach(parseVNode);
+			return;
+		}
+
+		if (typeof vnode.type === "symbol" || Array.isArray(vnode.children)) {
+			if (Array.isArray(vnode.children)) {
+				vnode.children.forEach(parseVNode);
+				return;
+			}
+		}
+
+		if (vnode.type === "option" || vnode.type?.name === "option") {
+			const val = vnode.props?.value !== undefined ? vnode.props.value : getVNodeText(vnode);
+			const labelText = getVNodeText(vnode) || String(val);
+			const isDisabled = vnode.props?.disabled !== undefined && vnode.props?.disabled !== false;
+			list.push({
+				value: val,
+				label: labelText,
+				disabled: isDisabled,
+			});
+		}
+	}
+
+	defaultSlot.forEach(parseVNode);
+	parsedSlotOptions.value = list;
+}
+
+const availableOptions = computed<SelectOption[]>(() => {
+	if (props.options && props.options.length > 0) {
+		return props.options;
+	}
+	return parsedSlotOptions.value;
+});
+
+const selectedOption = computed(() => {
+	return availableOptions.value.find((opt) => String(opt.value) === String(props.modelValue));
+});
+
+const selectedLabel = computed(() => {
+	if (selectedOption.value) {
+		return selectedOption.value.label;
+	}
+	if (props.placeholder) {
+		return props.placeholder;
+	}
+	return props.modelValue !== undefined && props.modelValue !== "" ? String(props.modelValue) : "Select an option...";
+});
+
+function toggleOpen() {
+	if (props.disabled) return;
+	if (!isOpen.value) {
+		updateParsedOptions();
+	}
+	isOpen.value = !isOpen.value;
+}
+
+function selectOption(opt: SelectOption) {
+	if (opt.disabled || props.disabled) return;
+	emit("update:modelValue", opt.value);
+	const event = new CustomEvent("change", { bubbles: true });
+	Object.defineProperty(event, "target", { value: { value: opt.value }, enumerable: true });
+	emit("change", event as any);
+	isOpen.value = false;
+}
+
+function handleClickOutside(event: MouseEvent) {
+	if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
+		isOpen.value = false;
+	}
+}
+
+watch([() => props.options, () => props.modelValue], () => {
+	updateParsedOptions();
+}, { immediate: true, deep: true });
+
+onMounted(() => {
+	document.addEventListener("click", handleClickOutside);
+	updateParsedOptions();
+});
+
+onUnmounted(() => {
+	document.removeEventListener("click", handleClickOutside);
+});
 </script>
 
 <template>
-	<div class="select-field">
+	<div class="select-field" ref="containerRef">
 		<label v-if="label || $slots.label" class="select-field__label">
 			<slot name="label">
 				<template v-if="label && label.includes('*')">
@@ -23,18 +158,52 @@ defineEmits<{
 				</template>
 			</slot>
 		</label>
-		<div class="select-wrapper">
-			<select 
-				:value="modelValue" 
-				@change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
-				class="select-control"
-				:class="{ 'select-control--error': error }"
-				:disabled="disabled"
-			>
-				<slot></slot>
-			</select>
-			<i class="mdi mdi-chevron-down select-icon"></i>
+
+		<div
+			class="select-control"
+			:class="{
+				'select-control--disabled': disabled,
+				'select-control--open': isOpen,
+				'select-control--error': error,
+			}"
+			@click="toggleOpen"
+		>
+			<span class="selected-text" :class="{ 'selected-text--placeholder': !selectedOption }">
+				{{ selectedLabel }}
+			</span>
+			<i class="mdi mdi-chevron-down chevron-icon" :class="{ 'chevron-icon--open': isOpen }"></i>
 		</div>
+
+		<!-- Custom Floating Dropdown Menu (matching Autocomplete) -->
+		<div class="select-dropdown" v-if="isOpen">
+			<ul v-if="availableOptions.length > 0" class="options-list">
+				<li
+					v-for="opt in availableOptions"
+					:key="String(opt.value)"
+					class="option-item"
+					:class="{
+						'option-item--selected': String(opt.value) === String(modelValue),
+						'option-item--disabled': opt.disabled
+					}"
+					@click.stop="selectOption(opt)"
+				>
+					<span class="option-name">{{ opt.label }}</span>
+					<i v-if="String(opt.value) === String(modelValue)" class="mdi mdi-check check-icon"></i>
+				</li>
+			</ul>
+			<div v-else class="empty-list">No options available</div>
+		</div>
+
+		<!-- Hidden native select for slot fallback / form compatibility -->
+		<select
+			style="display: none;"
+			:value="modelValue"
+			:disabled="disabled"
+			@change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
+		>
+			<slot></slot>
+		</select>
+
 		<div class="select-field__footer" v-if="error">
 			<p class="select-field__error">
 				<i class="mdi mdi-alert-circle-outline select-field__error-icon"></i>
@@ -44,68 +213,141 @@ defineEmits<{
 	</div>
 </template>
 
-
 <style lang="scss" scoped>
 .select-field {
+	position: relative;
 	display: flex;
 	flex-direction: column;
-	gap: var(--spacing-xs);
-	line-height: 20px;
+	gap: var(--spacing-xs, 4px);
 	width: 100%;
 
 	&__label {
-		font-size: var(--typography-fontSize-sm);
-		font-weight: var(--typography-fontWeight-medium);
-		color: var(--colors-text-secondary);
+		font-size: var(--typography-fontSize-sm, 12px);
+		font-weight: var(--typography-fontWeight-medium, 500);
+		color: var(--colors-text-secondary, #64748b);
 	}
 }
 
-.select-wrapper {
+.select-control {
 	position: relative;
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
+	padding: 0 32px 0 12px;
+	border-radius: var(--radius-md, 6px);
+	border: 1px solid var(--colors-surface-border, #cbd5e1);
+	background: var(--colors-surface-card, #ffffff);
+	height: 40px;
+	box-sizing: border-box;
+	cursor: pointer;
+	user-select: none;
+	transition: all 0.2s ease;
 
-	.select-control {
-		width: 100%;
-		appearance: none;
-		-webkit-appearance: none;
-		padding: 0 32px 0 var(--spacing-md);
-		border-radius: var(--radius-md, 6px);
-		border: 1px solid var(--colors-surface-border);
-		background: var(--colors-surface-background, var(--colors-surface-card));
-		color: var(--colors-text-primary);
-		height: 40px;
-		box-sizing: border-box;
+	&--open,
+	&:focus-within {
+		border-color: var(--colors-brand-primary, #3b82f6);
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+	}
+
+	&--error {
+		border-color: var(--colors-state-error, #ef4444);
+	}
+
+	&--disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+		background: var(--colors-surface-background, #f8fafc);
+	}
+
+	.selected-text {
 		font-size: 13px;
-		outline: none;
-		cursor: pointer;
-		transition: border-color 0.2s ease;
+		color: var(--colors-text-primary, #1e293b);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 
-		&:focus {
-			border-color: var(--colors-brand-primary);
-		}
-
-		&--error {
-			border-color: var(--colors-state-error);
-			
-			&:focus {
-				box-shadow: 0 0 0 3px rgb(239 68 68 / 0.15);
-			}
-		}
-
-		&:disabled {
-			opacity: 0.6;
-			cursor: not-allowed;
+		&--placeholder {
+			color: var(--colors-text-muted, #94a3b8);
 		}
 	}
 
-	.select-icon {
+	.chevron-icon {
 		position: absolute;
-		right: 8px;
-		color: var(--colors-text-muted);
-		pointer-events: none;
-		font-size: 16px;
+		right: 10px;
+		color: var(--colors-text-muted, #94a3b8);
+		font-size: 18px;
+		transition: transform 0.2s ease;
+
+		&--open {
+			transform: rotate(180deg);
+		}
 	}
+}
+
+.select-dropdown {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	z-index: 100;
+	background: var(--colors-surface-card, #ffffff);
+	border: 1px solid var(--colors-surface-border, #e2e8f0);
+	border-radius: var(--radius-md, 6px);
+	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+	max-height: clamp(160px, 35vh, 260px);
+	overflow-y: auto;
+}
+
+.options-list {
+	list-style: none;
+	margin: 0;
+	padding: 4px 0;
+}
+
+.option-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	padding: 8px 12px;
+	font-size: 13px;
+	color: var(--colors-text-primary, #1e293b);
+	cursor: pointer;
+	transition: background 0.15s ease;
+
+	&:hover {
+		background: var(--colors-surface-hover, #f1f5f9);
+	}
+
+	&--selected {
+		background: var(--colors-brand-light, #eff6ff);
+		font-weight: 500;
+		color: var(--colors-brand-primary, #3b82f6);
+	}
+
+	&--disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		pointer-events: none;
+	}
+
+	.option-name {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.check-icon {
+		font-size: 16px;
+		color: var(--colors-brand-primary, #3b82f6);
+	}
+}
+
+.empty-list {
+	padding: 12px;
+	text-align: center;
+	font-size: 13px;
+	color: var(--colors-text-muted, #94a3b8);
 }
 
 .select-field__footer {

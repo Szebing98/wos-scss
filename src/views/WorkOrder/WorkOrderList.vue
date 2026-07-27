@@ -162,8 +162,8 @@ const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
 const formatDate = (d: Date) => {
 	const y = d.getFullYear();
-	const m = String(d.getMonth() + 1).padStart(2, '0');
-	const dStr = String(d.getDate()).padStart(2, '0');
+	const m = String(d.getMonth() + 1).padStart(2, "0");
+	const dStr = String(d.getDate()).padStart(2, "0");
 	return `${y}-${m}-${dStr}`;
 };
 
@@ -213,7 +213,8 @@ const sampleMockWorkOrders: any[] = [
 		estimatedEndDate: "2026-05-13T00:00:00Z",
 		leadEngineer: "Ahmad Faizi",
 		assistantEngineers: ["Lim Wei Chen", "Siti Fatimah"],
-		description: "Complete overhaul of AHU-04 unit including belt replacement, bearing lubrication, and HEPA filter change.",
+		description:
+			"Complete overhaul of AHU-04 unit including belt replacement, bearing lubrication, and HEPA filter change.",
 		location: "Level 4 Plant Room, Tower 1, Petronas Twin Towers, KLCC",
 	},
 	{
@@ -235,7 +236,8 @@ const sampleMockWorkOrders: any[] = [
 		estimatedEndDate: "2026-05-17T00:00:00Z",
 		leadEngineer: "Nurul Ain",
 		assistantEngineers: ["Siti Fatimah"],
-		description: "Install 6-inch stainless steel header pipe connecting Cooling Tower 2 to Chiller Water Line B.",
+		description:
+			"Install 6-inch stainless steel header pipe connecting Cooling Tower 2 to Chiller Water Line B.",
 		location: "Penang Regional Facility, Bayan Lepas Industrial Zone",
 	},
 	{
@@ -257,7 +259,8 @@ const sampleMockWorkOrders: any[] = [
 		estimatedEndDate: "2026-05-19T00:00:00Z",
 		leadEngineer: "Lim Wei Chen",
 		assistantEngineers: ["Ahmad Faizi"],
-		description: "11kV VCB switchgear trip testing, contact resistance measurement, and insulation resistance test.",
+		description:
+			"11kV VCB switchgear trip testing, contact resistance measurement, and insulation resistance test.",
 		location: "Substation 3B, TNB Complex, Jalan Bangsar, Kuala Lumpur",
 	},
 	{
@@ -279,7 +282,8 @@ const sampleMockWorkOrders: any[] = [
 		estimatedEndDate: "2026-04-28T00:00:00Z",
 		leadEngineer: "Ahmad Faizi",
 		assistantEngineers: ["Lim Wei Chen"],
-		description: "Replaced burnt 45kW 3-phase induction motor driving emergency fire fighting pump #2.",
+		description:
+			"Replaced burnt 45kW 3-phase induction motor driving emergency fire fighting pump #2.",
 		location: "Petaling Jaya Central Warehouse, Section 51A",
 	},
 	{
@@ -301,7 +305,8 @@ const sampleMockWorkOrders: any[] = [
 		estimatedEndDate: "2026-05-02T00:00:00Z",
 		leadEngineer: "Siti Fatimah",
 		assistantEngineers: ["Nurul Ain"],
-		description: "Calibrated numerical protection relays (overcurrent and earth fault) according to TNB grid code.",
+		description:
+			"Calibrated numerical protection relays (overcurrent and earth fault) according to TNB grid code.",
 		location: "Penang Regional Substation B, Seberang Perai",
 	},
 	{
@@ -323,7 +328,8 @@ const sampleMockWorkOrders: any[] = [
 		estimatedEndDate: "2026-05-05T00:00:00Z",
 		leadEngineer: "Ahmad Faizi",
 		assistantEngineers: ["Lim Wei Chen"],
-		description: "DOSH/JKKP certified pop test and set pressure calibration for Boiler #1 safety valves.",
+		description:
+			"DOSH/JKKP certified pop test and set pressure calibration for Boiler #1 safety valves.",
 		location: "Kuala Lumpur Headquarters Power Station",
 	},
 ];
@@ -340,14 +346,14 @@ async function fetchWorkOrders() {
 			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
 		};
 		if (searchQuery.value) query.q = searchQuery.value;
-		
+
 		// Status query
 		if (activeStatus.value !== "All" && activeStatus.value !== "all") {
 			query.status = activeStatus.value;
 		} else if (appliedStatusFilter.value !== "all") {
 			query.status = appliedStatusFilter.value;
 		}
-		
+
 		if (appliedWorkTypeFilter.value !== "all") {
 			query.workType = appliedWorkTypeFilter.value;
 		}
@@ -358,7 +364,7 @@ async function fetchWorkOrders() {
 			query.endDate = new Date(appliedDateTo.value).toISOString();
 		}
 
-		const { data, error } = await workOrderApi.getWorkOrders(query);
+		const { data } = await workOrderApi.getWorkOrders(query);
 		if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
 			workOrders.value = data.data.map((w: any) => ({
 				guid: w.guid,
@@ -399,16 +405,30 @@ function goToDetail(item: any) {
 	router.push({
 		name: "Work Order Detail",
 		params: { id },
-		query: item.status === 'Completed' || item.status === 'Claimed' ? { status: 'completed' } : undefined,
+		query:
+			item.status === "Completed" || item.status === "Claimed"
+				? { status: "completed" }
+				: undefined,
 	});
 }
 
-watch([searchQuery, activeStatus, appliedStatusFilter, appliedWorkTypeFilter, appliedDateFrom, appliedDateTo], () => {
-	fetchWorkOrders();
-});
+watch(
+	[
+		searchQuery,
+		activeStatus,
+		appliedStatusFilter,
+		appliedWorkTypeFilter,
+		appliedDateFrom,
+		appliedDateTo,
+	],
+	() => {
+		fetchWorkOrders();
+	},
+);
 
 onMounted(() => {
 	fetchWorkOrders();
+	fetchWorkTypes();
 });
 
 const filteredWorkOrders = computed(() => {
@@ -422,7 +442,8 @@ const filteredWorkOrders = computed(() => {
 		}
 
 		if (appliedWorkTypeFilter.value !== "all") {
-			if (w.workType?.toLowerCase() !== appliedWorkTypeFilter.value?.toLowerCase()) return false;
+			if (w.workType?.toLowerCase() !== appliedWorkTypeFilter.value?.toLowerCase())
+				return false;
 		}
 
 		if (searchQuery.value) {
@@ -468,11 +489,11 @@ const activeFilterCount = computed(() => {
 	let count = 0;
 	if (appliedStatusFilter.value !== "all") count++;
 	if (appliedWorkTypeFilter.value !== "all") count++;
-	
+
 	// Add counts for dates if they differ from the default
 	if (appliedDateFrom.value !== formatDate(firstDayOfMonth)) count++;
 	if (appliedDateTo.value !== formatDate(today)) count++;
-	
+
 	return count;
 });
 
@@ -491,7 +512,14 @@ const isRejectedView = computed(() => effectiveStatus.value === "Rejected");
 
 const headers = computed<TableHeader[]>(() => {
 	const base: TableHeader[] = [
-		{ key: "select", label: "", width: "48px", minWidth: "48px", align: "center", sortable: false },
+		{
+			key: "select",
+			label: "",
+			width: "48px",
+			minWidth: "48px",
+			align: "center",
+			sortable: false,
+		},
 	];
 
 	if (effectiveStatus.value === "All" || effectiveStatus.value === "all") {
@@ -504,14 +532,26 @@ const headers = computed<TableHeader[]>(() => {
 		{ key: "customer", label: "Customer", width: "260px", minWidth: "200px" },
 		{ key: "workType", label: "Work Type", width: "150px", minWidth: "130px" },
 		{ key: "personInCharge", label: "Person In Charge", width: "160px", minWidth: "140px" },
-		{ key: "createdAt", label: "Created Date", width: "130px", minWidth: "110px" }
+		{ key: "createdAt", label: "Created Date", width: "130px", minWidth: "110px" },
 	);
 
 	if (isRejectedView.value) {
-		base.push({ key: "rejectedReason", label: "Rejected Reason", width: "200px", minWidth: "160px" });
+		base.push({
+			key: "rejectedReason",
+			label: "Rejected Reason",
+			width: "200px",
+			minWidth: "160px",
+		});
 	}
 
-	base.push({ key: "actions", label: "Actions", align: "right", width: "140px", minWidth: "120px", sortable: false });
+	base.push({
+		key: "actions",
+		label: "Actions",
+		align: "right",
+		width: "140px",
+		minWidth: "120px",
+		sortable: false,
+	});
 
 	return base;
 });
@@ -686,9 +726,6 @@ const availableBulkActions = computed(() => {
 // Handlers
 async function handleCreateWorkOrder() {
 	await fetchWorkTypes();
-	if (availableWorkTypes.value.length > 0) {
-		selectedWorkTypeGuid.value = availableWorkTypes.value[0].guid || availableWorkTypes.value[0].code;
-	}
 	isCreateDialog.value = true;
 }
 
@@ -720,7 +757,7 @@ function openApproveDialog(item: WorkOrderModel) {
 	approveFormData.value = {
 		estimatedEndDate: item.estimatedEndDate || "",
 		leadEngineer: item.leadEngineer || "",
-		engineer: item.assistantEngineers?.[0] || "", // fallback since approve dialog still uses single engineer
+		engineer: item.assistantEngineers?.[0] || "",
 		description: item.description || "",
 	};
 	isApproveDialog.value = true;
@@ -795,7 +832,9 @@ async function executeReject() {
 		try {
 			const guid = selectedItem.value.guid;
 			if (!guid) return;
-			const { error } = await workOrderApi.reject(guid, { rejectedReason: rejectReason.value });
+			const { error } = await workOrderApi.reject(guid, {
+				rejectedReason: rejectReason.value,
+			});
 			if (error) {
 				alert(`Failed to reject work order: ${error.error.message}`);
 			} else {
@@ -863,32 +902,86 @@ const loadingWorkTypes = ref(false);
 async function fetchWorkTypes() {
 	loadingWorkTypes.value = true;
 	try {
-		const wtRes = await workTypeApi.getWorkTypes({ pageIndex: 0, pageSize: 100, timezone: "UTC" });
+		const wtRes = await workTypeApi.getWorkTypes({
+			pageIndex: 0,
+			pageSize: 100,
+			timezone: "UTC",
+		});
 		if (wtRes.data && wtRes.data.data && wtRes.data.data.length > 0) {
 			const activeTypes = wtRes.data.data.filter((wt: any) => wt.isActive !== false);
-			availableWorkTypes.value = (activeTypes.length > 0 ? activeTypes : wtRes.data.data).map((wt: any) => ({
-				guid: wt.guid,
-				code: wt.code,
-				name: wt.name,
-				description: wt.description || "",
-				withEquipmentForm: !!wt.withEquipmentForm,
-				isActive: wt.isActive,
-			}));
+			availableWorkTypes.value = (activeTypes.length > 0 ? activeTypes : wtRes.data.data).map(
+				(wt: any) => ({
+					guid: wt.guid,
+					code: wt.code,
+					name: wt.name,
+					description: wt.description || "",
+					withEquipmentForm: !!wt.withEquipmentForm,
+					isActive: wt.isActive,
+				}),
+			);
 		} else {
 			availableWorkTypes.value = [
-				{ guid: "wt-1", code: "mechanical", name: "Mechanical Maintenance", withEquipmentForm: true, isActive: true },
-				{ guid: "wt-2", code: "electrical", name: "Electrical Maintenance", withEquipmentForm: false, isActive: true },
-				{ guid: "wt-3", code: "hvac", name: "HVAC System", withEquipmentForm: true, isActive: true },
-				{ guid: "wt-4", code: "general", name: "General Maintenance", withEquipmentForm: false, isActive: true },
+				{
+					guid: "wt-1",
+					code: "mechanical",
+					name: "Mechanical Maintenance",
+					withEquipmentForm: true,
+					isActive: true,
+				},
+				{
+					guid: "wt-2",
+					code: "electrical",
+					name: "Electrical Maintenance",
+					withEquipmentForm: false,
+					isActive: true,
+				},
+				{
+					guid: "wt-3",
+					code: "hvac",
+					name: "HVAC System",
+					withEquipmentForm: true,
+					isActive: true,
+				},
+				{
+					guid: "wt-4",
+					code: "general",
+					name: "General Maintenance",
+					withEquipmentForm: false,
+					isActive: true,
+				},
 			];
 		}
 	} catch (e) {
 		console.error("Failed to fetch work types for modal:", e);
 		availableWorkTypes.value = [
-			{ guid: "wt-1", code: "mechanical", name: "Mechanical Maintenance", withEquipmentForm: true, isActive: true },
-			{ guid: "wt-2", code: "electrical", name: "Electrical Maintenance", withEquipmentForm: false, isActive: true },
-			{ guid: "wt-3", code: "hvac", name: "HVAC System", withEquipmentForm: true, isActive: true },
-			{ guid: "wt-4", code: "general", name: "General Maintenance", withEquipmentForm: false, isActive: true },
+			{
+				guid: "wt-1",
+				code: "mechanical",
+				name: "Mechanical Maintenance",
+				withEquipmentForm: true,
+				isActive: true,
+			},
+			{
+				guid: "wt-2",
+				code: "electrical",
+				name: "Electrical Maintenance",
+				withEquipmentForm: false,
+				isActive: true,
+			},
+			{
+				guid: "wt-3",
+				code: "hvac",
+				name: "HVAC System",
+				withEquipmentForm: true,
+				isActive: true,
+			},
+			{
+				guid: "wt-4",
+				code: "general",
+				name: "General Maintenance",
+				withEquipmentForm: false,
+				isActive: true,
+			},
 		];
 	} finally {
 		loadingWorkTypes.value = false;
@@ -896,9 +989,10 @@ async function fetchWorkTypes() {
 }
 
 function proceedCreateWorkOrder() {
-	const selectedWt = availableWorkTypes.value.find(
-		(wt) => (wt.guid || wt.code) === selectedWorkTypeGuid.value,
-	) || availableWorkTypes.value[0];
+	const selectedWt =
+		availableWorkTypes.value.find(
+			(wt) => (wt.guid || wt.code) === selectedWorkTypeGuid.value,
+		) || availableWorkTypes.value[0];
 
 	isCreateDialog.value = false;
 	router.push({
@@ -962,6 +1056,7 @@ function getStatusChipType(status: string) {
 
 defineExpose({
 	handleCreateWorkOrder,
+	viewWorkOrder,
 });
 </script>
 
@@ -981,10 +1076,11 @@ defineExpose({
 						effectiveStatus === 'All' ||
 						effectiveStatus === 'all'
 					"
-					class="btn btn--primary"
+					class="btn btn--primary add-workorder-btn"
 					@click="handleCreateWorkOrder"
 				>
-					<i class="mdi mdi-plus"></i> Create New Work Order
+					<i class="mdi mdi-plus"></i>
+					<span class="btn-text">New Work Order</span>
 				</button>
 			</div>
 		</div>
@@ -1002,10 +1098,10 @@ defineExpose({
 					</template>
 				</Textbox>
 
-				<FilterPanel :count="activeFilterCount" @reset="resetFilters" @apply="applyFilters">
+				<FilterPanel :count="activeFilterCount" show-reset @reset="resetFilters" @apply="applyFilters">
 					<!-- Hide local status filter if we are already in a specific status view -->
 					<Select v-if="activeStatus === 'All'" v-model="statusFilter" label="Status">
-						<option value="all">All Statuses</option>
+						<option value="all">All Status</option>
 						<option value="New">New</option>
 						<option value="PendingApproval">Pending Approval</option>
 						<option value="InProgress">In Progress</option>
@@ -1019,24 +1115,29 @@ defineExpose({
 
 					<Select v-model="workTypeFilter" label="Work Type">
 						<option value="all">All Types</option>
-						<option value="Maintenance">Maintenance</option>
-						<option value="Electrical">Electrical</option>
-						<option value="HVAC">HVAC</option>
-						<option value="Carpentry">Carpentry</option>
-						<option value="Safety">Safety</option>
-						<option value="IT">IT</option>
-						<option value="Plumbing">Plumbing</option>
-						<option value="General">General</option>
-						<option value="Security">Security</option>
+						<option
+							v-for="wt in availableWorkTypes"
+							:key="wt.guid || wt.code || wt.name"
+							:value="wt.name || wt.code"
+						>
+							{{ wt.name }}
+						</option>
 					</Select>
 
-					<div style="display: flex; gap: 16px;">
-						<DatePicker style="flex: 1" v-model="dateFrom" label="From" placeholder="Any" />
+					<div style="display: flex; gap: 16px">
+						<DatePicker
+							style="flex: 1"
+							v-model="dateFrom"
+							label="From"
+							placeholder="Any"
+							align="left"
+						/>
 						<DatePicker
 							style="flex: 1"
 							v-model="dateTo"
 							label="To"
 							placeholder="Any"
+							align="right"
 							:min="dateFrom || undefined"
 						/>
 					</div>
@@ -1108,7 +1209,7 @@ defineExpose({
 				<template #item-woNumber="{ item }">
 					<span
 						class="u-font-mono u-font-weight-medium text-primary"
-						style="cursor: pointer; text-decoration: underline;"
+						style="cursor: pointer; text-decoration: underline"
 						@click.stop="goToDetail(item)"
 					>
 						<HighlightText :text="item.woNumber" :query="searchQuery" />
@@ -1125,7 +1226,8 @@ defineExpose({
 							<HighlightText :text="item.customer.name" :query="searchQuery" />
 						</div>
 						<div class="u-text-muted" style="font-size: 12px">
-							<HighlightText :text="item.customer.email" :query="searchQuery" /> • <HighlightText :text="item.customer.phone" :query="searchQuery" />
+							<HighlightText :text="item.customer.email" :query="searchQuery" /> •
+							<HighlightText :text="item.customer.phone" :query="searchQuery" />
 						</div>
 					</div>
 				</template>
@@ -1164,28 +1266,39 @@ defineExpose({
 		</Card>
 
 		<!-- Dialogs -->
-		<Dialog v-model="isCreateDialog" title="Select Work Type" maxWidth="450px">
+		<Dialog v-model="isCreateDialog" title="Select Work Type" maxWidth="500px" overflowVisible>
 			<p style="margin: 0 0 16px 0">Please select the work type for the new work order.</p>
-			<div v-if="loadingWorkTypes" style="padding: 16px; text-align: center; color: var(--color-text-secondary);">
-				<i class="mdi mdi-loading mdi-spin" style="font-size: 20px;"></i>
+			<div
+				v-if="loadingWorkTypes"
+				style="padding: 16px; text-align: center; color: var(--color-text-secondary)"
+			>
+				<i class="mdi mdi-loading mdi-spin" style="font-size: 20px"></i>
 				<p style="margin: 8px 0 0 0">Fetching work types...</p>
 			</div>
-			<div v-else>
+			<div v-else style="position: relative">
 				<Autocomplete
 					v-model="selectedWorkTypeGuid"
-					:options="availableWorkTypes.map((wt) => ({
-						id: wt.guid || wt.code,
-						name: wt.name,
-						code: wt.code,
-						info: wt.withEquipmentForm ? '• With Equipment' : '',
-					}))"
+					:options="
+						availableWorkTypes.map((wt) => ({
+							id: wt.guid || wt.code,
+							name: wt.name,
+							code: wt.code,
+							info: wt.withEquipmentForm ? '• With Equipment' : '',
+						}))
+					"
 					label="Work Type"
 					placeholder="Type or select a work type..."
+					emptyMessage="Not found"
 				/>
 			</div>
 			<template #footer>
 				<Button variant="text" @click="isCreateDialog = false">Cancel</Button>
-				<Button variant="primary" :disabled="loadingWorkTypes || !selectedWorkTypeGuid" @click="proceedCreateWorkOrder">Proceed</Button>
+				<Button
+					variant="primary"
+					:disabled="loadingWorkTypes || !selectedWorkTypeGuid"
+					@click="proceedCreateWorkOrder"
+					>Proceed</Button
+				>
 			</template>
 		</Dialog>
 
@@ -1316,6 +1429,20 @@ defineExpose({
 			font-size: 13px;
 			color: var(--colors-text-muted);
 			margin: 0;
+		}
+	}
+}
+
+.add-workorder-btn {
+	flex-shrink: 0;
+	white-space: nowrap;
+
+	@media (max-width: 640px) {
+		padding: 8px 12px !important;
+		min-width: 40px;
+
+		.btn-text {
+			display: none;
 		}
 	}
 }

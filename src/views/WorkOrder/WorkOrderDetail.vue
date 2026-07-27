@@ -227,7 +227,7 @@ async function fetchWorkOrderDetails() {
 	if (!woNumber) return;
 	loading.value = true;
 	try {
-		const { data, error } = await workOrderApi.getWorkOrderByGuid(woNumber);
+		const { data } = await workOrderApi.getWorkOrderByGuid(woNumber);
 		if (data && data.data) {
 			const w = data.data as any;
 			workOrder.value = {
@@ -466,12 +466,6 @@ const priorityColorMap: Record<string, string> = {
 	High: '#ef4444',
 	Medium: '#f59e0b',
 	Low: '#3b82f6',
-};
-
-const priorityIconMap: Record<string, string> = {
-	High: 'mdi-alert-circle',
-	Medium: 'mdi-alert',
-	Low: 'mdi-information',
 };
 
 function formatDate(dateStr: string) {

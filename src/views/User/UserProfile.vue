@@ -109,6 +109,11 @@ const profileData = ref<ProfileForm>({
 	profileImage: null,
 });
 
+const initialActiveStatus = ref<boolean>(true);
+const initialRoleCode = ref<string>("");
+const showSaveConfirmModal = ref(false);
+const saveConfirmChanges = ref<string[]>([]);
+
 async function loadProfile() {
 	loading.value = true;
 	try {
@@ -166,6 +171,8 @@ async function loadProfile() {
 				};
 			}
 		}
+		initialActiveStatus.value = profileData.value.isActive;
+		initialRoleCode.value = profileData.value.role;
 		updateBreadcrumbs();
 	} catch (e) {
 		console.error("Failed to load user profile:", e);
@@ -175,20 +182,43 @@ async function loadProfile() {
 }
 
 function normalizeRoleCode(rawRole: string): string {
-	if (!rawRole) return "Administrator";
+	if (!rawRole) return roleList.value[0]?.code || "ADM";
 	const lower = rawRole.toLowerCase().trim();
-	if (rawRole === "SA" || lower === "superadmin") return "SA";
-	if (rawRole === "ADM" || lower === "adm" || lower.startsWith("admin")) return "Administrator";
-	if (rawRole === "MGR" || lower === "mgr" || lower.startsWith("manag")) return "Manager";
-	if (rawRole === "ENG" || lower === "eng" || lower.startsWith("engin") || lower.startsWith("tech")) return "Engineer";
-	if (lower.startsWith("sale")) return "Sales";
+
+	const directMatch = roleList.value.find(r => r.code.toLowerCase() === lower || r.name.toLowerCase() === lower);
+	if (directMatch) return directMatch.code;
+
+	if (rawRole === "SA" || lower === "superadmin") {
+		return roleList.value.find(r => r.code === "SA" || r.name === "Superadmin")?.code || "SA";
+	}
+	if (rawRole === "ADM" || lower === "adm" || lower.startsWith("admin")) {
+		return roleList.value.find(r => r.code === "ADM" || r.code === "Administrator" || r.name === "Administrator")?.code || "ADM";
+	}
+	if (rawRole === "MGR" || lower === "mgr" || lower.startsWith("manag")) {
+		return roleList.value.find(r => r.code === "MGR" || r.code === "Manager" || r.name.startsWith("Manag"))?.code || "MGR";
+	}
+	if (rawRole === "ENG" || lower === "eng" || lower.startsWith("engin") || lower.startsWith("tech")) {
+		return roleList.value.find(r => r.code === "ENG" || r.code === "Engineer" || r.name.startsWith("Engin"))?.code || "ENG";
+	}
+	if (lower.startsWith("sale")) {
+		return roleList.value.find(r => r.code === "Sales" || r.code === "SAL" || r.name.startsWith("Sale"))?.code || "Sales";
+	}
+
 	return rawRole;
 }
 
 function getRoleDisplayName(roleCode: string): string {
+	if (!roleCode) return "Unassigned";
 	if (roleCode === "SA" || roleCode === "Superadmin") return "Superadmin";
-	const found = roleList.value.find(r => r.code === roleCode || r.name === roleCode);
-	return found ? found.name : roleCode;
+	const found = roleList.value.find(
+		r => r.code === roleCode || r.name === roleCode || r.code.toLowerCase() === roleCode.toLowerCase()
+	);
+	if (found) return found.name;
+	if (roleCode === "ADM" || roleCode === "Administrator") return "Administrator";
+	if (roleCode === "MGR" || roleCode === "Manager") return "Manager";
+	if (roleCode === "ENG" || roleCode === "Engineer") return "Engineer";
+	if (roleCode === "Sales") return "Sales";
+	return roleCode;
 }
 
 function updateBreadcrumbs() {
@@ -237,10 +267,37 @@ async function handleSaveProfile() {
 		snackbar.error("Please fill in all required fields.");
 		return;
 	}
+
+	if (isNewMode.value) {
+		await executeSaveProfile();
+		return;
+	}
+
+	const changes: string[] = [];
+	if (profileData.value.isActive !== initialActiveStatus.value) {
+		const newStatusStr = profileData.value.isActive ? "Active" : "Inactive";
+		const oldStatusStr = initialActiveStatus.value ? "Active" : "Inactive";
+		changes.push(`Account Status: ${oldStatusStr} ➔ ${newStatusStr}`);
+	}
+	if (profileData.value.role !== initialRoleCode.value) {
+		const oldRoleName = getRoleDisplayName(initialRoleCode.value);
+		const newRoleName = getRoleDisplayName(profileData.value.role);
+		changes.push(`Assigned Role: ${oldRoleName} ➔ ${newRoleName}`);
+	}
+
+	if (changes.length > 0) {
+		saveConfirmChanges.value = changes;
+		showSaveConfirmModal.value = true;
+	} else {
+		await executeSaveProfile();
+	}
+}
+
+async function executeSaveProfile() {
+	showSaveConfirmModal.value = false;
 	loading.value = true;
 	try {
 		if (isNewMode.value) {
-			// Backend expects: email, userGroupCode, isActive, profile.displayName
 			const { error } = await userApi.createUser({
 				email: profileData.value.email,
 				userGroupCode: profileData.value.role,
@@ -259,15 +316,46 @@ async function handleSaveProfile() {
 				snackbar.error("Could not determine user ID.");
 				return;
 			}
-			// Backend strict schema only accepts: email?, profile.displayName?
+
+			// 1. Update basic profile info (email, displayName)
 			const { error } = await userApi.updateUser(guid, {
 				email: profileData.value.email,
 				profile: { displayName: profileData.value.name },
 			} as any);
+
 			if (error) {
 				snackbar.error((error as any)?.error?.message || "Failed to update profile.");
 				return;
 			}
+
+			// 2. Update account status if changed
+			if (profileData.value.isActive !== initialActiveStatus.value) {
+				if (profileData.value.isActive) {
+					const { error: actErr } = await userApi.activateUser(guid);
+					if (actErr) {
+						snackbar.error((actErr as any)?.error?.message || "Failed to activate user account.");
+						return;
+					}
+				} else {
+					const { error: deactErr } = await userApi.deactivateUser(guid);
+					if (deactErr) {
+						snackbar.error((deactErr as any)?.error?.message || "Failed to deactivate user account.");
+						return;
+					}
+				}
+			}
+
+			// 3. Update role/group if changed
+			if (profileData.value.role !== initialRoleCode.value) {
+				const { error: roleErr } = await userApi.reassignUserGroup(guid, {
+					userGroupCode: profileData.value.role,
+				} as any);
+				if (roleErr) {
+					snackbar.error((roleErr as any)?.error?.message || "Failed to update user role.");
+					return;
+				}
+			}
+
 			snackbar.success("Profile updated successfully.");
 			isEditMode.value = false;
 			await loadProfile();
@@ -567,6 +655,26 @@ async function confirmAvatarUpload() {
 			<Button variant="outlined" @click="showPasswordModal = false" :disabled="passwordLoading">Cancel</Button>
 			<Button variant="primary" @click="handleUpdatePassword" :loading="passwordLoading">
 				<i v-if="!passwordLoading" class="mdi mdi-check"></i> Update Password
+			</Button>
+		</template>
+	</Dialog>
+
+	<!-- Save Changes Confirmation Dialog -->
+	<Dialog v-model="showSaveConfirmModal" title="Confirm Account Updates" maxWidth="460px">
+		<p style="margin: 0 0 12px 0; color: var(--colors-text-primary); font-size: 14px;">
+			Are you sure you want to apply the following updates to this account?
+		</p>
+		<div style="background: var(--colors-surface-background); border: 1px solid var(--colors-surface-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;">
+			<ul style="margin: 0; padding-left: 18px; color: var(--colors-text-primary); font-size: 13px;">
+				<li v-for="(change, idx) in saveConfirmChanges" :key="idx" style="margin-bottom: 4px;">
+					{{ change }}
+				</li>
+			</ul>
+		</div>
+		<template #footer>
+			<Button variant="outlined" @click="showSaveConfirmModal = false" :disabled="loading">Cancel</Button>
+			<Button variant="primary" @click="executeSaveProfile" :loading="loading">
+				<i v-if="!loading" class="mdi mdi-check"></i> Confirm & Save
 			</Button>
 		</template>
 	</Dialog>

@@ -91,12 +91,13 @@ const roleList = ref<RoleModel[]>([]);
 
 function getRoleDisplayName(roleCode: string): string {
 	if (!roleCode) return "Unassigned";
+	const found = roleList.value.find(r => r.code === roleCode || r.name === roleCode || r.code.toLowerCase() === roleCode.toLowerCase());
+	if (found) return found.name;
 	if (roleCode === "SA" || roleCode === "Superadmin") return "Superadmin";
 	if (roleCode === "ADM" || roleCode === "Administrator") return "Administrator";
 	if (roleCode === "MGR" || roleCode === "Manager") return "Manager";
 	if (roleCode === "ENG" || roleCode === "Engineer") return "Engineer";
-	const found = roleList.value.find(r => r.code === roleCode || r.name === roleCode);
-	return found ? found.name : roleCode;
+	return roleCode;
 }
 
 function getRoleChipType(role: string) {

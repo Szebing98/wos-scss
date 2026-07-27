@@ -820,6 +820,11 @@ const paginationText = computed(() => {
 		white-space: normal;
 		border-bottom: 1px solid var(--colors-surface-border);
 		gap: 16px;
+		width: 100% !important;
+		min-width: 0 !important;
+		max-width: none !important;
+		box-sizing: border-box;
+		word-break: break-word;
 		
 		&:last-child {
 			border-bottom: none;
@@ -831,7 +836,13 @@ const paginationText = computed(() => {
 			color: var(--colors-text-secondary);
 			text-align: left;
 			flex-shrink: 0;
-			max-width: 40%;
+			max-width: 45%;
+		}
+
+		&[data-label=""]::before,
+		&:not([data-label])::before {
+			content: none !important;
+			display: none !important;
 		}
 	}
 	

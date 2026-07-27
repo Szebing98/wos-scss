@@ -8,14 +8,17 @@ export interface AutocompleteOption {
 	info?: string;
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
 	modelValue?: string | number;
 	options: AutocompleteOption[];
 	label?: string;
 	placeholder?: string;
 	disabled?: boolean;
 	error?: string;
-}>();
+	emptyMessage?: string;
+}>(), {
+	emptyMessage: "Not found",
+});
 
 const emit = defineEmits<{
 	(e: "update:modelValue", value: string | number): void;
@@ -140,7 +143,7 @@ onUnmounted(() => {
 					<span v-if="opt.info" class="option-info">{{ opt.info }}</span>
 				</li>
 			</ul>
-			<div v-else class="empty-list">No matching results found</div>
+			<div v-else class="empty-list">{{ emptyMessage || 'Not found' }}</div>
 		</div>
 
 		<div class="autocomplete-field__footer" v-if="error">
@@ -236,7 +239,7 @@ onUnmounted(() => {
 	border: 1px solid var(--colors-surface-border, #e2e8f0);
 	border-radius: var(--radius-md, 6px);
 	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-	max-height: 220px;
+	max-height: clamp(160px, 35vh, 260px);
 	overflow-y: auto;
 }
 

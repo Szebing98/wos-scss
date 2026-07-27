@@ -295,8 +295,13 @@ onMounted(() => {
 					Define service categories and their specific task items
 				</p>
 			</div>
-			<button class="action-btn action-btn--primary" @click="openCreateTypeModal" style="display: flex; align-items: center; gap: 6px;">
-				<i class="mdi mdi-plus"></i> New Work Type
+			<button
+				class="action-btn action-btn--primary add-worktype-btn"
+				@click="openCreateTypeModal"
+				style="display: flex; align-items: center; gap: 6px"
+			>
+				<i class="mdi mdi-plus"></i>
+				<span class="btn-text">New Work Type</span>
 			</button>
 		</div>
 
@@ -318,7 +323,6 @@ onMounted(() => {
 					</Textbox>
 
 					<FilterPanel show-reset align="right" @reset="resetTypeFilter">
-
 						<Select v-model="filterActive" label="Status">
 							<option value="all">All</option>
 							<option value="active">Active</option>
@@ -386,7 +390,7 @@ onMounted(() => {
 					<Card>
 						<template #header>
 							<h2>
-								Work Type Details: <strong>{{ selectedType.code }}</strong>
+								{{ selectedType.name }}<strong> ({{ selectedType.code }})</strong>
 							</h2>
 							<button
 								class="action-btn action-btn--sm action-btn--outlined"
@@ -412,8 +416,14 @@ onMounted(() => {
 							<div class="detail-view__group">
 								<label>Equipment Form</label>
 								<p>
-									<Badge :type="selectedType.withEquipmentForm ? 'info' : 'warning'">
-										{{ selectedType.withEquipmentForm ? "Required" : "Not Required" }}
+									<Badge
+										:type="selectedType.withEquipmentForm ? 'info' : 'warning'"
+									>
+										{{
+											selectedType.withEquipmentForm
+												? "Required"
+												: "Not Required"
+										}}
 									</Badge>
 								</p>
 							</div>
@@ -491,7 +501,6 @@ onMounted(() => {
 							</Textbox>
 
 							<FilterPanel show-reset align="right" @reset="resetItemFilter">
-
 								<Select v-model="filterItemStatus" label="Status">
 									<option value="all">All</option>
 									<option value="active">Active</option>
@@ -518,7 +527,14 @@ onMounted(() => {
 								</Badge>
 							</template>
 							<template #item-actions="{ item }">
-								<div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+								<div
+									style="
+										display: flex;
+										gap: 6px;
+										justify-content: flex-end;
+										align-items: center;
+									"
+								>
 									<button
 										class="btn btn--icon"
 										@click="editItem(item)"
@@ -531,7 +547,14 @@ onMounted(() => {
 										@click="requestToggleItemStatus(item)"
 										:title="item.isActive ? 'Deactivate Item' : 'Activate Item'"
 									>
-										<i class="mdi" :class="item.isActive ? 'mdi-check-circle-outline' : 'mdi-pause-circle-outline'"></i>
+										<i
+											class="mdi"
+											:class="
+												item.isActive
+													? 'mdi-check-circle-outline'
+													: 'mdi-pause-circle-outline'
+											"
+										></i>
 									</button>
 								</div>
 							</template>
@@ -554,7 +577,15 @@ onMounted(() => {
 
 			<div class="form-group">
 				<label class="form-group__label">
-					Item Code <span style="font-size: 11px; color: var(--colors-text-muted); font-weight: normal;">(System Auto-Generated)</span>
+					Item Code
+					<span
+						style="
+							font-size: 11px;
+							color: var(--colors-text-muted);
+							font-weight: normal;
+						"
+						>(System Auto-Generated)</span
+					>
 				</label>
 				<Textbox v-model="editingItem.code" disabled class="u-font-mono" />
 			</div>
@@ -595,7 +626,9 @@ onMounted(() => {
 
 			<div class="form-grid">
 				<div class="form-group form-group--full">
-					<label class="form-group__label">Work Type Code <span class="u-required">*</span></label>
+					<label class="form-group__label"
+						>Work Type Code <span class="u-required">*</span></label
+					>
 					<Textbox
 						v-model="workTypeFormData.code"
 						:disabled="!isNewRecord"
@@ -605,7 +638,9 @@ onMounted(() => {
 				</div>
 
 				<div class="form-group form-group--full">
-					<label class="form-group__label">Work Type Name <span class="u-required">*</span></label>
+					<label class="form-group__label"
+						>Work Type Name <span class="u-required">*</span></label
+					>
 					<Textbox
 						v-model="workTypeFormData.name"
 						placeholder="e.g. Electrical Maintenance"
@@ -624,16 +659,13 @@ onMounted(() => {
 
 				<div class="form-group form-group--full">
 					<label class="checkbox-container">
-						<input
-							type="checkbox"
-							v-model="workTypeFormData.withEquipmentForm"
-						/>
+						<input type="checkbox" v-model="workTypeFormData.withEquipmentForm" />
 						<span class="checkbox-container__box"></span>
 						Requires Equipment Form
 					</label>
 				</div>
 
-				<div class="form-group form-group--full" style="padding-top: 8px;">
+				<div class="form-group form-group--full" style="padding-top: 8px">
 					<label class="switch-toggle">
 						<input type="checkbox" v-model="workTypeFormData.isActive" />
 						<span class="switch-toggle__slider"></span>
@@ -643,12 +675,8 @@ onMounted(() => {
 			</div>
 
 			<template #footer>
-				<button class="btn btn--secondary" @click="isTypeDialogOpen = false">
-					Cancel
-				</button>
-				<button class="btn btn--primary" @click="saveTypeModal">
-					Save Work Type
-				</button>
+				<button class="btn btn--secondary" @click="isTypeDialogOpen = false">Cancel</button>
+				<button class="btn btn--primary" @click="saveTypeModal">Save Work Type</button>
 			</template>
 		</Dialog>
 
@@ -658,8 +686,9 @@ onMounted(() => {
 				<h2>Confirm Status Change</h2>
 			</template>
 
-			<p style="padding: 8px 0; font-size: 14px; line-height: 1.5;">
-				Are you sure you want to {{ itemToToggle?.isActive ? 'deactivate' : 'activate' }} work type item
+			<p style="padding: 8px 0; font-size: 14px; line-height: 1.5">
+				Are you sure you want to
+				{{ itemToToggle?.isActive ? "deactivate" : "activate" }} work type item
 				<strong>"{{ itemToToggle?.name }}"</strong> ({{ itemToToggle?.code }})?
 			</p>
 
@@ -667,9 +696,7 @@ onMounted(() => {
 				<button class="btn btn--secondary" @click="isConfirmItemStatusOpen = false">
 					Cancel
 				</button>
-				<button class="btn btn--primary" @click="confirmToggleItemStatus">
-					Confirm
-				</button>
+				<button class="btn btn--primary" @click="confirmToggleItemStatus">Confirm</button>
 			</template>
 		</Dialog>
 	</div>
@@ -700,6 +727,20 @@ onMounted(() => {
 			font-size: 13px;
 			color: var(--colors-text-muted);
 			margin: 0;
+		}
+	}
+}
+
+.add-worktype-btn {
+	flex-shrink: 0;
+	white-space: nowrap;
+
+	@media (max-width: 640px) {
+		padding: 8px 12px !important;
+		min-width: 40px;
+
+		.btn-text {
+			display: none;
 		}
 	}
 }
@@ -1069,8 +1110,6 @@ onMounted(() => {
 		font-weight: 500;
 	}
 }
-
-
 
 .mt-lg {
 	margin-top: var(--spacing-lg);

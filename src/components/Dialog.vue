@@ -7,11 +7,19 @@
 						<h3>{{ title }}</h3>
 					</slot>
 				</div>
-				<button class="btn btn--icon" style="margin-right: -8px" @click="$emit('update:modelValue', false)" title="Close">
+				<button
+					class="btn btn--icon"
+					style="margin-right: -8px"
+					@click="$emit('update:modelValue', false)"
+					title="Close"
+				>
 					<i class="mdi mdi-close"></i>
 				</button>
 			</div>
-			<div class="modal-box__body">
+			<div
+				class="modal-box__body"
+				:class="{ 'modal-box__body--overflow-visible': overflowVisible }"
+			>
 				<slot></slot>
 			</div>
 			<div v-if="$slots.footer" class="modal-box__footer">
@@ -25,7 +33,8 @@
 defineProps<{
 	modelValue: boolean;
 	title?: string;
-    maxWidth?: string;
+	maxWidth?: string;
+	overflowVisible?: boolean;
 }>();
 
 defineEmits<{
@@ -75,6 +84,10 @@ defineEmits<{
 		flex-direction: column;
 		gap: var(--spacing-md);
 		overflow-y: auto;
+
+		&--overflow-visible {
+			overflow: visible !important;
+		}
 	}
 	&__footer {
 		padding: var(--spacing-md) var(--spacing-lg);
@@ -83,8 +96,5 @@ defineEmits<{
 		justify-content: flex-end;
 		gap: var(--spacing-sm);
 	}
-	}
-	
-	
-
+}
 </style>

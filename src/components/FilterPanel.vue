@@ -47,10 +47,16 @@
 import { ref } from "vue";
 import Button from "./Button.vue";
 
-defineProps<{
-	showReset?: boolean;
-	align?: "left" | "right";
-}>();
+withDefaults(
+	defineProps<{
+		showReset?: boolean;
+		align?: "left" | "right";
+		count?: number;
+	}>(),
+	{
+		showReset: true,
+	}
+);
 
 const emit = defineEmits<{
 	(e: "reset"): void;

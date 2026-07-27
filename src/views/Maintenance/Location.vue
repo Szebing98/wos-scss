@@ -261,9 +261,9 @@ async function syncWithLhdn() {
 					Official LHDN MyInvois Standard Country & State Reference Specifications
 				</p>
 			</div>
-			<button class="btn btn--primary" :disabled="isSyncing" @click="syncWithLhdn">
+			<button class="btn btn--primary sync-btn" :disabled="isSyncing" @click="syncWithLhdn">
 				<i class="mdi" :class="isSyncing ? 'mdi-loading mdi-spin' : 'mdi-sync'"></i>
-				{{ isSyncing ? 'Syncing SDK...' : 'Sync LHDN Codes' }}
+				<span class="btn-text">{{ isSyncing ? 'Syncing SDK...' : 'Sync LHDN Codes' }}</span>
 			</button>
 		</div>
 
@@ -271,7 +271,7 @@ async function syncWithLhdn() {
 			<div class="filter-panel__left">
 				<Textbox
 					v-model="searchString"
-					placeholder="Search 242 Countries, ISO codes, or states (e.g. MYS, Malaysia, Selangor)..."
+					placeholder="Search Countries, ISO codes, or states (e.g. MYS, Malaysia, Selangor)..."
 					style="flex: 1;"
 					hide-footer
 				>
@@ -472,6 +472,20 @@ async function syncWithLhdn() {
 	display: flex;
 	align-items: center;
 	gap: 10px;
+}
+
+.sync-btn {
+	flex-shrink: 0;
+	white-space: nowrap;
+
+	@media (max-width: 640px) {
+		padding: 8px 12px !important;
+		min-width: 40px;
+		
+		.btn-text {
+			display: none;
+		}
+	}
 }
 
 .filter-panel {

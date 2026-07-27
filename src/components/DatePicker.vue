@@ -9,9 +9,10 @@ const props = defineProps<{
 	error?: string;
 	hint?: string;
 	hideFooter?: boolean;
-    min?: string;
-    max?: string;
-    enableTime?: boolean;
+	min?: string;
+	max?: string;
+	enableTime?: boolean;
+	align?: "left" | "right" | "center";
 }>();
 
 const emit = defineEmits<{
@@ -20,158 +21,233 @@ const emit = defineEmits<{
 
 const isOpen = ref(false);
 const datepickerRef = ref<HTMLElement | null>(null);
+const placement = ref<"bottom" | "top">("bottom");
+const inputValue = ref("");
 
 const currentMonth = ref(new Date().getMonth());
 const currentYear = ref(new Date().getFullYear());
 const selectedTime = ref("00:00");
 
 // Init from modelValue
-watch(() => props.modelValue, (newVal) => {
-    if (newVal) {
-        // Handle "YYYY-MM-DD" or "YYYY-MM-DD HH:mm" or ISO string
-        const d = new Date(newVal);
-        if (!isNaN(d.getTime())) {
-            currentMonth.value = d.getMonth();
-            currentYear.value = d.getFullYear();
-            const hh = String(d.getHours()).padStart(2, '0');
-            const mm = String(d.getMinutes()).padStart(2, '0');
-            selectedTime.value = `${hh}:${mm}`;
-        }
-    }
-}, { immediate: true });
+watch(
+	() => props.modelValue,
+	(newVal) => {
+		if (newVal) {
+			const d = new Date(newVal);
+			if (!isNaN(d.getTime())) {
+				currentMonth.value = d.getMonth();
+				currentYear.value = d.getFullYear();
+				const hh = String(d.getHours()).padStart(2, "0");
+				const mm = String(d.getMinutes()).padStart(2, "0");
+				selectedTime.value = `${hh}:${mm}`;
+			}
+		}
+	},
+	{ immediate: true },
+);
 
 const formattedValue = computed(() => {
-    if (!props.modelValue) return "";
-    const d = new Date(props.modelValue);
-    if (isNaN(d.getTime())) return props.modelValue;
-    
-    // Format YYYY-MM-DD
-    let formatted = d.toISOString().split('T')[0];
-    
-    if (props.enableTime) {
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mm = String(d.getMinutes()).padStart(2, '0');
-        formatted += ` ${hh}:${mm}`;
-    }
-    return formatted;
+	if (!props.modelValue) return "";
+	const d = new Date(props.modelValue);
+	if (isNaN(d.getTime())) return props.modelValue;
+
+	let formatted = d.toISOString().split("T")[0];
+	if (props.enableTime) {
+		const hh = String(d.getHours()).padStart(2, "0");
+		const mm = String(d.getMinutes()).padStart(2, "0");
+		formatted += ` ${hh}:${mm}`;
+	}
+	return formatted;
 });
 
-const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+// Sync typed input text with formattedValue
+watch(
+	formattedValue,
+	(newVal) => {
+		inputValue.value = newVal;
+	},
+	{ immediate: true },
+);
+
+const monthNames = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+];
 const weekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-// MudBlazor style header text
 const displayDateHeader = computed(() => {
-    if (!props.modelValue) return "Select Date";
-    const d = new Date(props.modelValue);
-    if (isNaN(d.getTime())) return "Select Date";
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${days[d.getDay()]}, ${month[d.getMonth()]} ${d.getDate()}`;
+	if (!props.modelValue) return "Select Date";
+	const d = new Date(props.modelValue);
+	if (isNaN(d.getTime())) return "Select Date";
+	const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+	const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+	return `${days[d.getDay()]}, ${month[d.getMonth()]} ${d.getDate()}`;
 });
 
 const displayMonthYear = computed(() => {
-    return `${monthNames[currentMonth.value]} ${currentYear.value}`;
+	return `${monthNames[currentMonth.value]} ${currentYear.value}`;
 });
 
 // Grid logic
 const daysInMonth = computed(() => {
-    const days = [];
-    const firstDay = new Date(currentYear.value, currentMonth.value, 1);
-    const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0);
-    
-    // Padding before
-    for (let i = 0; i < firstDay.getDay(); i++) {
-        days.push({ empty: true });
-    }
-    
-    // Days
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-        const dateObj = new Date(currentYear.value, currentMonth.value, i);
-        // format as YYYY-MM-DD for easy comparison
-        const m = String(currentMonth.value + 1).padStart(2, '0');
-        const dStr = String(i).padStart(2, '0');
-        const dateStr = `${currentYear.value}-${m}-${dStr}`;
-        
-        let disabled = false;
-        if (props.min && dateStr < props.min) disabled = true;
-        if (props.max && dateStr > props.max) disabled = true;
-        
-        let selected = false;
-        if (props.modelValue) {
-            const modelDateStr = props.modelValue.split('T')[0].split(' ')[0];
-            selected = modelDateStr === dateStr;
-        }
+	const days = [];
+	const firstDay = new Date(currentYear.value, currentMonth.value, 1);
+	const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0);
 
-        days.push({
-            empty: false,
-            day: i,
-            dateStr: dateStr,
-            dateObj: dateObj,
-            disabled: disabled,
-            selected: selected
-        });
-    }
-    
-    return days;
+	for (let i = 0; i < firstDay.getDay(); i++) {
+		days.push({ empty: true });
+	}
+
+	for (let i = 1; i <= lastDay.getDate(); i++) {
+		const dateObj = new Date(currentYear.value, currentMonth.value, i);
+		const m = String(currentMonth.value + 1).padStart(2, "0");
+		const dStr = String(i).padStart(2, "0");
+		const dateStr = `${currentYear.value}-${m}-${dStr}`;
+
+		let disabled = false;
+		if (props.min && dateStr < props.min) disabled = true;
+		if (props.max && dateStr > props.max) disabled = true;
+
+		let selected = false;
+		if (props.modelValue) {
+			const modelDateStr = props.modelValue.split("T")[0].split(" ")[0];
+			selected = modelDateStr === dateStr;
+		}
+
+		days.push({
+			empty: false,
+			day: i,
+			dateStr: dateStr,
+			dateObj: dateObj,
+			disabled: disabled,
+			selected: selected,
+		});
+	}
+
+	return days;
 });
 
 function prevMonth() {
-    if (currentMonth.value === 0) {
-        currentMonth.value = 11;
-        currentYear.value--;
-    } else {
-        currentMonth.value--;
-    }
+	if (currentMonth.value === 0) {
+		currentMonth.value = 11;
+		currentYear.value--;
+	} else {
+		currentMonth.value--;
+	}
 }
 
 function nextMonth() {
-    if (currentMonth.value === 11) {
-        currentMonth.value = 0;
-        currentYear.value++;
-    } else {
-        currentMonth.value++;
-    }
+	if (currentMonth.value === 11) {
+		currentMonth.value = 0;
+		currentYear.value++;
+	} else {
+		currentMonth.value++;
+	}
 }
 
 function updateModelValue(dateStr: string) {
-    if (props.enableTime) {
-        emit('update:modelValue', `${dateStr}T${selectedTime.value}`);
-    } else {
-        emit('update:modelValue', dateStr);
-    }
+	if (props.enableTime) {
+		emit("update:modelValue", `${dateStr}T${selectedTime.value}`);
+	} else {
+		emit("update:modelValue", dateStr);
+	}
 }
 
 function selectDate(day: any) {
-    if (day.empty || day.disabled) return;
-    updateModelValue(day.dateStr);
-    if (!props.enableTime) {
-        isOpen.value = false;
-    }
+	if (day.empty || day.disabled) return;
+	updateModelValue(day.dateStr);
+	if (!props.enableTime) {
+		isOpen.value = false;
+	}
 }
 
 function handleTimeChange() {
-    if (!props.modelValue) return;
-    const dateStr = props.modelValue.split('T')[0].split(' ')[0]; // Extract just the date part
-    updateModelValue(dateStr);
+	if (!props.modelValue) return;
+	const dateStr = props.modelValue.split("T")[0].split(" ")[0];
+	updateModelValue(dateStr);
+}
+
+// Automatic direction detection (Top vs Bottom flip)
+function checkPlacement() {
+	if (!datepickerRef.value) return;
+	const rect = datepickerRef.value.getBoundingClientRect();
+	const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+	const popoverHeight = props.enableTime ? 450 : 390;
+	const spaceBelow = viewportHeight - rect.bottom;
+	const spaceAbove = rect.top;
+
+	if (spaceBelow < popoverHeight && spaceAbove > spaceBelow) {
+		placement.value = "top";
+	} else {
+		placement.value = "bottom";
+	}
+}
+
+function openCalendar() {
+	if (props.disabled) return;
+	checkPlacement();
+	isOpen.value = true;
 }
 
 function toggleCalendar() {
-    if (props.disabled) return;
-    isOpen.value = !isOpen.value;
+	if (props.disabled) return;
+	if (!isOpen.value) {
+		checkPlacement();
+	}
+	isOpen.value = !isOpen.value;
+}
+
+// Manual typing handler
+function onManualInput(e: Event) {
+	const val = (e.target as HTMLInputElement).value;
+	inputValue.value = val;
+
+	if (!val) {
+		emit("update:modelValue", null);
+		return;
+	}
+
+	// Try parsing YYYY-MM-DD or YYYY-MM-DD HH:mm
+	const dateObj = new Date(val);
+	if (!isNaN(dateObj.getTime())) {
+		const y = dateObj.getFullYear();
+		const m = dateObj.getMonth();
+		if (y >= 1900 && y <= 2100 && val.length >= 10) {
+			currentMonth.value = m;
+			currentYear.value = y;
+			emit("update:modelValue", val);
+		}
+	}
+}
+
+function onInputBlur() {
+	if (props.modelValue) {
+		inputValue.value = formattedValue.value;
+	}
 }
 
 function handleClickOutside(event: MouseEvent) {
-    if (datepickerRef.value && !datepickerRef.value.contains(event.target as Node)) {
-        isOpen.value = false;
-    }
+	if (datepickerRef.value && !datepickerRef.value.contains(event.target as Node)) {
+		isOpen.value = false;
+	}
 }
 
 onMounted(() => {
-    document.addEventListener('click', handleClickOutside);
+	document.addEventListener("click", handleClickOutside);
 });
 
 onUnmounted(() => {
-    document.removeEventListener('click', handleClickOutside);
+	document.removeEventListener("click", handleClickOutside);
 });
 </script>
 
@@ -191,21 +267,26 @@ onUnmounted(() => {
 			:class="{
 				'textbox--error': error,
 				'textbox--disabled': disabled,
-				'textbox--focused': isOpen
+				'textbox--focused': isOpen,
 			}"
-			@click="toggleCalendar"
 		>
 			<slot name="prefix">
-                <i class="mdi mdi-calendar-blank textbox__prefix-icon"></i>
-            </slot>
+				<i
+					class="mdi mdi-calendar-blank textbox__prefix-icon"
+					style="cursor: pointer"
+					@click.stop="toggleCalendar"
+				></i>
+			</slot>
 
 			<input
-				:value="formattedValue"
+				:value="inputValue"
 				type="text"
-				:placeholder="placeholder"
+				:placeholder="placeholder || (enableTime ? 'YYYY-MM-DD HH:mm' : 'YYYY-MM-DD')"
 				:disabled="disabled"
 				class="textbox__control"
-				readonly
+				@focus="openCalendar"
+				@input="onManualInput"
+				@blur="onInputBlur"
 			/>
 
 			<slot name="suffix" />
@@ -213,7 +294,11 @@ onUnmounted(() => {
 
 		<!-- Popover -->
 		<Transition name="popover-fade">
-			<div class="datepicker-popover" v-if="isOpen">
+			<div
+				class="datepicker-popover"
+				:class="[`datepicker-popover--${align || 'left'}`, `datepicker-popover--${placement}`]"
+				v-if="isOpen"
+			>
 				<div class="datepicker-popover__header">
 					<div class="datepicker-popover__year" v-if="modelValue && !isNaN(new Date(modelValue).getTime())">
 						{{ new Date(modelValue).getFullYear() }}
@@ -222,7 +307,7 @@ onUnmounted(() => {
 						{{ displayDateHeader }}
 					</div>
 				</div>
-				
+
 				<div class="datepicker-popover__toolbar">
 					<button class="datepicker-btn" @click.prevent="prevMonth" type="button">
 						<i class="mdi mdi-chevron-left"></i>
@@ -232,24 +317,24 @@ onUnmounted(() => {
 						<i class="mdi mdi-chevron-right"></i>
 					</button>
 				</div>
-				
+
 				<div class="datepicker-grid">
 					<div class="datepicker-grid__header">
 						<div class="datepicker-grid__day-name" v-for="d in weekDays" :key="d">{{ d }}</div>
 					</div>
 					<div class="datepicker-grid__body">
-						<div 
-							v-for="(day, idx) in daysInMonth" 
-							:key="idx" 
+						<div
+							v-for="(day, idx) in daysInMonth"
+							:key="idx"
 							class="datepicker-grid__cell"
 						>
-							<button 
+							<button
 								v-if="!day.empty"
 								type="button"
 								class="datepicker-day"
 								:class="{
 									'datepicker-day--selected': day.selected,
-									'datepicker-day--disabled': day.disabled
+									'datepicker-day--disabled': day.disabled,
 								}"
 								:disabled="day.disabled"
 								@click.prevent="selectDate(day)"
@@ -259,17 +344,18 @@ onUnmounted(() => {
 						</div>
 					</div>
 				</div>
-                
-                <div class="datepicker-time" v-if="enableTime">
-                    <div class="datepicker-time__label">Time</div>
-                    <div class="datepicker-time__controls">
-                        <input type="time" v-model="selectedTime" @change="handleTimeChange" class="time-input" />
-                    </div>
-                </div>
-                
-                <div class="datepicker-footer" v-if="enableTime">
-                    <button class="datepicker-footer-btn" @click.prevent="isOpen = false">Done</button>
-                </div>
+
+				<!-- Optional Time Picker Section -->
+				<div v-if="enableTime" class="datepicker-time-picker">
+					<i class="mdi mdi-clock-outline"></i>
+					<span>Time:</span>
+					<input
+						type="time"
+						v-model="selectedTime"
+						class="time-input"
+						@change="handleTimeChange"
+					/>
+				</div>
 			</div>
 		</Transition>
 
@@ -293,17 +379,15 @@ onUnmounted(() => {
 }
 
 .textbox__prefix-icon {
-    font-size: 18px;
-    margin-right: 8px;
-    color: var(--colors-text-muted);
+	color: var(--colors-text-muted, #94a3b8);
+	font-size: 18px;
+	margin-right: 4px;
 }
 
 .textbox--date {
-	cursor: pointer;
-	
 	.textbox__control {
-		cursor: pointer;
-        color: var(--colors-text-primary);
+		cursor: text;
+		color: var(--colors-text-primary);
 	}
 
 	&.textbox--focused {
@@ -314,8 +398,6 @@ onUnmounted(() => {
 
 .datepicker-popover {
 	position: absolute;
-	top: calc(100% - 15px);
-	left: 0;
 	z-index: 1000;
 	width: 320px;
 	background: var(--colors-surface-card, #ffffff);
@@ -323,24 +405,67 @@ onUnmounted(() => {
 	box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 	border: 1px solid var(--colors-surface-border);
 	overflow: hidden;
-	
+
+	&--bottom {
+		top: calc(100% + 4px);
+		bottom: auto;
+	}
+
+	&--top {
+		bottom: calc(100% + 4px);
+		top: auto;
+	}
+
+	&--left {
+		left: 0;
+		right: auto;
+	}
+
+	&--right {
+		right: 0;
+		left: auto;
+	}
+
+	&--center {
+		left: 50%;
+		right: auto;
+		transform: translateX(-50%);
+	}
+
+	@media (max-width: 640px) {
+		left: 50% !important;
+		right: auto !important;
+		transform: translateX(-50%) !important;
+		width: min(310px, calc(100vw - 24px)) !important;
+
+		&.datepicker-popover--top {
+			bottom: calc(100% + 6px) !important;
+			top: auto !important;
+		}
+
+		&.datepicker-popover--bottom {
+			top: calc(100% + 6px) !important;
+			bottom: auto !important;
+		}
+	}
+
 	&__header {
 		background: var(--colors-brand-primary, #4f46e5);
 		color: #ffffff;
-		padding: 20px;
+		padding: 16px 20px;
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
 	}
 
 	&__year {
-		font-size: 14px;
+		font-size: 13px;
 		opacity: 0.8;
 		font-weight: 500;
 	}
 
 	&__date {
-		font-size: 24px;
+		font-size: 20px;
 		font-weight: 600;
 	}
 
@@ -381,52 +506,58 @@ onUnmounted(() => {
 }
 
 .datepicker-grid {
-	padding: 0 16px 16px;
+	padding: 0 16px 16px 16px;
 
-	&__header, &__body {
+	&__header {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
+		margin-bottom: 8px;
+		text-align: center;
 	}
 
 	&__day-name {
-		text-align: center;
 		font-size: 12px;
 		font-weight: 600;
 		color: var(--colors-text-muted);
-		padding: 8px 0;
+	}
+
+	&__body {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 2px;
 	}
 
 	&__cell {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 2px 0;
+		height: 36px;
 	}
 }
 
 .datepicker-day {
 	background: transparent;
 	border: none;
-	width: 36px;
-	height: 36px;
+	width: 32px;
+	height: 32px;
 	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
 	font-size: 13px;
 	color: var(--colors-text-primary);
 	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	transition: all 0.2s;
 
-	&:hover:not(&--disabled):not(&--selected) {
-		background: var(--colors-surface-background, #f3f4f6);
+	&:hover:not(:disabled) {
+		background: var(--colors-surface-hover, #f1f5f9);
+		color: var(--colors-brand-primary);
 	}
 
 	&--selected {
-		background: var(--colors-brand-primary, #4f46e5);
-		color: #ffffff;
+		background: var(--colors-brand-primary, #4f46e5) !important;
+		color: #ffffff !important;
 		font-weight: 600;
-		box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);
 	}
 
 	&--disabled {
@@ -435,75 +566,41 @@ onUnmounted(() => {
 	}
 }
 
+.datepicker-time-picker {
+	padding: 12px 16px;
+	border-top: 1px solid var(--colors-surface-border);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: var(--colors-text-primary);
+	background: var(--colors-surface-background, #f8fafc);
+
+	.time-input {
+		border: 1px solid var(--colors-surface-border);
+		border-radius: 4px;
+		padding: 4px 8px;
+		font-size: 13px;
+		outline: none;
+		background: var(--colors-surface-card);
+		color: var(--colors-text-primary);
+
+		&:focus {
+			border-color: var(--colors-brand-primary);
+		}
+	}
+}
+
 .popover-fade-enter-active,
 .popover-fade-leave-active {
-	transition: opacity 0.2s ease, transform 0.2s ease;
+	transition:
+		opacity 0.2s ease,
+		transform 0.2s ease;
 }
 
 .popover-fade-enter-from,
 .popover-fade-leave-to {
 	opacity: 0;
-	transform: translateY(-10px);
-}
-
-.datepicker-time {
-    padding: 12px 16px;
-    border-top: 1px solid var(--colors-surface-border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--colors-surface-background, #f9fafb);
-
-    &__label {
-        font-size: 14px;
-        font-weight: 500;
-        color: var(--colors-text-secondary);
-    }
-
-    &__controls {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-}
-
-.time-input {
-    appearance: none;
-    background: var(--colors-surface-card, #ffffff);
-    border: 1px solid var(--colors-surface-border);
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 14px;
-    font-family: inherit;
-    font-weight: 500;
-    color: var(--colors-text-primary);
-    cursor: text;
-    outline: none;
-    
-    &:focus {
-        border-color: var(--colors-brand-primary, #4f46e5);
-    }
-}
-
-.datepicker-footer {
-    padding: 8px 16px;
-    border-top: 1px solid var(--colors-surface-border);
-    display: flex;
-    justify-content: flex-end;
-    
-    &-btn {
-        background: var(--colors-brand-primary, #4f46e5);
-        color: white;
-        border: none;
-        padding: 6px 16px;
-        border-radius: 6px;
-        font-weight: 500;
-        font-size: 13px;
-        cursor: pointer;
-        
-        &:hover {
-            opacity: 0.9;
-        }
-    }
+	transform: translateY(-6px);
 }
 </style>

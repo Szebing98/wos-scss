@@ -176,8 +176,9 @@ async function confirmToggleStatus() {
 					Configure facility locations, service branches, and work order operational sites
 				</p>
 			</div>
-			<button class="btn btn--primary" @click="openCreateModal" style="display: flex; align-items: center; gap: 6px;">
-				<i class="mdi mdi-plus"></i> New Site
+			<button class="btn btn--primary add-site-btn" @click="openCreateModal" style="display: flex; align-items: center; gap: 6px;">
+				<i class="mdi mdi-plus"></i>
+				<span class="btn-text">New Site</span>
 			</button>
 		</div>
 
@@ -498,6 +499,20 @@ async function confirmToggleStatus() {
 	display: flex;
 	align-items: center;
 	gap: 10px;
+}
+
+.add-site-btn {
+	flex-shrink: 0;
+	white-space: nowrap;
+
+	@media (max-width: 640px) {
+		padding: 8px 12px !important;
+		min-width: 40px;
+		
+		.btn-text {
+			display: none;
+		}
+	}
 }
 
 .stats-grid {
