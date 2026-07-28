@@ -1035,22 +1035,78 @@ function handleSaveProgress(updatedWorkOrder: WorkOrderModel) {
 }
 
 function getStatusChipType(status: string) {
+	if (!status) return "default";
 	switch (status) {
-		case "Rejected":
-		case "Cancelled":
-			return "error";
+		case "New":
+		case "new":
+			return "new";
 		case "PendingApproval":
-			return "warning";
+		case "pending":
+		case "Pending Approval":
+			return "pending-approval";
 		case "InProgress":
-			return "info";
+		case "progress":
+		case "in-progress":
+		case "In Progress":
+			return "in-progress";
 		case "Done":
+		case "done":
+			return "done";
 		case "Completed":
+		case "completed":
+			return "completed";
 		case "Claimed":
-			return "success";
+		case "claimed":
+			return "claimed";
 		case "Closed":
-			return "default";
+		case "closed":
+			return "closed";
+		case "Cancelled":
+		case "cancelled":
+			return "cancelled";
+		case "Rejected":
+		case "rejected":
+			return "rejected";
 		default:
 			return "default";
+	}
+}
+
+function formatStatusLabel(status: string) {
+	if (!status) return "";
+	switch (status) {
+		case "PendingApproval":
+		case "pending":
+		case "Pending Approval":
+			return "Pending Approval";
+		case "InProgress":
+		case "progress":
+		case "in-progress":
+		case "In Progress":
+			return "In Progress";
+		case "New":
+		case "new":
+			return "New";
+		case "Done":
+		case "done":
+			return "Done";
+		case "Completed":
+		case "completed":
+			return "Completed";
+		case "Claimed":
+		case "claimed":
+			return "Claimed";
+		case "Closed":
+		case "closed":
+			return "Closed";
+		case "Cancelled":
+		case "cancelled":
+			return "Cancelled";
+		case "Rejected":
+		case "rejected":
+			return "Rejected";
+		default:
+			return status.replace(/([a-z])([A-Z])/g, "$1 $2");
 	}
 }
 
@@ -1245,7 +1301,7 @@ defineExpose({
 					{{ new Date(item.createdAt).toLocaleDateString() }}
 				</template>
 				<template #item-status="{ item }">
-					<Badge :type="getStatusChipType(item.status)">{{ item.status }}</Badge>
+					<Badge :type="getStatusChipType(item.status) as any">{{ formatStatusLabel(item.status) }}</Badge>
 				</template>
 				<template #item-actions="{ item }">
 					<div class="row-actions">

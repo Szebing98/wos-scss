@@ -7,7 +7,18 @@ interface Props {
 		| "info"
 		| "default"
 		| "disabled"
-		| "primary";
+		| "primary"
+		| "new"
+		| "pending"
+		| "pending-approval"
+		| "progress"
+		| "in-progress"
+		| "done"
+		| "completed"
+		| "claimed"
+		| "closed"
+		| "cancelled"
+		| "rejected";
 	icon?: string;
 }
 

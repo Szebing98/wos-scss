@@ -10,6 +10,7 @@ import Table from "@/components/Table.vue";
 import Dialog from "@/components/Dialog.vue";
 import NumericField from "@/components/NumericField.vue";
 import MultiSelect from "@/components/MultiSelect.vue";
+import Badge from "@/components/Badge.vue";
 import { workOrderApi } from "@/api/work-order/work-order.api";
 
 const route = useRoute();
@@ -68,6 +69,82 @@ function updateStepFromStatus(statusStr: string) {
 	} else if (s === "closed") {
 		currentStepIndex.value = 6;
 		breadcrumbStatus.value = "Closed";
+	}
+}
+
+function getStatusChipType(status: string) {
+	if (!status) return "default";
+	switch (status) {
+		case "New":
+		case "new":
+			return "new";
+		case "PendingApproval":
+		case "pending":
+		case "Pending Approval":
+			return "pending-approval";
+		case "InProgress":
+		case "progress":
+		case "in-progress":
+		case "In Progress":
+			return "in-progress";
+		case "Done":
+		case "done":
+			return "done";
+		case "Completed":
+		case "completed":
+			return "completed";
+		case "Claimed":
+		case "claimed":
+			return "claimed";
+		case "Closed":
+		case "closed":
+			return "closed";
+		case "Cancelled":
+		case "cancelled":
+			return "cancelled";
+		case "Rejected":
+		case "rejected":
+			return "rejected";
+		default:
+			return "default";
+	}
+}
+
+function formatStatusLabel(status: string) {
+	if (!status) return "";
+	switch (status) {
+		case "PendingApproval":
+		case "pending":
+		case "Pending Approval":
+			return "Pending Approval";
+		case "InProgress":
+		case "progress":
+		case "in-progress":
+		case "In Progress":
+			return "In Progress";
+		case "New":
+		case "new":
+			return "New";
+		case "Done":
+		case "done":
+			return "Done";
+		case "Completed":
+		case "completed":
+			return "Completed";
+		case "Claimed":
+		case "claimed":
+			return "Claimed";
+		case "Closed":
+		case "closed":
+			return "Closed";
+		case "Cancelled":
+		case "cancelled":
+			return "Cancelled";
+		case "Rejected":
+		case "rejected":
+			return "Rejected";
+		default:
+			return status.replace(/([a-z])([A-Z])/g, "$1 $2");
 	}
 }
 
@@ -901,11 +978,16 @@ onUnmounted(() => {
 				<div class="breadcrumb">
 					<span class="text-muted">Work Order</span>
 					<i class="mdi mdi-chevron-right text-muted"></i>
-					<span class="text-muted">{{ breadcrumbStatus }}</span>
+					<span class="text-muted">{{ formatStatusLabel(breadcrumbStatus) }}</span>
 					<i class="mdi mdi-chevron-right text-muted"></i>
 					<span class="fw-500">View Details</span>
 				</div>
-				<h2>{{ workOrder.woNumber }} - {{ workOrder.title }}</h2>
+				<div class="header-title-row">
+					<h2>{{ workOrder.woNumber }} - {{ workOrder.title }}</h2>
+					<Badge v-if="workOrder.status" :type="getStatusChipType(workOrder.status) as any">
+						{{ formatStatusLabel(workOrder.status) }}
+					</Badge>
+				</div>
 			</div>
 			<div class="header-actions">
 				<Button variant="outlined" @click="router.push('/work-order')">
@@ -2613,11 +2695,16 @@ onUnmounted(() => {
 .page-header {
 	display: flex;
 	justify-content: space-between;
-	align-items: flex-end;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	gap: 16px 24px;
 	padding: 24px 32px 16px 32px;
 	background: var(--colors-surface-card);
+	border-bottom: 1px solid var(--colors-surface-border, #e2e8f0);
+
 	.header-left {
-		display: block;
+		flex: 1 1 320px;
+		min-width: 0;
 
 		.breadcrumb {
 			font-size: 13px;
@@ -2625,25 +2712,64 @@ onUnmounted(() => {
 			display: flex;
 			align-items: center;
 			gap: 6px;
+			flex-wrap: wrap;
 			i {
 				font-size: 16px;
 			}
 		}
-		h2 {
-			margin: 0;
-			font-size: 28px;
-			color: var(--colors-text-primary);
-			font-weight: 500;
+
+		.header-title-row {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex-wrap: wrap;
+
+			h2 {
+				margin: 0;
+				font-size: clamp(20px, 2.2vw, 28px);
+				color: var(--colors-text-primary);
+				font-weight: 600;
+				line-height: 1.3;
+				word-break: break-word;
+			}
 		}
+
 		.wo-title {
 			margin: 4px 0 0 0;
 			font-size: 16px;
 			color: var(--colors-text-secondary);
 		}
 	}
+
 	.header-actions {
 		display: flex;
-		gap: 12px;
+		flex-wrap: wrap;
+		gap: 8px 12px;
+		align-items: center;
+		flex: 0 1 auto;
+	}
+}
+
+@media (max-width: 768px) {
+	.page-header {
+		padding: 16px 20px;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 14px;
+
+		.header-left {
+			flex: 1 1 auto;
+		}
+
+		.header-actions {
+			width: 100%;
+			justify-content: flex-start;
+			gap: 8px;
+
+			> * {
+				flex: 1 1 auto;
+			}
+		}
 	}
 }
 .tabs-horizontal {
