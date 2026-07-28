@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import Dialog from "@/components/Dialog.vue";
+import GoogleMapPicker from "@/components/GoogleMapPicker.vue";
 import Badge from "@/components/Badge.vue";
 import Button from "@/components/Button.vue";
 import { useRouter } from "vue-router";
@@ -404,10 +405,13 @@ function saveProgress() {
 							<i class="mdi mdi-map-marker text-muted" style="margin-right: 8px"></i>
 						</template>
 					</Textbox>
-					<div class="map-placeholder">
-						<i class="mdi mdi-map"></i>
-						<span>Google Map Integration</span>
-					</div>
+					<GoogleMapPicker
+						:location="workOrder.location"
+						:latitude="workOrder.latitude"
+						:longitude="workOrder.longitude"
+						readonly
+						height="220px"
+					/>
 				</div>
 			</div>
 

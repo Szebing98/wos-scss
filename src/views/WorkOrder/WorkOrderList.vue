@@ -527,9 +527,9 @@ const headers = computed<TableHeader[]>(() => {
 	}
 
 	base.push(
-		{ key: "woNumber", label: "WO #", width: "130px", minWidth: "110px" },
-		{ key: "title", label: "Title", width: "220px", minWidth: "180px" },
-		{ key: "customer", label: "Customer", width: "260px", minWidth: "200px" },
+		{ key: "woNumber", label: "WO #", width: "130px", minWidth: "115px" },
+		{ key: "title", label: "Work Order Title", width: "320px", minWidth: "220px" },
+		{ key: "customer", label: "Customer", width: "280px", minWidth: "220px" },
 		{ key: "workType", label: "Work Type", width: "150px", minWidth: "130px" },
 		{ key: "personInCharge", label: "Person In Charge", width: "160px", minWidth: "140px" },
 		{ key: "createdAt", label: "Created Date", width: "130px", minWidth: "110px" },
@@ -539,8 +539,8 @@ const headers = computed<TableHeader[]>(() => {
 		base.push({
 			key: "rejectedReason",
 			label: "Rejected Reason",
-			width: "200px",
-			minWidth: "160px",
+			width: "260px",
+			minWidth: "200px",
 		});
 	}
 
@@ -1154,7 +1154,12 @@ defineExpose({
 					</template>
 				</Textbox>
 
-				<FilterPanel :count="activeFilterCount" show-reset @reset="resetFilters" @apply="applyFilters">
+				<FilterPanel
+					:count="activeFilterCount"
+					show-reset
+					@reset="resetFilters"
+					@apply="applyFilters"
+				>
 					<!-- Hide local status filter if we are already in a specific status view -->
 					<Select v-if="activeStatus === 'All'" v-model="statusFilter" label="Status">
 						<option value="all">All Status</option>
@@ -1244,6 +1249,7 @@ defineExpose({
 				paginate
 				hover
 				bordered
+				storageKey="work-order-list"
 				:headers="headers"
 				:items="filteredWorkOrders"
 				:loading="loading"
@@ -1301,7 +1307,9 @@ defineExpose({
 					{{ new Date(item.createdAt).toLocaleDateString() }}
 				</template>
 				<template #item-status="{ item }">
-					<Badge :type="getStatusChipType(item.status) as any">{{ formatStatusLabel(item.status) }}</Badge>
+					<Badge :type="getStatusChipType(item.status) as any">{{
+						formatStatusLabel(item.status)
+					}}</Badge>
 				</template>
 				<template #item-actions="{ item }">
 					<div class="row-actions">

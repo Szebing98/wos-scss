@@ -80,7 +80,7 @@ function parseCountryList(items: any[]): CountryModel[] {
 			isActive: item.isActive ?? true,
 			subNodes: code === "MYS"
 				? mysStates.value
-				: [{ code: "00", name: "Standard Region", isActive: true }],
+				: [{ code: "17", name: "Not Applicable", isActive: true }],
 		};
 	});
 }
@@ -351,6 +351,7 @@ async function syncWithLhdn() {
 			<Card>
 				<Table
 					paginate
+					storageKey="location-maintenance"
 					:headers="countryHeaders"
 					:items="filteredCountries"
 					emptyMessage="No countries found matching your search."

@@ -12,10 +12,10 @@ import { customerApi } from "@/api/customer/customer.api";
 
 const headers: TableHeader[] = [
 	{ key: "status", label: "Status", width: "110px", minWidth: "100px" },
-	{ key: "customer", label: "Customer / Debtor", minWidth: "220px" },
+	{ key: "customer", label: "Customer", minWidth: "220px" },
 	{ key: "autocount", label: "AutoCount No", width: "150px", minWidth: "140px" },
 	{ key: "contractNo", label: "Contract No", width: "150px", minWidth: "140px" },
-	{ key: "tax", label: "Tax Info / Identity", minWidth: "200px" },
+	{ key: "tax", label: "Tax Info", minWidth: "200px" },
 	{ key: "einvoice", label: "e-Invoice", width: "140px", minWidth: "130px" },
 	{ key: "actions", label: "Actions", align: "right", width: "110px", minWidth: "100px" },
 ];
@@ -52,25 +52,30 @@ async function fetchCustomers() {
 		const { data, error } = await customerApi.getCustomers(query);
 		if (data && data.data) {
 			customers.value = data.data.map((c: any) => ({
+				guid: c.guid || c.code,
 				code: c.code,
 				accountNo: c.accountNo,
 				name: c.name,
 				contractNo: c.contractNo || c.metadata?.contractNo || "",
+				contracts: c.contracts || [],
+				contractNoList: c.contractNoList || (c.contractNo ? [c.contractNo] : []),
 				licenseNo: c.licenseNo,
 				isActive: c.isActive,
 				requestEinvoice: c.requestEinvoice,
 				addressCode: c.addressCode,
-				profile: c.profile ? {
-					customerCode: c.profile.customerCode,
-					email: c.profile.email,
-					phone: c.profile.phone,
-					tin: c.profile.tin,
-					brn: c.profile.brn,
-					individualType: c.profile.individualType,
-					identityNo: c.profile.identityNo,
-					msicCode: c.profile.msicCode,
-					msicDesc: c.profile.msicDesc,
-				} : null,
+				profile: c.profile
+					? {
+							customerCode: c.profile.customerCode,
+							email: c.profile.email,
+							phone: c.profile.phone,
+							tin: c.profile.tin,
+							brn: c.profile.brn,
+							individualType: c.profile.individualType,
+							identityNo: c.profile.identityNo,
+							msicCode: c.profile.msicCode,
+							msicDesc: c.profile.msicDesc,
+						}
+					: null,
 			}));
 		} else if (error) {
 			console.error("Failed to load customers:", error);
@@ -100,11 +105,25 @@ const filteredCustomers = computed(() => {
 			const matchName = item.name?.toLowerCase().includes(q);
 			const matchCode = item.code?.toLowerCase().includes(q);
 			const matchAccount = item.accountNo?.toLowerCase().includes(q);
-			const matchContract = item.contractNo?.toLowerCase().includes(q);
+			const matchContract =
+				item.contractNoList?.some((cn: string) => cn.toLowerCase().includes(q)) ||
+				item.contractNo?.toLowerCase().includes(q);
+			const matchEmail = item.profile?.email?.toLowerCase().includes(q);
+			const matchPhone = item.profile?.phone?.toLowerCase().includes(q);
 			const matchTin = item.profile?.tin?.toLowerCase().includes(q);
 			const matchBrn = item.profile?.brn?.toLowerCase().includes(q);
 			const matchId = item.profile?.identityNo?.toLowerCase().includes(q);
-			return matchName || matchCode || matchAccount || matchContract || matchTin || matchBrn || matchId;
+			return (
+				matchName ||
+				matchCode ||
+				matchAccount ||
+				matchContract ||
+				matchEmail ||
+				matchPhone ||
+				matchTin ||
+				matchBrn ||
+				matchId
+			);
 		}
 
 		return true;
@@ -115,18 +134,20 @@ const filteredCustomers = computed(() => {
 const totalCount = computed(() => customers.value.length);
 const activeCount = computed(() => customers.value.filter((c) => c.isActive).length);
 const einvoiceCount = computed(() => customers.value.filter((c) => c.requestEinvoice).length);
-const corporateCount = computed(() => customers.value.filter((c) => c.profile?.individualType === "COMPANY").length);
+const inactiveCount = computed(() => customers.value.filter((c) => !c.isActive).length);
 
 function handleCreateCustomer() {
 	router.push("/customer/form");
 }
 
-function handleEditCustomer(code: string) {
-	router.push(`/customer/form?code=${code}`);
+function handleEditCustomer(customer: any) {
+	const targetId = customer.guid;
+	router.push(`/customer/form?guid=${targetId}`);
 }
 
-function viewCustomerDetail(code: string) {
-	router.push(`/customer/profile?code=${code}`);
+function viewCustomerDetail(customer: any) {
+	const targetId = customer.guid;
+	router.push(`/customer/profile?guid=${targetId}`);
 }
 
 function getAvatarStyle(name: string) {
@@ -145,9 +166,10 @@ function countryFormatAccount(acc: string) {
 		<!-- Header -->
 		<div class="customer-view__header">
 			<div class="customer-view__title-area">
-				<h1>Customer Directory</h1>
+				<h1>Customer List</h1>
 				<p class="customer-view__subtitle">
-					Manage debtors, individual tax identities, contract references, and LHDN MyInvois profiles
+					Manage debtors, individual tax identities, contract references, and LHDN
+					MyInvois profiles
 				</p>
 			</div>
 			<button class="btn btn--primary" @click="handleCreateCustomer">
@@ -178,22 +200,22 @@ function countryFormatAccount(acc: string) {
 			</div>
 
 			<div class="metric-card">
-				<div class="metric-card__icon metric-card__icon--sky">
-					<i class="mdi mdi-file-check-outline"></i>
+				<div class="metric-card__icon metric-card__icon--rose">
+					<i class="mdi mdi-account-off-outline"></i>
 				</div>
 				<div class="metric-card__content">
-					<span class="metric-card__label">e-Invoice Ready</span>
-					<span class="metric-card__value">{{ einvoiceCount }}</span>
+					<span class="metric-card__label">Inactive Accounts</span>
+					<span class="metric-card__value">{{ inactiveCount }}</span>
 				</div>
 			</div>
 
 			<div class="metric-card">
-				<div class="metric-card__icon metric-card__icon--purple">
-					<i class="mdi mdi-office-building-outline"></i>
+				<div class="metric-card__icon metric-card__icon--sky">
+					<i class="mdi mdi-file-check-outline"></i>
 				</div>
 				<div class="metric-card__content">
-					<span class="metric-card__label">Corporate Clients</span>
-					<span class="metric-card__value">{{ corporateCount }}</span>
+					<span class="metric-card__label">e-Invoice Requested</span>
+					<span class="metric-card__value">{{ einvoiceCount }}</span>
 				</div>
 			</div>
 		</div>
@@ -204,11 +226,18 @@ function countryFormatAccount(acc: string) {
 				<Textbox
 					v-model="searchQuery"
 					placeholder="Search Name, AutoCount No, Contract No, or Tax ID..."
-					style="flex: 1; min-width: 260px;"
+					style="flex: 1; min-width: 260px"
 					hide-footer
 				>
 					<template #prefix>
-						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px; color: var(--colors-text-muted);"></i>
+						<i
+							class="mdi mdi-magnify"
+							style="
+								font-size: 18px;
+								margin-right: 4px;
+								color: var(--colors-text-muted);
+							"
+						></i>
 					</template>
 				</Textbox>
 
@@ -240,38 +269,71 @@ function countryFormatAccount(acc: string) {
 			<Table
 				paginate
 				hover
+				storageKey="customer-directory"
 				:headers="headers"
 				:items="filteredCustomers"
 				:loading="loading"
 				:search-query="searchQuery"
 				emptyMessage="No customer records found."
-				@row-click="(customer) => viewCustomerDetail(customer.code)"
+				@row-click="(customer) => viewCustomerDetail(customer)"
 			>
 				<template #item-customer="{ item: customer }">
 					<div class="customer-cell">
 						<div class="customer-cell__avatar" :style="getAvatarStyle(customer.name)">
-							{{ customer.name ? customer.name[0].toUpperCase() : 'C' }}
+							{{ customer.name[0].toUpperCase() }}
 						</div>
 						<div class="customer-cell__info">
 							<span class="customer-cell__name">
-								<HighlightText :text="customer.name" :query="searchQuery" />
+								<HighlightText
+									:text="`${customer.name} (${customer.code})`"
+									:query="searchQuery"
+								/>
 							</span>
-							<span class="customer-cell__code">
-								System Code: <HighlightText :text="customer.code" :query="searchQuery" />
+							<span
+								class="customer-cell__code"
+								v-if="customer.profile?.email || customer.profile?.phone"
+							>
+								<HighlightText
+									:text="
+										[customer.profile?.email, customer.profile?.phone]
+											.filter(Boolean)
+											.join(' • ')
+									"
+									:query="searchQuery"
+								/>
 							</span>
 						</div>
 					</div>
 				</template>
 
 				<template #item-autocount="{ item: customer }">
-					<span v-if="customer.accountNo" class="u-font-mono u-font-weight-bold u-text-primary">
-						<HighlightText :text="countryFormatAccount(customer.accountNo)" :query="searchQuery" />
+					<span
+						v-if="customer.accountNo"
+						class="u-font-mono u-font-weight-bold u-text-primary"
+					>
+						<HighlightText
+							:text="countryFormatAccount(customer.accountNo)"
+							:query="searchQuery"
+						/>
 					</span>
 					<span v-else class="u-text-muted">—</span>
 				</template>
 
 				<template #item-contractNo="{ item: customer }">
-					<span v-if="customer.contractNo" class="contract-badge">
+					<div
+						v-if="customer.contractNoList && customer.contractNoList.length > 0"
+						class="contract-list"
+					>
+						<span
+							v-for="(cn, idx) in customer.contractNoList"
+							:key="idx"
+							class="contract-badge"
+						>
+							<i class="mdi mdi-file-document-outline"></i>
+							<HighlightText :text="cn" :query="searchQuery" />
+						</span>
+					</div>
+					<span v-else-if="customer.contractNo" class="contract-badge">
 						<i class="mdi mdi-file-document-outline"></i>
 						<HighlightText :text="customer.contractNo" :query="searchQuery" />
 					</span>
@@ -282,7 +344,8 @@ function countryFormatAccount(acc: string) {
 					<div v-if="customer.profile" class="tax-cell">
 						<span class="tax-cell__tin">TIN: {{ customer.profile.tin || "N/A" }}</span>
 						<span class="tax-cell__type">
-							{{ customer.profile.individualType }} | {{ customer.profile.identityNo || customer.profile.brn || "No ID" }}
+							{{ customer.profile.individualType }} |
+							{{ customer.profile.identityNo || customer.profile.brn || "No ID" }}
 						</span>
 					</div>
 					<span v-else class="u-text-muted">No Profile Registered</span>
@@ -290,10 +353,14 @@ function countryFormatAccount(acc: string) {
 
 				<template #item-einvoice="{ item: customer }">
 					<Badge
-						:type="customer.requestEinvoice ? 'info' : 'default'"
-						:icon="customer.requestEinvoice ? 'mdi-file-check-outline' : 'mdi-minus-circle-outline'"
+						:type="customer.requestEinvoice ? 'info' : 'error'"
+						:icon="
+							customer.requestEinvoice
+								? 'mdi-file-check-outline'
+								: 'mdi-minus-circle-outline'
+						"
 					>
-						{{ customer.requestEinvoice ? "Required" : "Standard" }}
+						{{ customer.requestEinvoice ? "Required" : "Not required" }}
 					</Badge>
 				</template>
 
@@ -307,14 +374,14 @@ function countryFormatAccount(acc: string) {
 					<div class="action-buttons" @click.stop>
 						<button
 							class="btn btn--icon"
-							@click="handleEditCustomer(customer.code)"
+							@click="handleEditCustomer(customer)"
 							title="Edit Customer Form"
 						>
 							<i class="mdi mdi-pencil-outline"></i>
 						</button>
 						<button
 							class="btn btn--icon"
-							@click="viewCustomerDetail(customer.code)"
+							@click="viewCustomerDetail(customer)"
 							title="View Profile Details"
 						>
 							<i class="mdi mdi-eye-outline"></i>
@@ -378,7 +445,9 @@ function countryFormatAccount(acc: string) {
 	align-items: center;
 	gap: 16px;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-	transition: transform 0.2s ease, box-shadow 0.2s ease;
+	transition:
+		transform 0.2s ease,
+		box-shadow 0.2s ease;
 
 	&:hover {
 		transform: translateY(-2px);
@@ -409,6 +478,10 @@ function countryFormatAccount(acc: string) {
 		&--purple {
 			background: rgba(139, 92, 246, 0.1);
 			color: #8b5cf6;
+		}
+		&--rose {
+			background: rgba(244, 63, 94, 0.1);
+			color: #f43f5e;
 		}
 	}
 
@@ -525,7 +598,8 @@ function countryFormatAccount(acc: string) {
 	border: 1px solid var(--colors-surface-border);
 	border-radius: 12px;
 	padding: 0 !important;
-	overflow: hidden;
+	overflow-x: auto;
+	max-width: 100%;
 }
 
 .action-buttons {

@@ -88,9 +88,9 @@ async function loadGroups() {
 		console.error("Failed to load user groups", e);
 		groups.value = [
 			{ code: "SA", name: "Superadmin", description: "Complete system control" },
-			{ code: "Administrator", name: "Administrator", description: "Manage users and settings" },
-			{ code: "Manager", name: "Manager", description: "Manage engineers and schedules" },
-			{ code: "Engineer", name: "Engineer", description: "Execute work orders" },
+			{ code: "ADM", name: "Administrator", description: "Manage users and settings" },
+			{ code: "MGR", name: "Manager", description: "Manage engineers and schedules" },
+			{ code: "ENG", name: "Engineer", description: "Execute work orders" },
 			{ code: "Sales", name: "Sales", description: "Manage customer requests" },
 		];
 		if (groups.value.length > 0 && !selectedGroup.value) {

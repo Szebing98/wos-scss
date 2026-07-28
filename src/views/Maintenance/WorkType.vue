@@ -49,11 +49,11 @@ const workTypeFormData = ref<Partial<WorkType>>({
 });
 
 const itemHeaders: TableHeader[] = [
-	{ key: "code", label: "Code", width: "130px", minWidth: "110px" },
-	{ key: "name", label: "Item Name", width: "180px", minWidth: "150px" },
-	{ key: "description", label: "Description", width: "auto", minWidth: "220px" },
-	{ key: "status", label: "Status", width: "110px", minWidth: "100px" },
-	{ key: "actions", label: "Actions", align: "right", width: "110px", minWidth: "100px" },
+	{ key: "code", label: "Code", width: "120px", minWidth: "100px" },
+	{ key: "name", label: "Item Name", width: "180px", minWidth: "140px" },
+	{ key: "description", label: "Description", minWidth: "150px" },
+	{ key: "status", label: "Status", width: "100px", minWidth: "90px" },
+	{ key: "actions", label: "Actions", align: "right", width: "100px", minWidth: "90px" },
 ];
 
 const searchItem = ref("");
@@ -511,6 +511,7 @@ onMounted(() => {
 
 						<Table
 							paginate
+							storageKey="worktype-items"
 							:headers="itemHeaders"
 							:items="filteredItems"
 							emptyMessage="No work items found under this category."

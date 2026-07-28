@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from "vue";
 import Dialog from "@/components/Dialog.vue";
+import Button from "@/components/Button.vue";
 import HighlightText from "@/components/HighlightText.vue";
 
 export interface TableHeader {
@@ -17,36 +18,39 @@ interface InternalHeader extends TableHeader {
 	_width?: string;
 }
 
-const props = withDefaults(defineProps<{
-	headers: TableHeader[];
-	items: any[];
-	emptyMessage?: string;
-	hover?: boolean;
-	striped?: boolean;
-	dense?: boolean;
-	bordered?: boolean;
-	elevation?: number;
-	outlined?: boolean;
-	paginate?: boolean;
-	rowsPerPageOptions?: number[];
-	storageKey?: string;
-	searchQuery?: string;
-}>(), {
-	emptyMessage: 'No data available.',
-	hover: false,
-	striped: false,
-	dense: false,
-	bordered: true,
-	elevation: 0,
-	outlined: false,
-	paginate: false,
-	rowsPerPageOptions: () => [10, 25, 50, 100],
-	storageKey: undefined,
-	searchQuery: undefined,
-});
+const props = withDefaults(
+	defineProps<{
+		headers: TableHeader[];
+		items: any[];
+		emptyMessage?: string;
+		hover?: boolean;
+		striped?: boolean;
+		dense?: boolean;
+		bordered?: boolean;
+		elevation?: number;
+		outlined?: boolean;
+		paginate?: boolean;
+		rowsPerPageOptions?: number[];
+		storageKey?: string;
+		searchQuery?: string;
+	}>(),
+	{
+		emptyMessage: "No data available.",
+		hover: false,
+		striped: false,
+		dense: false,
+		bordered: true,
+		elevation: 0,
+		outlined: false,
+		paginate: false,
+		rowsPerPageOptions: () => [10, 25, 50, 100],
+		storageKey: undefined,
+		searchQuery: undefined,
+	},
+);
 
 const emit = defineEmits<{
-	'row-click': [item: any]
+	"row-click": [item: any];
 }>();
 
 // --- Internal Headers State (Customization, Order, Width) ---
@@ -55,7 +59,7 @@ const internalHeaders = ref<InternalHeader[]>([]);
 // --- Sorting State (Multi-column support with priority badges 1, 2, 3) ---
 export interface SortRule {
 	key: string;
-	order: 'asc' | 'desc';
+	order: "asc" | "desc";
 }
 
 const sortRules = ref<SortRule[]>([]);
@@ -69,13 +73,13 @@ function loadTablePreferences() {
 			if (parsed.sortRules && Array.isArray(parsed.sortRules)) {
 				sortRules.value = parsed.sortRules;
 			} else if (parsed.sortKey) {
-				sortRules.value = [{ key: parsed.sortKey, order: parsed.sortOrder || 'asc' }];
+				sortRules.value = [{ key: parsed.sortKey, order: parsed.sortOrder || "asc" }];
 			}
 			if (parsed.headers && Array.isArray(parsed.headers)) {
 				const savedMap = new Map(parsed.headers.map((h: any) => [h.key, h]));
 				const restored: InternalHeader[] = [];
 				parsed.headers.forEach((h: any) => {
-					const propH = props.headers.find(ph => ph.key === h.key);
+					const propH = props.headers.find((ph) => ph.key === h.key);
 					if (propH) {
 						restored.push({
 							...propH,
@@ -84,7 +88,7 @@ function loadTablePreferences() {
 						});
 					}
 				});
-				props.headers.forEach(ph => {
+				props.headers.forEach((ph) => {
 					if (!savedMap.has(ph.key)) {
 						restored.push({ ...ph, visible: true });
 					}
@@ -102,7 +106,7 @@ function saveTablePreferences() {
 	try {
 		const payload = {
 			sortRules: sortRules.value,
-			headers: internalHeaders.value.map(h => ({
+			headers: internalHeaders.value.map((h) => ({
 				key: h.key,
 				visible: h.visible,
 				_width: h._width,
@@ -114,26 +118,34 @@ function saveTablePreferences() {
 	}
 }
 
-watch(() => props.headers, (newHeaders) => {
-	const currentMap = new Map(internalHeaders.value.map(h => [h.key, h]));
-	internalHeaders.value = newHeaders.map(h => {
-		const existing = currentMap.get(h.key);
-		return {
-			...h,
-			visible: existing !== undefined ? existing.visible : true,
-			_width: existing?._width || h.width
-		};
-	});
-	if (props.storageKey) {
-		loadTablePreferences();
-	}
-}, { immediate: true, deep: true });
+watch(
+	() => props.headers,
+	(newHeaders) => {
+		const currentMap = new Map(internalHeaders.value.map((h) => [h.key, h]));
+		internalHeaders.value = newHeaders.map((h) => {
+			const existing = currentMap.get(h.key);
+			return {
+				...h,
+				visible: existing !== undefined ? existing.visible : true,
+				_width: existing?._width || h.width,
+			};
+		});
+		if (props.storageKey) {
+			loadTablePreferences();
+		}
+	},
+	{ immediate: true, deep: true },
+);
 
-watch([sortRules, internalHeaders], () => {
-	saveTablePreferences();
-}, { deep: true });
+watch(
+	[sortRules, internalHeaders],
+	() => {
+		saveTablePreferences();
+	},
+	{ deep: true },
+);
 
-const visibleHeaders = computed(() => internalHeaders.value.filter(h => h.visible));
+const visibleHeaders = computed(() => internalHeaders.value.filter((h) => h.visible));
 
 const showColumnSettings = ref(false);
 const tempHeaders = ref<InternalHeader[]>([]);
@@ -141,22 +153,37 @@ const tempHeaders = ref<InternalHeader[]>([]);
 function toggleColumnSettings() {
 	if (!showColumnSettings.value) {
 		tempHeaders.value = internalHeaders.value
-			.filter(h => h.label && h.label.trim() !== '')
-			.map(h => ({ ...h }));
+			.filter(
+				(h) =>
+					h.label && h.label.trim() !== "" && h.key !== "actions" && h.key !== "action",
+			)
+			.map((h) => ({ ...h }));
 	}
 	showColumnSettings.value = !showColumnSettings.value;
 }
 
-const allSelected = computed(() => tempHeaders.value.length > 0 && tempHeaders.value.every(h => h.visible));
-
 function toggleSelectAll() {
-	const newState = !allSelected.value;
-	tempHeaders.value.forEach(h => h.visible = newState);
+	// Always keep at least 1 column selected (select all)
+	tempHeaders.value.forEach((h) => (h.visible = true));
 }
 
 function applyColumnSettings() {
-	const tempVisibilityMap = new Map(tempHeaders.value.map(h => [h.key, h.visible]));
-	internalHeaders.value = internalHeaders.value.map(h => {
+	const visibleCount = tempHeaders.value.filter((h) => h.visible).length;
+	if (visibleCount === 0) {
+		// Automatically preserve primary column (title, name, customer, woNumber, details, code)
+		const primaryHeader =
+			tempHeaders.value.find((h) =>
+				["title", "name", "customer", "woNumber", "details", "code"].includes(h.key),
+			) || tempHeaders.value[0];
+		if (primaryHeader) {
+			primaryHeader.visible = true;
+		}
+	}
+	const tempVisibilityMap = new Map(tempHeaders.value.map((h) => [h.key, h.visible]));
+	internalHeaders.value = internalHeaders.value.map((h) => {
+		if (h.key === "actions" || h.key === "action") {
+			return { ...h, visible: true };
+		}
 		if (tempVisibilityMap.has(h.key)) {
 			return { ...h, visible: tempVisibilityMap.get(h.key)! };
 		}
@@ -171,23 +198,23 @@ const draggedColumn = ref<string | null>(null);
 function onDragStart(event: DragEvent, key: string) {
 	draggedColumn.value = key;
 	if (event.dataTransfer) {
-		event.dataTransfer.effectAllowed = 'move';
+		event.dataTransfer.effectAllowed = "move";
 	}
 }
 
 function onDragOver(event: DragEvent) {
 	event.preventDefault();
 	if (event.dataTransfer) {
-		event.dataTransfer.dropEffect = 'move';
+		event.dataTransfer.dropEffect = "move";
 	}
 }
 
 function onDrop(event: DragEvent, targetKey: string) {
 	event.preventDefault();
 	if (draggedColumn.value && draggedColumn.value !== targetKey) {
-		const draggedIndex = internalHeaders.value.findIndex(h => h.key === draggedColumn.value);
-		const targetIndex = internalHeaders.value.findIndex(h => h.key === targetKey);
-		
+		const draggedIndex = internalHeaders.value.findIndex((h) => h.key === draggedColumn.value);
+		const targetIndex = internalHeaders.value.findIndex((h) => h.key === targetKey);
+
 		if (draggedIndex !== -1 && targetIndex !== -1) {
 			const temp = [...internalHeaders.value];
 			const [removed] = temp.splice(draggedIndex, 1);
@@ -210,14 +237,14 @@ function onResizeStart(event: MouseEvent, key: string) {
 	isTableFixed.value = true;
 	resizingColumn.value = key;
 	startX.value = event.clientX;
-	
-	const th = (event.target as HTMLElement).closest('th');
+
+	const th = (event.target as HTMLElement).closest("th");
 	startWidth.value = th ? th.offsetWidth : 0;
 
 	// Initialize _width for all visible headers using their current actual offsetWidth
 	// to prevent layout shifts when table-layout switches to fixed.
-	const tr = th?.closest('tr');
-	const thElements = tr?.querySelectorAll('th');
+	const tr = th?.closest("tr");
+	const thElements = tr?.querySelectorAll("th");
 	if (thElements) {
 		visibleHeaders.value.forEach((header, index) => {
 			if (!header._width) {
@@ -229,15 +256,15 @@ function onResizeStart(event: MouseEvent, key: string) {
 		});
 	}
 
-	document.addEventListener('mousemove', onResizeMove);
-	document.addEventListener('mouseup', onResizeEnd);
+	document.addEventListener("mousemove", onResizeMove);
+	document.addEventListener("mouseup", onResizeEnd);
 }
 
 function onResizeMove(event: MouseEvent) {
 	if (resizingColumn.value) {
 		const diffX = event.clientX - startX.value;
 		const newWidth = Math.max(50, startWidth.value + diffX);
-		const header = internalHeaders.value.find(h => h.key === resizingColumn.value);
+		const header = internalHeaders.value.find((h) => h.key === resizingColumn.value);
 		if (header) {
 			header._width = `${newWidth}px`;
 		}
@@ -246,20 +273,20 @@ function onResizeMove(event: MouseEvent) {
 
 function onResizeEnd() {
 	resizingColumn.value = null;
-	document.removeEventListener('mousemove', onResizeMove);
-	document.removeEventListener('mouseup', onResizeEnd);
+	document.removeEventListener("mousemove", onResizeMove);
+	document.removeEventListener("mouseup", onResizeEnd);
 }
 
 onUnmounted(() => {
-	document.removeEventListener('mousemove', onResizeMove);
-	document.removeEventListener('mouseup', onResizeEnd);
+	document.removeEventListener("mousemove", onResizeMove);
+	document.removeEventListener("mouseup", onResizeEnd);
 });
 
-const isAnyHeaderResized = computed(() => visibleHeaders.value.some(h => !!h._width));
+const isAnyHeaderResized = computed(() => visibleHeaders.value.some((h) => !!h._width));
 
 const tableStyle = computed(() => {
 	if (isTableFixed.value || isAnyHeaderResized.value) {
-		return { tableLayout: 'fixed' as const };
+		return { tableLayout: "fixed" as const };
 	}
 	return {};
 });
@@ -267,63 +294,69 @@ const tableStyle = computed(() => {
 // --- Sorting ---
 function isHeaderSortable(header: TableHeader): boolean {
 	if (header.sortable !== undefined) return header.sortable;
-	if (header.key === 'actions' || header.key === 'action' || header.key === 'select') return false;
+	if (header.key === "actions" || header.key === "action" || header.key === "select")
+		return false;
 	return true;
 }
 
 function getSortPriority(key: string): number | null {
-	const index = sortRules.value.findIndex(r => r.key === key);
+	const index = sortRules.value.findIndex((r) => r.key === key);
 	return index !== -1 ? index + 1 : null;
 }
 
-function getSortOrder(key: string): 'asc' | 'desc' | null {
-	const rule = sortRules.value.find(r => r.key === key);
+function getSortOrder(key: string): "asc" | "desc" | null {
+	const rule = sortRules.value.find((r) => r.key === key);
 	return rule ? rule.order : null;
 }
 
 function toggleSort(key: string, event?: MouseEvent) {
-	const header = internalHeaders.value.find(h => h.key === key);
+	const header = internalHeaders.value.find((h) => h.key === key);
 	if (header && !isHeaderSortable(header)) return;
 
 	const isShift = event?.shiftKey;
-	const existingIndex = sortRules.value.findIndex(r => r.key === key);
+	const existingIndex = sortRules.value.findIndex((r) => r.key === key);
 
 	if (isShift) {
 		// Shift + Click: Add or cycle in multi-sort rule list
 		if (existingIndex !== -1) {
 			const currentOrder = sortRules.value[existingIndex].order;
-			if (currentOrder === 'asc') {
-				sortRules.value[existingIndex].order = 'desc';
+			if (currentOrder === "asc") {
+				sortRules.value[existingIndex].order = "desc";
 			} else {
 				sortRules.value.splice(existingIndex, 1);
 			}
 		} else {
-			sortRules.value.push({ key, order: 'asc' });
+			sortRules.value.push({ key, order: "asc" });
 		}
 	} else {
 		// Normal Click: Replace with single column sort, or cycle asc -> desc -> none
 		if (existingIndex !== -1) {
 			if (sortRules.value.length === 1) {
 				const currentOrder = sortRules.value[0].order;
-				if (currentOrder === 'asc') {
-					sortRules.value[0].order = 'desc';
+				if (currentOrder === "asc") {
+					sortRules.value[0].order = "desc";
 				} else {
 					sortRules.value = [];
 				}
 			} else {
-				sortRules.value = [{ key, order: 'asc' }];
+				sortRules.value = [{ key, order: "asc" }];
 			}
 		} else {
-			sortRules.value = [{ key, order: 'asc' }];
+			sortRules.value = [{ key, order: "asc" }];
 		}
 	}
 }
 
 function getSortableValue(item: any, key: string): any {
 	if (item[key] !== undefined && item[key] !== null) return item[key];
-	if (key === 'employee') return item.name || item.displayName || item.employeeName || '';
-	if (key === 'status') return item.isActive !== undefined ? (item.isActive ? 'Active' : 'Inactive') : (item.status || '');
-	return '';
+	if (key === "employee") return item.name || item.displayName || item.employeeName || "";
+	if (key === "status")
+		return item.isActive !== undefined
+			? item.isActive
+				? "Active"
+				: "Inactive"
+			: item.status || "";
+	return "";
 }
 
 const sortedItems = computed(() => {
@@ -335,11 +368,11 @@ const sortedItems = computed(() => {
 			if (valA === valB) continue;
 			if (valA == null) return 1;
 			if (valB == null) return -1;
-			
+
 			const strA = String(valA).toLowerCase();
 			const strB = String(valB).toLowerCase();
-			if (strA < strB) return rule.order === 'asc' ? -1 : 1;
-			if (strA > strB) return rule.order === 'asc' ? 1 : -1;
+			if (strA < strB) return rule.order === "asc" ? -1 : 1;
+			if (strA > strB) return rule.order === "asc" ? 1 : -1;
 		}
 		return 0;
 	});
@@ -375,56 +408,83 @@ function handleRowsPerPageChange(event: Event) {
 }
 
 const paginationText = computed(() => {
-	if (totalItems.value === 0) return '0-0 of 0';
+	if (totalItems.value === 0) return "0-0 of 0";
 	const start = (currentPage.value - 1) * rowsPerPage.value + 1;
 	const end = Math.min(start + rowsPerPage.value - 1, totalItems.value);
 	return `${start}-${end} of ${totalItems.value}`;
 });
-
 </script>
 
 <template>
-	<div 
+	<div
 		class="mud-table-container"
 		:class="{
-			[`mud-elevation-${elevation}`]:  0,
-			'mud-table-outlined': outlined
+			[`mud-elevation-${elevation}`]: 0,
+			'mud-table-outlined': outlined,
 		}"
 	>
-		<table class="mud-table-root" :class="{ 'mud-table-root--bordered': bordered }" :style="tableStyle">
+		<table
+			class="mud-table-root"
+			:class="{ 'mud-table-root--bordered': bordered }"
+			:style="tableStyle"
+		>
 			<thead class="mud-table-head">
 				<tr>
-					<th 
-						v-for="header in visibleHeaders" 
-						:key="header.key" 
+					<th
+						v-for="header in visibleHeaders"
+						:key="header.key"
 						class="mud-table-cell mud-table-cell-header"
 						:class="[
 							`mud-table-cell-${header.key}`,
 							`u-text-${header.align || 'left'}`,
-							{ 'dragging': draggedColumn === header.key, 'sortable-header': isHeaderSortable(header) }
+							{
+								dragging: draggedColumn === header.key,
+								'sortable-header': isHeaderSortable(header),
+							},
 						]"
-						:style="{ width: header._width || header.width, minWidth: header._width || header.minWidth || (header.width && header.width.endsWith('px') ? header.width : '100px') }"
+						:style="{
+							width: header._width || header.width,
+							minWidth:
+								header._width ||
+								header.minWidth ||
+								(header.width && header.width.endsWith('px')
+									? header.width
+									: '100px'),
+						}"
 						:draggable="!isHoveringResizer && !resizingColumn"
 						@dragstart="onDragStart($event, header.key)"
 						@dragover="onDragOver($event)"
 						@drop="onDrop($event, header.key)"
 						@click="isHeaderSortable(header) && toggleSort(header.key, $event)"
-						:title="isHeaderSortable(header) ? 'Click to sort, Shift + Click for multi-column sort' : undefined"
+						:title="
+							isHeaderSortable(header)
+								? 'Click to sort, Shift + Click for multi-column sort'
+								: undefined
+						"
 					>
 						<div class="header-content">
 							<slot :name="`header-${header.key}`" :header="header">
 								{{ header.label }}
 							</slot>
-							<span v-if="isHeaderSortable(header) && getSortOrder(header.key)" class="sort-icon-group">
-								<i :class="getSortOrder(header.key) === 'asc' ? 'mdi mdi-arrow-up' : 'mdi mdi-arrow-down'"></i>
+							<span
+								v-if="isHeaderSortable(header) && getSortOrder(header.key)"
+								class="sort-icon-group"
+							>
+								<i
+									:class="
+										getSortOrder(header.key) === 'asc'
+											? 'mdi mdi-arrow-up'
+											: 'mdi mdi-arrow-down'
+									"
+								></i>
 								<span v-if="sortRules.length > 1" class="sort-priority-badge">
 									{{ getSortPriority(header.key) }}
 								</span>
 							</span>
 						</div>
-						<div 
-							class="resizer" 
-							:class="{ 'resizing': resizingColumn === header.key }"
+						<div
+							class="resizer"
+							:class="{ resizing: resizingColumn === header.key }"
 							@mousedown.stop="onResizeStart($event, header.key)"
 							@mouseenter="isHoveringResizer = true"
 							@mouseleave="isHoveringResizer = false"
@@ -433,27 +493,35 @@ const paginationText = computed(() => {
 				</tr>
 			</thead>
 			<tbody class="mud-table-body">
-				<tr 
-					v-for="(item, index) in paginatedItems" 
+				<tr
+					v-for="(item, index) in paginatedItems"
 					:key="index"
 					class="mud-table-row"
 					:class="{
 						'mud-table-row-hover': hover,
 						'mud-table-row-striped': striped,
-						'mud-table-row-clickable': hover
+						'mud-table-row-clickable': hover,
 					}"
 					@click="emit('row-click', item)"
 				>
-					<td 
-						v-for="header in visibleHeaders" 
+					<td
+						v-for="header in visibleHeaders"
 						:key="header.key"
 						class="mud-table-cell"
 						:class="[
 							`mud-table-cell-${header.key}`,
 							`u-text-${header.align || 'left'}`,
-							{ 'mud-table-cell-dense': dense }
+							{ 'mud-table-cell-dense': dense },
 						]"
-						:style="{ width: header._width || header.width, minWidth: header._width || header.minWidth || (header.width && header.width.endsWith('px') ? header.width : '100px') }"
+						:style="{
+							width: header._width || header.width,
+							minWidth:
+								header._width ||
+								header.minWidth ||
+								(header.width && header.width.endsWith('px')
+									? header.width
+									: '100px'),
+						}"
 						:data-label="header.label"
 					>
 						<slot :name="`item-${header.key}`" :item="item" :index="index">
@@ -462,22 +530,34 @@ const paginationText = computed(() => {
 					</td>
 				</tr>
 				<tr v-if="!items || items.length === 0" class="mud-table-empty-row">
-					<td :colspan="visibleHeaders.length" class="mud-table-cell mud-table-empty-cell">
-						{{ emptyMessage || 'No data available.' }}
+					<td
+						:colspan="visibleHeaders.length"
+						class="mud-table-cell mud-table-empty-cell"
+					>
+						{{ emptyMessage || "No data available." }}
 					</td>
 				</tr>
 			</tbody>
 		</table>
 		<div class="mud-table-pagination" v-if="paginate && items && items.length > 0">
-			<div class="mud-table-column-settings" style="margin-right: auto;">
-				<button class="btn btn--outlined" @click="toggleColumnSettings" title="Customize Columns" style="display: flex; align-items: center; gap: 6px;">
+			<div class="mud-table-column-settings" style="margin-right: auto">
+				<button
+					class="btn btn--outlined"
+					@click="toggleColumnSettings"
+					title="Customize Columns"
+					style="display: flex; align-items: center; gap: 6px"
+				>
 					<i class="mdi mdi-view-column-outline"></i> Columns
 				</button>
 				<Teleport to="body">
 					<Dialog v-model="showColumnSettings" title="Customize Columns">
 						<div class="column-settings-container">
 							<div class="column-settings-list">
-								<label v-for="header in tempHeaders" :key="header.key" class="column-setting-item">
+								<label
+									v-for="header in tempHeaders"
+									:key="header.key"
+									class="column-setting-item"
+								>
 									<div class="checkbox-wrapper">
 										<input type="checkbox" v-model="header.visible" />
 										<div class="checkbox-custom">
@@ -487,16 +567,39 @@ const paginationText = computed(() => {
 									<span class="column-label">{{ header.label }}</span>
 								</label>
 							</div>
-							<div class="column-settings-footer">
-								<button class="action-btn" @click="toggleSelectAll">
-									<i :class="allSelected ? 'mdi mdi-checkbox-blank-outline' : 'mdi mdi-check-all'"></i>
-									{{ allSelected ? 'Deselect All' : 'Select All' }}
-								</button>
-								<button class="action-btn apply-btn" @click="applyColumnSettings">
-									Apply
-								</button>
-							</div>
 						</div>
+						<template #footer>
+							<div
+								style="
+									display: flex;
+									align-items: center;
+									justify-content: space-between;
+									width: 100%;
+								"
+							>
+								<Button
+									variant="outlined"
+									@click="toggleSelectAll"
+									style="
+										padding: 6px 14px;
+										font-size: 13px;
+										display: flex;
+										align-items: center;
+										gap: 6px;
+									"
+								>
+									<i class="mdi mdi-check-all"></i> Select All
+								</Button>
+								<div style="display: flex; align-items: center; gap: 8px">
+									<Button variant="secondary" @click="showColumnSettings = false"
+										>Cancel</Button
+									>
+									<Button variant="primary" @click="applyColumnSettings"
+										>Apply</Button
+									>
+								</div>
+							</div>
+						</template>
 					</Dialog>
 				</Teleport>
 			</div>
@@ -504,23 +607,45 @@ const paginationText = computed(() => {
 			<div class="mud-table-pagination-select">
 				<span>Rows per page:</span>
 				<select :value="rowsPerPage" @change="handleRowsPerPageChange">
-					<option v-for="opt in rowsPerPageOptions" :key="opt" :value="opt">{{ opt }}</option>
+					<option v-for="opt in rowsPerPageOptions" :key="opt" :value="opt">
+						{{ opt }}
+					</option>
 				</select>
 			</div>
 			<div class="mud-table-pagination-display">
 				{{ paginationText }}
 			</div>
 			<div class="mud-table-pagination-actions">
-				<button class="btn btn--icon" :disabled="currentPage === 1" @click="goToPage(1)" title="First page">
+				<button
+					class="btn btn--icon"
+					:disabled="currentPage === 1"
+					@click="goToPage(1)"
+					title="First page"
+				>
 					<i class="mdi mdi-page-first"></i>
 				</button>
-				<button class="btn btn--icon" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)" title="Previous page">
+				<button
+					class="btn btn--icon"
+					:disabled="currentPage === 1"
+					@click="goToPage(currentPage - 1)"
+					title="Previous page"
+				>
 					<i class="mdi mdi-chevron-left"></i>
 				</button>
-				<button class="btn btn--icon" :disabled="currentPage === totalPages" @click="goToPage(currentPage + 1)" title="Next page">
+				<button
+					class="btn btn--icon"
+					:disabled="currentPage === totalPages"
+					@click="goToPage(currentPage + 1)"
+					title="Next page"
+				>
 					<i class="mdi mdi-chevron-right"></i>
 				</button>
-				<button class="btn btn--icon" :disabled="currentPage === totalPages" @click="goToPage(totalPages)" title="Last page">
+				<button
+					class="btn btn--icon"
+					:disabled="currentPage === totalPages"
+					@click="goToPage(totalPages)"
+					title="Last page"
+				>
 					<i class="mdi mdi-page-last"></i>
 				</button>
 			</div>
@@ -546,7 +671,7 @@ const paginationText = computed(() => {
 
 .mud-table-root {
 	width: 100%;
-	min-width: max-content;
+	min-width: 100%;
 	display: table;
 	border-spacing: 0;
 	border-collapse: collapse;
@@ -554,7 +679,7 @@ const paginationText = computed(() => {
 	&--bordered {
 		.mud-table-cell {
 			border-right: 1px solid var(--colors-surface-border);
-			
+
 			&:last-child {
 				border-right: none;
 			}
@@ -565,7 +690,7 @@ const paginationText = computed(() => {
 .mud-table-head {
 	display: table-header-group;
 	background-color: var(--colors-brand-primary);
-	
+
 	.mud-table-cell {
 		color: #ffffff;
 		font-weight: 600;
@@ -578,7 +703,7 @@ const paginationText = computed(() => {
 
 	:global([data-theme="dark"]) & {
 		background-color: #333336;
-		
+
 		.mud-table-cell {
 			color: var(--colors-text-primary);
 			border-bottom-color: #404040;
@@ -595,19 +720,19 @@ const paginationText = computed(() => {
 	display: table-row;
 	vertical-align: middle;
 	outline: 0;
-	
+
 	&.mud-table-row-hover:hover {
 		background-color: var(--colors-surface-hover);
 	}
-	
+
 	&:nth-of-type(even) {
 		background-color: rgba(0, 0, 0, 0.05);
 	}
-	
+
 	&.mud-table-row-striped:nth-of-type(odd) {
 		background-color: rgba(0, 0, 0, 0.02);
 	}
-	
+
 	&:last-child .mud-table-cell {
 		border-bottom: none;
 	}
@@ -638,7 +763,6 @@ const paginationText = computed(() => {
 	white-space: normal;
 	word-break: break-word;
 	overflow-wrap: break-word;
-	max-width: 320px;
 
 	&-dense {
 		padding: 6px 24px 6px 16px;
@@ -694,14 +818,40 @@ const paginationText = computed(() => {
 }
 
 /* Elevation classes based on Material Design */
-.mud-elevation-1 { box-shadow: 0px 2px 1px -1px rgba(0,0,0,0.2),0px 1px 1px 0px rgba(0,0,0,0.14),0px 1px 3px 0px rgba(0,0,0,0.12); }
-.mud-elevation-2 { box-shadow: 0px 3px 1px -2px rgba(0,0,0,0.2),0px 2px 2px 0px rgba(0,0,0,0.14),0px 1px 5px 0px rgba(0,0,0,0.12); }
-.mud-elevation-3 { box-shadow: 0px 3px 3px -2px rgba(0,0,0,0.2),0px 3px 4px 0px rgba(0,0,0,0.14),0px 1px 8px 0px rgba(0,0,0,0.12); }
-.mud-elevation-4 { box-shadow: 0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12); }
+.mud-elevation-1 {
+	box-shadow:
+		0px 2px 1px -1px rgba(0, 0, 0, 0.2),
+		0px 1px 1px 0px rgba(0, 0, 0, 0.14),
+		0px 1px 3px 0px rgba(0, 0, 0, 0.12);
+}
+.mud-elevation-2 {
+	box-shadow:
+		0px 3px 1px -2px rgba(0, 0, 0, 0.2),
+		0px 2px 2px 0px rgba(0, 0, 0, 0.14),
+		0px 1px 5px 0px rgba(0, 0, 0, 0.12);
+}
+.mud-elevation-3 {
+	box-shadow:
+		0px 3px 3px -2px rgba(0, 0, 0, 0.2),
+		0px 3px 4px 0px rgba(0, 0, 0, 0.14),
+		0px 1px 8px 0px rgba(0, 0, 0, 0.12);
+}
+.mud-elevation-4 {
+	box-shadow:
+		0px 2px 4px -1px rgba(0, 0, 0, 0.2),
+		0px 4px 5px 0px rgba(0, 0, 0, 0.14),
+		0px 1px 10px 0px rgba(0, 0, 0, 0.12);
+}
 
-.u-text-left { text-align: left !important; }
-.u-text-center { text-align: center !important; }
-.u-text-right { text-align: right !important; }
+.u-text-left {
+	text-align: left !important;
+}
+.u-text-center {
+	text-align: center !important;
+}
+.u-text-right {
+	text-align: right !important;
+}
 
 /* Pagination Styles */
 .mud-table-pagination {
@@ -733,7 +883,7 @@ const paginationText = computed(() => {
 			outline: none;
 			cursor: pointer;
 			padding: 4px;
-			
+
 			&:focus {
 				border-bottom: 1px solid var(--colors-brand-primary);
 			}
@@ -755,23 +905,23 @@ const paginationText = computed(() => {
 		align-items: center;
 		gap: 8px;
 	}
-	
+
 	@media (max-width: 767px) {
 		justify-content: center;
 		padding: 12px;
 		gap: 16px;
-		
+
 		&-display {
 			width: 100%;
 			text-align: center;
 			order: -1;
 			margin-bottom: 4px;
 		}
-		
+
 		&-select {
 			margin-right: auto;
 		}
-		
+
 		&-actions {
 			margin-left: auto;
 		}
@@ -782,17 +932,17 @@ const paginationText = computed(() => {
 	.mud-table-head {
 		display: none;
 	}
-	
+
 	.mud-table-root {
 		min-width: 100%;
 		border-collapse: separate;
 		border-spacing: 0 16px; /* adds spacing between rows instead of margin */
 	}
-	
+
 	.mud-table-body {
 		display: block;
 	}
-	
+
 	.mud-table-row {
 		display: block;
 		margin-bottom: 16px;
@@ -801,19 +951,19 @@ const paginationText = computed(() => {
 		border-radius: 8px;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 		overflow: hidden;
-		
+
 		&.mud-table-row-striped:nth-of-type(odd) {
 			background-color: var(--colors-surface-card);
 		}
 	}
-	
+
 	.mud-table-empty-row {
 		display: block;
 		box-shadow: none;
 		border: none;
 		background: transparent;
 	}
-	
+
 	.mud-table-cell {
 		display: flex;
 		justify-content: space-between;
@@ -828,11 +978,18 @@ const paginationText = computed(() => {
 		max-width: none !important;
 		box-sizing: border-box;
 		word-break: break-word;
-		
+
+		// Override all u-text-* alignment classes in mobile — value always right-aligned
+		&.u-text-left,
+		&.u-text-center,
+		&.u-text-right {
+			text-align: right !important;
+		}
+
 		&:last-child {
 			border-bottom: none;
 		}
-		
+
 		&::before {
 			content: attr(data-label);
 			font-weight: 600;
@@ -848,14 +1005,14 @@ const paginationText = computed(() => {
 			display: none !important;
 		}
 	}
-	
+
 	.mud-table-cell-select {
 		display: none !important;
 	}
-	
+
 	.mud-table-empty-cell {
 		justify-content: center;
-		
+
 		&::before {
 			display: none;
 		}
@@ -970,7 +1127,7 @@ const paginationText = computed(() => {
 		border-radius: 6px;
 		cursor: pointer;
 		transition: all 0.2s ease;
-		
+
 		&:hover {
 			color: var(--colors-brand-primary);
 			border-color: var(--colors-brand-primary);
@@ -1030,7 +1187,9 @@ const paginationText = computed(() => {
 	cursor: pointer;
 	padding: 8px 12px;
 	border-radius: 8px;
-	transition: background-color 0.2s, transform 0.1s;
+	transition:
+		background-color 0.2s,
+		transform 0.1s;
 	user-select: none;
 	border: 1px solid transparent;
 
@@ -1038,7 +1197,7 @@ const paginationText = computed(() => {
 		background-color: var(--colors-surface-hover);
 		border-color: var(--colors-surface-border);
 	}
-	
+
 	&:active {
 		transform: scale(0.98);
 	}
@@ -1091,7 +1250,9 @@ const paginationText = computed(() => {
 		}
 
 		&:focus-visible + .checkbox-custom {
-			box-shadow: 0 0 0 2px var(--colors-surface-card), 0 0 0 4px var(--colors-brand-primary);
+			box-shadow:
+				0 0 0 2px var(--colors-surface-card),
+				0 0 0 4px var(--colors-brand-primary);
 		}
 	}
 }

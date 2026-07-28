@@ -58,12 +58,12 @@ async function fetchUsers() {
 
 		if (searchQuery.value) query.q = searchQuery.value;
 		if (roleFilter.value !== "all") query.userGroupCode = roleFilter.value;
-		
+
 		if (filterStatus.value === "active") query.isActive = "true";
 		else if (filterStatus.value === "inactive") query.isActive = "false";
 
 		const { data, error } = await userApi.getUsers(query);
-		
+
 		if (data && data.data) {
 			users.value = data.data.map((u: any) => ({
 				guid: u.guid,
@@ -71,9 +71,13 @@ async function fetchUsers() {
 				name: u.displayName || u.profile?.displayName || u.name || "Unknown",
 				employee: u.displayName || u.profile?.displayName || u.name || "Unknown",
 				email: u.email,
-				role: u.groups && u.groups.length > 0 ? (u.groups[0].name || u.groups[0].code) : (u.userGroupCode || u.role || "Unassigned"),
+				role:
+					u.groups && u.groups.length > 0
+						? u.groups[0].name || u.groups[0].code
+						: u.userGroupCode || u.role || "Unassigned",
 				isActive: u.isActive,
-				profileImage: u.profileImage || u.profile?.profileImage || u.avatarUrl || u.avatar || null,
+				profileImage:
+					u.profileImage || u.profile?.profileImage || u.avatarUrl || u.avatar || null,
 			}));
 		} else if (error) {
 			console.error("Failed to load users:", error);
@@ -91,7 +95,12 @@ const roleList = ref<RoleModel[]>([]);
 
 function getRoleDisplayName(roleCode: string): string {
 	if (!roleCode) return "Unassigned";
-	const found = roleList.value.find(r => r.code === roleCode || r.name === roleCode || r.code.toLowerCase() === roleCode.toLowerCase());
+	const found = roleList.value.find(
+		(r) =>
+			r.code === roleCode ||
+			r.name === roleCode ||
+			r.code.toLowerCase() === roleCode.toLowerCase(),
+	);
 	if (found) return found.name;
 	if (roleCode === "SA" || roleCode === "Superadmin") return "Superadmin";
 	if (roleCode === "ADM" || roleCode === "Administrator") return "Administrator";
@@ -123,6 +132,33 @@ function getRoleChipType(role: string) {
 watch([searchQuery, roleFilter, filterStatus], () => {
 	fetchUsers();
 });
+
+import { computed } from "vue";
+
+const totalEmployees = computed(() => users.value.length);
+const activeEmployees = computed(() => users.value.filter((u) => u.isActive).length);
+const inactiveEmployees = computed(() => users.value.filter((u) => !u.isActive).length);
+const salesCount = computed(
+	() =>
+		users.value.filter((u) => {
+			const r = (u.role || "").toLowerCase();
+			return r.includes("sale") || r === "sales" || r === "sal";
+		}).length,
+);
+const engineerCount = computed(
+	() =>
+		users.value.filter((u) => {
+			const r = (u.role || "").toLowerCase();
+			return r === "eng" || r.includes("engineer") || r.includes("technician");
+		}).length,
+);
+const managerCount = computed(
+	() =>
+		users.value.filter((u) => {
+			const r = (u.role || "").toLowerCase();
+			return r.includes("manager");
+		}).length,
+);
 
 onMounted(async () => {
 	roleList.value = await fetchRoleList();
@@ -196,10 +232,77 @@ function getRandomAvatarBg(name: string) {
 					Manage internal technicians, support staff, and system administrative roles
 				</p>
 			</div>
-			<button class="btn btn--primary add-employee-btn" @click="handleCreateUser" title="Add Employee">
+			<button
+				class="btn btn--primary add-employee-btn"
+				@click="handleCreateUser"
+				title="Add Employee"
+			>
 				<i class="mdi mdi-plus"></i>
 				<span class="btn-text">Add Employee</span>
 			</button>
+		</div>
+
+		<!-- Metric Summary Cards -->
+		<div class="metrics-grid mb-md">
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--indigo">
+					<i class="mdi mdi-account-group-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">Total Employees</span>
+					<span class="metric-card__value">{{ totalEmployees }}</span>
+				</div>
+			</div>
+
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--emerald">
+					<i class="mdi mdi-account-check-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">Active Staff</span>
+					<span class="metric-card__value">{{ activeEmployees }}</span>
+				</div>
+			</div>
+
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--rose">
+					<i class="mdi mdi-account-off-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">Inactive Staff</span>
+					<span class="metric-card__value">{{ inactiveEmployees }}</span>
+				</div>
+			</div>
+
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--amber">
+					<i class="mdi mdi-account-tie-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">Sales Engineer</span>
+					<span class="metric-card__value">{{ salesCount }}</span>
+				</div>
+			</div>
+
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--sky">
+					<i class="mdi mdi-wrench-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">Engineers & Technicians</span>
+					<span class="metric-card__value">{{ engineerCount }}</span>
+				</div>
+			</div>
+
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--purple">
+					<i class="mdi mdi-shield-account-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">Manager</span>
+					<span class="metric-card__value">{{ managerCount }}</span>
+				</div>
+			</div>
 		</div>
 
 		<Card style="padding: var(--spacing-md)">
@@ -248,18 +351,35 @@ function getRandomAvatarBg(name: string) {
 					<div class="employee-cell">
 						<div
 							class="employee-cell__avatar"
-							:class="user.isActive ? 'employee-cell__avatar--active' : 'employee-cell__avatar--inactive'"
+							:class="
+								user.isActive
+									? 'employee-cell__avatar--active'
+									: 'employee-cell__avatar--inactive'
+							"
 							:style="!user.profileImage ? getRandomAvatarBg(user.name) : {}"
 						>
-							<img v-if="user.profileImage" :src="getAvatarUrl(user.profileImage)" class="employee-cell__avatar-img" alt="Avatar" />
-							<span v-else>{{ user.name ? user.name[0].toUpperCase() : 'U' }}</span>
+							<img
+								v-if="user.profileImage"
+								:src="getAvatarUrl(user.profileImage)"
+								class="employee-cell__avatar-img"
+								alt="Avatar"
+							/>
+							<span v-else>{{ user.name ? user.name[0].toUpperCase() : "U" }}</span>
 						</div>
 						<div class="employee-cell__info">
-							<div style="display: flex; align-items: center;">
+							<div style="display: flex; align-items: center">
 								<span class="employee-cell__name">
 									<HighlightText :text="user.name" :query="searchQuery" />
 								</span>
-								<Badge v-if="user.guid === authStore.currentUser?.guid || user.email === authStore.currentUser?.email" type="info" style="margin-left: 6px; font-size: 10px; padding: 2px 6px;">You</Badge>
+								<Badge
+									v-if="
+										user.guid === authStore.currentUser?.guid ||
+										user.email === authStore.currentUser?.email
+									"
+									type="info"
+									style="margin-left: 6px; font-size: 10px; padding: 2px 6px"
+									>You</Badge
+								>
 							</div>
 						</div>
 					</div>
@@ -270,7 +390,9 @@ function getRandomAvatarBg(name: string) {
 					</span>
 				</template>
 				<template #item-role="{ item: user }">
-					<Badge :type="getRoleChipType(user.role)">{{ getRoleDisplayName(user.role) }}</Badge>
+					<Badge :type="getRoleChipType(user.role)">{{
+						getRoleDisplayName(user.role)
+					}}</Badge>
 				</template>
 				<template #item-email="{ item: user }">
 					<HighlightText :text="user.email" :query="searchQuery" />
@@ -281,7 +403,7 @@ function getRandomAvatarBg(name: string) {
 					</Badge>
 				</template>
 				<template #item-actions="{ item: user }">
-					<div style="display: flex; gap: 4px; justify-content: flex-end;">
+					<div style="display: flex; gap: 4px; justify-content: flex-end">
 						<button
 							class="btn btn--icon"
 							@click.stop="viewUserProfile(user.guid)"
@@ -294,7 +416,13 @@ function getRandomAvatarBg(name: string) {
 							:disabled="isSelf(user)"
 							:style="isSelf(user) ? 'opacity: 0.35; cursor: not-allowed;' : ''"
 							@click.stop="promptToggleStatus(user)"
-							:title="isSelf(user) ? 'You cannot deactivate your own account' : (user.isActive ? 'Suspend' : 'Activate')"
+							:title="
+								isSelf(user)
+									? 'You cannot deactivate your own account'
+									: user.isActive
+										? 'Suspend'
+										: 'Activate'
+							"
 						>
 							<i
 								class="mdi"
@@ -312,23 +440,42 @@ function getRandomAvatarBg(name: string) {
 
 		<!-- Confirmation Modal for Status Toggle -->
 		<Dialog v-model="showStatusModal" title="Confirm Account Status Change" maxWidth="420px">
-			<div style="padding: 12px 0; font-size: 14px; color: var(--colors-text-secondary); line-height: 1.5;">
-				<p style="margin: 0 0 8px 0;">
-					Are you sure you want to <strong>{{ selectedUserForStatus?.isActive ? 'Deactivate' : 'Activate' }}</strong>
-					the account for <strong>{{ selectedUserForStatus?.name }}</strong>?
+			<div
+				style="
+					padding: 12px 0;
+					font-size: 14px;
+					color: var(--colors-text-secondary);
+					line-height: 1.5;
+				"
+			>
+				<p style="margin: 0 0 8px 0">
+					Are you sure you want to
+					<strong>{{
+						selectedUserForStatus?.isActive ? "Deactivate" : "Activate"
+					}}</strong>
+					the account for <strong>{{ selectedUserForStatus?.name }}</strong
+					>?
 				</p>
-				<p v-if="selectedUserForStatus?.isActive" style="margin: 0; font-size: 12px; color: var(--colors-text-muted);">
+				<p
+					v-if="selectedUserForStatus?.isActive"
+					style="margin: 0; font-size: 12px; color: var(--colors-text-muted)"
+				>
 					Inactive accounts will not be able to authenticate or access the system.
 				</p>
 			</div>
 			<template #footer>
-				<Button variant="outlined" @click="showStatusModal = false" :disabled="statusLoading">Cancel</Button>
+				<Button
+					variant="outlined"
+					@click="showStatusModal = false"
+					:disabled="statusLoading"
+					>Cancel</Button
+				>
 				<Button
 					:variant="selectedUserForStatus?.isActive ? 'outlined' : 'primary'"
 					@click="confirmToggleStatus"
 					:loading="statusLoading"
 				>
-					Confirm {{ selectedUserForStatus?.isActive ? 'Deactivate' : 'Activate' }}
+					Confirm {{ selectedUserForStatus?.isActive ? "Deactivate" : "Activate" }}
 				</Button>
 			</template>
 		</Dialog>
@@ -380,7 +527,7 @@ function getRandomAvatarBg(name: string) {
 	@media (max-width: 640px) {
 		padding: 8px 12px !important;
 		min-width: 40px;
-		
+
 		.btn-text {
 			display: none;
 		}
@@ -418,16 +565,18 @@ function getRandomAvatarBg(name: string) {
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 		overflow: hidden;
 		border: 2px solid transparent;
-		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		transition:
+			border-color 0.2s ease,
+			box-shadow 0.2s ease;
 		flex-shrink: 0;
 
 		&--active {
-			border-color: #10B981 !important;
+			border-color: #10b981 !important;
 			box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15) !important;
 		}
 
 		&--inactive {
-			border-color: #F43F5E !important;
+			border-color: #f43f5e !important;
 			box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.15) !important;
 		}
 
@@ -578,6 +727,94 @@ function getRandomAvatarBg(name: string) {
 .u-font-weight-medium {
 	font-weight: 500;
 }
+.mb-md {
+	margin-bottom: var(--spacing-md);
+}
+
+// KPI Grid
+.metrics-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: var(--spacing-md);
+
+	@media (max-width: 540px) {
+		grid-template-columns: 1fr;
+	}
+}
+
+.metric-card {
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 12px;
+	padding: 16px 20px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+	transition:
+		transform 0.2s ease,
+		box-shadow 0.2s ease;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+	}
+
+	&__icon {
+		width: 44px;
+		height: 44px;
+		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 22px;
+
+		&--indigo {
+			background: rgba(79, 70, 229, 0.1);
+			color: #4f46e5;
+		}
+		&--emerald {
+			background: rgba(16, 185, 129, 0.1);
+			color: #10b981;
+		}
+		&--sky {
+			background: rgba(14, 165, 233, 0.1);
+			color: #0ea5e9;
+		}
+		&--purple {
+			background: rgba(139, 92, 246, 0.1);
+			color: #8b5cf6;
+		}
+		&--rose {
+			background: rgba(244, 63, 94, 0.1);
+			color: #f43f5e;
+		}
+		&--amber {
+			background: rgba(245, 158, 11, 0.1);
+			color: #f59e0b;
+		}
+	}
+
+	&__content {
+		display: flex;
+		flex-direction: column;
+	}
+
+	&__label {
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--colors-text-muted);
+	}
+
+	&__value {
+		font-size: 22px;
+		font-weight: 700;
+		color: var(--colors-text-primary);
+		line-height: 1.2;
+		margin-top: 2px;
+	}
+}
+
 .u-required {
 	color: #ef4444;
 }

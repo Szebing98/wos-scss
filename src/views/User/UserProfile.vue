@@ -26,54 +26,33 @@ const loading = ref(false);
 const avatarLoading = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 
-// Password Dialog State
+// Password Reset Confirmation State
 const showPasswordModal = ref(false);
 const passwordLoading = ref(false);
-const passwordForm = ref({
-	newPassword: "",
-	confirmPassword: "",
-});
 
 function openPasswordDialog() {
-	passwordForm.value = { newPassword: "", confirmPassword: "" };
 	showPasswordModal.value = true;
 }
 
-async function handleUpdatePassword() {
-	if (!passwordForm.value.newPassword || !passwordForm.value.confirmPassword) {
-		snackbar.error("Please fill in both password fields.");
-		return;
-	}
-	if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
-		snackbar.error("Passwords do not match.");
-		return;
-	}
-	if (passwordForm.value.newPassword.length < 6) {
-		snackbar.error("Password must be at least 6 characters long.");
+async function handleConfirmResetPassword() {
+	if (!profileData.value.email) {
+		snackbar.error("User does not have a valid email address.");
 		return;
 	}
 
 	passwordLoading.value = true;
 	try {
-		const guid = (route.query.code as string) || (authStore.currentUser && authStore.currentUser.guid) || (authStore.user && authStore.user.guid);
-		if (!guid) {
-			snackbar.error("Could not determine user ID.");
-			return;
-		}
-		const { error } = await userApi.updatePassword(guid, {
-			password: passwordForm.value.newPassword,
-			passwordConfirm: passwordForm.value.confirmPassword,
-		} as any);
+		const { error } = await authApi.forgotPassword({ email: profileData.value.email });
 
 		if (error) {
-			snackbar.error((error as any)?.error?.message || "Failed to update password.");
+			snackbar.error((error as any)?.error?.message || "Failed to send password reset link.");
 			return;
 		}
-		snackbar.success("Password updated successfully.");
+		snackbar.success(`Password reset link sent to ${profileData.value.email}.`);
 		showPasswordModal.value = false;
 	} catch (e) {
 		console.error(e);
-		snackbar.error("Failed to update password.");
+		snackbar.error("Failed to send password reset link.");
 	} finally {
 		passwordLoading.value = false;
 	}
@@ -85,10 +64,14 @@ const avatarPreviewFile = ref<File | null>(null);
 const showAvatarPreview = ref(false);
 
 const isOwnProfile = computed(() => {
-	if (route.query.mode === "new") return false;
+	if (isNewMode.value || route.query.mode === "new" || route.path.endsWith("/form")) return false;
 	if (!route.query.code) return true;
 	const currentGuid = authStore.currentUser?.guid || authStore.user?.guid;
-	return !!(currentGuid && route.query.code === currentGuid);
+	const currentCode = authStore.currentUser?.code || authStore.currentUser?.displayCode || authStore.user?.code || authStore.user?.displayCode;
+	const target = route.query.code as string;
+	if (currentGuid && target === currentGuid) return true;
+	if (currentCode && target === currentCode) return true;
+	return false;
 });
 
 interface ProfileForm {
@@ -104,7 +87,7 @@ const profileData = ref<ProfileForm>({
 	code: "",
 	name: "",
 	email: "",
-	role: "Engineer",
+	role: "ENG",
 	isActive: true,
 	profileImage: null,
 });
@@ -123,11 +106,12 @@ async function loadProfile() {
 		if (mode === "new" || route.path.endsWith("/form")) {
 			isNewMode.value = true;
 			isEditMode.value = true;
+			const defaultRoleCode = assignableRoles.value[0]?.code || "ENG";
 			profileData.value = {
 				code: "",
 				name: "",
 				email: "",
-				role: "Engineer",
+				role: defaultRoleCode,
 				isActive: true,
 				profileImage: null,
 			};
@@ -139,7 +123,7 @@ async function loadProfile() {
 			if (u && (u.guid || u.email || u.displayCode || u.profile)) {
 				const userProfile = u.profile || {};
 				const g = (u.groups || u.userGroups || [])[0];
-				const rawRole = g ? (g.code || g.name) : (u.userGroupCode || u.role || "Engineer");
+				const rawRole = g ? (g.code || g.name) : (u.userGroupCode || u.role || "ENG");
 				profileData.value = {
 					code: u.displayCode || u.code || (u.guid ? u.guid.substring(0, 8).toUpperCase() : ""),
 					name: u.displayName || userProfile.displayName || u.name || "Employee Profile",
@@ -160,7 +144,7 @@ async function loadProfile() {
 				const u = data as any;
 				const userProfile = u.profile || {};
 				const g = (u.groups || u.userGroups || [])[0];
-				const rawRole = g ? (g.code || g.name) : (u.userGroupCode || u.role || "Administrator");
+				const rawRole = g ? (g.code || g.name) : (u.userGroupCode || u.role || "ADM");
 				profileData.value = {
 					code: u.displayCode || u.code || "",
 					name: u.displayName || userProfile.displayName || u.name || "My Profile",
@@ -493,8 +477,8 @@ async function confirmAvatarUpload() {
 							<img v-if="profileData.profileImage" :src="getAvatarUrl(profileData.profileImage)" class="user-meta-card__avatar-img" alt="Avatar" />
 							<span v-else>{{ profileData.name ? profileData.name[0].toUpperCase() : "U" }}</span>
 						</div>
-						<!-- Always-visible small edit button — independent of Edit Profile mode -->
-						<button class="avatar-edit-btn" @click="triggerAvatarUpload" title="Change Photo">
+						<!-- Profile picture edit button — visible only when viewing own profile -->
+						<button v-if="isOwnProfile && !isNewMode" class="avatar-edit-btn" @click="triggerAvatarUpload" title="Change Photo">
 							<i class="mdi mdi-pencil"></i>
 						</button>
 						<input type="file" ref="fileInput" accept="image/*" style="display: none" @change="onFileChange" />
@@ -639,22 +623,20 @@ async function confirmAvatarUpload() {
 		</div>
 	</Teleport>
 
-	<!-- Password Change / Reset Dialog -->
-	<Dialog v-model="showPasswordModal" :title="isOwnProfile ? 'Change Password' : 'Reset User Password'" maxWidth="440px">
-		<div class="form-grid" style="grid-template-columns: 1fr; gap: 16px; padding: 8px 0;">
-			<div class="form-group">
-				<label class="form-group__label">New Password <span class="u-required">*</span></label>
-				<Textbox v-model="passwordForm.newPassword" type="password" placeholder="Enter new password" />
-			</div>
-			<div class="form-group">
-				<label class="form-group__label">Confirm New Password <span class="u-required">*</span></label>
-				<Textbox v-model="passwordForm.confirmPassword" type="password" placeholder="Confirm new password" />
-			</div>
+	<!-- Password Reset Confirmation Dialog -->
+	<Dialog v-model="showPasswordModal" title="Reset User Password" maxWidth="440px">
+		<div style="padding: 8px 0;">
+			<p style="margin: 0 0 12px 0; color: var(--colors-text-primary); font-size: 14px; line-height: 1.5;">
+				Are you sure you want to send a password reset link to <strong>{{ profileData.email || 'this user' }}</strong>?
+			</p>
+			<p style="margin: 0; color: var(--colors-text-muted); font-size: 13px; line-height: 1.4;">
+				An email containing instructions to reset the password will be sent to the user's email address.
+			</p>
 		</div>
 		<template #footer>
 			<Button variant="outlined" @click="showPasswordModal = false" :disabled="passwordLoading">Cancel</Button>
-			<Button variant="primary" @click="handleUpdatePassword" :loading="passwordLoading">
-				<i v-if="!passwordLoading" class="mdi mdi-check"></i> Update Password
+			<Button variant="primary" @click="handleConfirmResetPassword" :loading="passwordLoading">
+				<i v-if="!passwordLoading" class="mdi mdi-email-send-outline"></i> Send Reset Link
 			</Button>
 		</template>
 	</Dialog>

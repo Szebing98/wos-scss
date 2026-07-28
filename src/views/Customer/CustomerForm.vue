@@ -10,7 +10,7 @@
 			<button class="btn btn--primary" :disabled="loading" @click="handleSubmitForm">
 				<i v-if="!loading" class="mdi mdi-content-save-check-outline"></i>
 				<i v-else class="mdi mdi-loading mdi-spin"></i>
-				{{ loading ? "Saving..." : (isNewMode ? "Register Customer" : "Commit Changes") }}
+				{{ loading ? "Saving..." : isNewMode ? "Register Customer" : "Commit Changes" }}
 			</button>
 		</div>
 
@@ -18,7 +18,8 @@
 			<!-- Core Primary Block -->
 			<div class="panel-card mb-lg">
 				<h2 class="panel-card__title mb-md">
-					<i class="mdi mdi-card-account-details-outline"></i> Core Account & Identity Block
+					<i class="mdi mdi-card-account-details-outline"></i>
+					Core Account & Identity
 				</h2>
 				<div class="form-grid">
 					<div class="form-group form-group--full">
@@ -33,14 +34,14 @@
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">AutoCount Debtor Code (AccountNo)</label>
-						<Textbox
-							v-model="form.accountNo"
-							placeholder="e.g. 300-A0001"
-						/>
+						<Textbox v-model="form.accountNo" placeholder="e.g. 300-A0001" />
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">License / Operating Permit No</label>
-						<Textbox v-model="form.licenseNo" placeholder="Business license reference" />
+						<Textbox
+							v-model="form.licenseNo"
+							placeholder="Business license reference"
+						/>
 					</div>
 
 					<!-- Side-by-side switches in the exact same row -->
@@ -56,7 +57,9 @@
 						<label class="switch-toggle">
 							<input type="checkbox" v-model="form.requestEinvoice" />
 							<span class="switch-toggle__slider"></span>
-							<span class="switch-toggle__label">Enable LHDN e-Invoice Validation Engine</span>
+							<span class="switch-toggle__label"
+								>Enable LHDN e-Invoice Validation Engine</span
+							>
 						</label>
 					</div>
 				</div>
@@ -66,18 +69,25 @@
 			<div class="panel-card mb-lg">
 				<div class="panel-card__header">
 					<h2>
-						<i class="mdi mdi-map-marker-outline u-text-primary"></i> Customer Primary Address
+						<i class="mdi mdi-map-marker-outline u-text-primary"></i>
+						Customer Address
 					</h2>
 				</div>
 
 				<div class="form-grid">
 					<div class="form-group form-group--full">
 						<label class="form-group__label">Address Line 1</label>
-						<Textbox v-model="form.address.address1" placeholder="Street address, building name, floor/unit no." />
+						<Textbox
+							v-model="form.address.address1"
+							placeholder="Street address, building name, floor/unit no."
+						/>
 					</div>
 					<div class="form-group form-group--full">
 						<label class="form-group__label">Address Line 2</label>
-						<Textbox v-model="form.address.address2" placeholder="Industrial park, section, landmark (optional)" />
+						<Textbox
+							v-model="form.address.address2"
+							placeholder="Industrial park, section, landmark (optional)"
+						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Country</label>
@@ -97,7 +107,10 @@
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">City / Town</label>
-						<Textbox v-model="form.address.city" placeholder="e.g. Petaling Jaya / Puchong" />
+						<Textbox
+							v-model="form.address.city"
+							placeholder="e.g. Petaling Jaya / Puchong"
+						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Postcode</label>
@@ -110,9 +123,14 @@
 			<div v-if="!isNewMode" class="panel-card mb-lg">
 				<div class="panel-card__header">
 					<h2>
-						<i class="mdi mdi-file-document-multiple-outline u-text-primary"></i> Customer Contracts
+						<i class="mdi mdi-file-document-multiple-outline u-text-primary"></i>
+						Customer Contracts
 					</h2>
-					<button class="btn btn--sm btn--primary" type="button" @click="openAddContractModal">
+					<button
+						class="btn btn--sm btn--primary"
+						type="button"
+						@click="openAddContractModal"
+					>
 						<i class="mdi mdi-plus"></i> Add Contract
 					</button>
 				</div>
@@ -124,7 +142,7 @@
 						class="contract-item-card"
 						:class="{
 							'contract-item-card--expiring': c.status === 'ExpiringSoon',
-							'contract-item-card--expired': c.status === 'Expired'
+							'contract-item-card--expired': c.status === 'Expired',
 						}"
 					>
 						<div class="contract-item-card__main">
@@ -134,10 +152,18 @@
 								</span>
 								<span class="contract-item-card__title">{{ c.contractName }}</span>
 
-								<Badge v-if="c.status === 'Active'" type="success" icon="mdi-check-circle">
+								<Badge
+									v-if="c.status === 'Active'"
+									type="success"
+									icon="mdi-check-circle"
+								>
 									Active
 								</Badge>
-								<Badge v-else-if="c.status === 'ExpiringSoon'" type="warning" icon="mdi-clock-alert-outline">
+								<Badge
+									v-else-if="c.status === 'ExpiringSoon'"
+									type="warning"
+									icon="mdi-clock-alert-outline"
+								>
 									Expiring Soon (In 1 Mo)
 								</Badge>
 								<Badge v-else type="error" icon="mdi-alert-circle-outline">
@@ -146,9 +172,13 @@
 							</div>
 
 							<div class="contract-item-card__dates mt-xs">
-								<span>Start: <strong>{{ formatDate(c.startDate) }}</strong></span>
+								<span
+									>Start: <strong>{{ formatDate(c.startDate) }}</strong></span
+								>
 								<span class="mx-xs">•</span>
-								<span>Expiry: <strong>{{ formatDate(c.endDate) }}</strong></span>
+								<span
+									>Expiry: <strong>{{ formatDate(c.endDate) }}</strong></span
+								>
 							</div>
 
 							<p v-if="c.description" class="contract-item-card__desc mt-xs">
@@ -156,11 +186,19 @@
 							</p>
 
 							<!-- Expiry Alert Banners -->
-							<div v-if="c.status === 'ExpiringSoon'" class="contract-alert contract-alert--warning mt-xs">
-								<i class="mdi mdi-alert-circle"></i> Notice: Contract will expire within 1 month. Click Renew to extend validity.
+							<div
+								v-if="c.status === 'ExpiringSoon'"
+								class="contract-alert contract-alert--warning mt-xs"
+							>
+								<i class="mdi mdi-alert-circle"></i> Notice: Contract will expire
+								within 1 month. Click Renew to extend validity.
 							</div>
-							<div v-else-if="c.status === 'Expired'" class="contract-alert contract-alert--danger mt-xs">
-								<i class="mdi mdi-close-circle"></i> Warning: Contract has expired and is disabled for selection in Work Orders.
+							<div
+								v-else-if="c.status === 'Expired'"
+								class="contract-alert contract-alert--danger mt-xs"
+							>
+								<i class="mdi mdi-close-circle"></i> Warning: Contract has expired
+								and is disabled for selection in Work Orders.
 							</div>
 						</div>
 
@@ -196,7 +234,10 @@
 				</div>
 				<div v-else class="empty-contracts">
 					<i class="mdi mdi-file-hidden-outline"></i>
-					<p>No contracts added yet. Click Add Contract to create a new contract schedule.</p>
+					<p>
+						No contracts added yet. Click Add Contract to create a new contract
+						schedule.
+					</p>
 				</div>
 			</div>
 
@@ -207,15 +248,19 @@
 			>
 				<div class="panel-card__header">
 					<h2>
-						<i class="mdi mdi-badge-account-horizontal-outline"></i> Tax Profile & Contacts Block
+						<i class="mdi mdi-badge-account-horizontal-outline"></i> Tax Profile &
+						Contacts
 					</h2>
-					<Chip v-if="form.accountNo" type="warning">Mandatory (Has AutoCount AccountNo)</Chip>
+					<Chip v-if="form.accountNo" type="warning">
+						Mandatory (Has AutoCount AccountNo)
+					</Chip>
 				</div>
 
 				<div class="form-grid">
 					<div class="form-group">
 						<label class="form-group__label">
-							Login / Notification Email <span v-if="form.accountNo" class="u-required">*</span>
+							Email
+							<span v-if="form.accountNo" class="u-required">*</span>
 						</label>
 						<Textbox
 							v-model="form.profile.email"
@@ -230,34 +275,50 @@
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Tax Identity No (TIN)</label>
-						<Textbox
-							v-model="form.profile.tin"
-							placeholder="C2580000000"
-						/>
+						<Textbox v-model="form.profile.tin" placeholder="C2580000000" />
 					</div>
 					<div class="form-group">
-						<label class="form-group__label">Business Reg No (BRN)</label>
-						<Textbox
-							v-model="form.profile.brn"
-							placeholder="202601000123 (123456-X)"
-						/>
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Individual Type Selection</label>
-						<Select v-model="form.profile.individualType">
+						<label class="form-group__label">Customer Type Selection</label>
+						<Select v-model="customerCategory">
 							<option value="COMPANY">COMPANY (Corporate Entity)</option>
-							<option value="MyKAD">MyKAD (Malaysian Citizen)</option>
-							<option value="PASSPORT">PASSPORT (Foreigner / Expat)</option>
+							<option value="INDIVIDUAL">INDIVIDUAL (Personal Account)</option>
 							<option value="GOVERNMENT">GOVERNMENT (Gov Agency)</option>
 						</Select>
 					</div>
-					<div class="form-group">
-						<label class="form-group__label">Identity Document Number</label>
-						<Textbox
-							v-model="form.profile.identityNo"
-							placeholder="MyKAD or Passport Number"
-						/>
-					</div>
+
+					<!-- Individual Identity Details -->
+					<template v-if="customerCategory === 'INDIVIDUAL'">
+						<div class="form-group">
+							<label class="form-group__label">Identity Document Type</label>
+							<Select v-model="selectedIdentityType">
+								<option value="MyKAD">MyKAD (Malaysian Citizen)</option>
+								<option value="MyPR">MyPR (Permanent Resident)</option>
+								<option value="MyKAS">MyKAS (Temporary Resident)</option>
+								<option value="ARMY">ARMY (Military Personnel)</option>
+								<option value="PASSPORT">PASSPORT (Foreigner / Expat)</option>
+							</Select>
+						</div>
+						<div class="form-group">
+							<label class="form-group__label"
+								>{{ selectedIdentityType || "Identity" }} Number</label
+							>
+							<Textbox
+								v-model="form.profile.identityNo"
+								:placeholder="`Enter ${selectedIdentityType || 'Identity'} Number`"
+							/>
+						</div>
+					</template>
+
+					<!-- Corporate / Government Business Reg No -->
+					<template v-else>
+						<div class="form-group">
+							<label class="form-group__label">Business Reg No (BRN)</label>
+							<Textbox
+								v-model="form.profile.brn"
+								placeholder="202601000123 (123456-X)"
+							/>
+						</div>
+					</template>
 				</div>
 			</div>
 
@@ -267,16 +328,17 @@
 				:class="{ 'panel-card--disabled-mask': form.requestEinvoice && !form.metadata }"
 			>
 				<div class="panel-card__header">
-					<h2>
-						<i class="mdi mdi-file-document-edit-outline"></i> Credit & Tax Metadata Block
-					</h2>
-					<Chip v-if="form.requestEinvoice" type="error">Required for e-Invoice Integration</Chip>
+					<h2><i class="mdi mdi-file-document-edit-outline"></i> Credit & Tax</h2>
+					<Chip v-if="form.requestEinvoice" type="error">
+						Required for e-Invoice Integration
+					</Chip>
 				</div>
 
 				<div class="form-grid">
 					<div class="form-group">
 						<label class="form-group__label">
-							Default Transaction Currency <span v-if="form.requestEinvoice" class="u-required">*</span>
+							Default Transaction Currency
+							<span v-if="form.requestEinvoice" class="u-required">*</span>
 						</label>
 						<Textbox
 							v-model="form.metadata.currencyCode"
@@ -286,31 +348,19 @@
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Credit Limit Amount</label>
-						<Textbox
-							v-model="form.metadata.creditLimit"
-							placeholder="50000.00"
-						/>
+						<Textbox v-model="form.metadata.creditLimit" placeholder="50000.00" />
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Overdue Limit Amount</label>
-						<Textbox
-							v-model="form.metadata.overdueLimit"
-							placeholder="10000.00"
-						/>
+						<Textbox v-model="form.metadata.overdueLimit" placeholder="10000.00" />
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Linked Accounting Control Account</label>
-						<Textbox
-							v-model="form.metadata.controlAccount"
-							placeholder="300-0000"
-						/>
+						<Textbox v-model="form.metadata.controlAccount" placeholder="300-0000" />
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Tax Exemption Reference Number</label>
-						<Textbox
-							v-model="form.metadata.taxExemptNo"
-							placeholder="EXEMPT-2026-9"
-						/>
+						<Textbox v-model="form.metadata.taxExemptNo" placeholder="EXEMPT-2026-9" />
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Exemption Expiry Date (YYYY-MM-DD)</label>
@@ -335,26 +385,40 @@
 		>
 			<div class="dialog-form">
 				<div class="form-group mb-md">
-					<label class="form-group__label">Contract No <span class="u-required">*</span></label>
+					<label class="form-group__label"
+						>Contract No <span class="u-required">*</span></label
+					>
 					<Textbox v-model="contractForm.contractNo" placeholder="e.g. CTR-2026-001" />
 				</div>
 				<div class="form-group mb-md">
-					<label class="form-group__label">Contract Title / Name <span class="u-required">*</span></label>
-					<Textbox v-model="contractForm.contractName" placeholder="e.g. Annual Equipment Maintenance" />
+					<label class="form-group__label"
+						>Contract Title / Name <span class="u-required">*</span></label
+					>
+					<Textbox
+						v-model="contractForm.contractName"
+						placeholder="e.g. Annual Equipment Maintenance"
+					/>
 				</div>
 				<div class="form-grid-2 mb-md">
 					<div class="form-group">
-						<label class="form-group__label">Start Date <span class="u-required">*</span></label>
+						<label class="form-group__label"
+							>Start Date <span class="u-required">*</span></label
+						>
 						<DatePicker v-model="contractForm.startDate" />
 					</div>
 					<div class="form-group">
-						<label class="form-group__label">End Date (Expiry) <span class="u-required">*</span></label>
+						<label class="form-group__label"
+							>End Date (Expiry) <span class="u-required">*</span></label
+						>
 						<DatePicker v-model="contractForm.endDate" />
 					</div>
 				</div>
 				<div class="form-group">
 					<label class="form-group__label">Description / Remarks</label>
-					<Textbox v-model="contractForm.description" placeholder="Optional contract terms or notes..." />
+					<Textbox
+						v-model="contractForm.description"
+						placeholder="Optional contract terms or notes..."
+					/>
 				</div>
 			</div>
 		</Dialog>
@@ -371,15 +435,24 @@
 		>
 			<div class="dialog-form" v-if="selectedContractForRenew">
 				<p class="mb-md" style="font-size: 13px; color: var(--colors-text-muted)">
-					Renewing contract <strong class="u-font-mono u-text-primary">{{ selectedContractForRenew.contractNo }}</strong> ({{ selectedContractForRenew.contractName }})
+					Renewing contract
+					<strong class="u-font-mono u-text-primary">{{
+						selectedContractForRenew.contractNo
+					}}</strong>
+					({{ selectedContractForRenew.contractName }})
 				</p>
 				<div class="form-group mb-md">
-					<label class="form-group__label">New Expiration Date <span class="u-required">*</span></label>
+					<label class="form-group__label"
+						>New Expiration Date <span class="u-required">*</span></label
+					>
 					<DatePicker v-model="renewForm.newEndDate" />
 				</div>
 				<div class="form-group">
 					<label class="form-group__label">Renewal Remarks / Notes</label>
-					<Textbox v-model="renewForm.remarks" placeholder="Reason for extension / renewal terms..." />
+					<Textbox
+						v-model="renewForm.remarks"
+						placeholder="Reason for extension / renewal terms..."
+					/>
 				</div>
 			</div>
 		</Dialog>
@@ -389,21 +462,30 @@
 			v-model="showPostRegisterDialog"
 			title="Customer Registered Successfully"
 			confirmText="Add Contract Now"
-			cancelText="Done / Go to Directory"
+			cancelText="Done"
 			@confirm="handlePostRegisterAddContract"
 			@cancel="handlePostRegisterSkip"
 		>
-			<div class="u-text-center py-md" style="text-align: center; padding: 16px 0;">
-				<i class="mdi mdi-check-circle-outline u-text-primary mb-sm" style="font-size: 48px; color: var(--colors-brand-primary)"></i>
-				<h3 style="font-size: 16px; font-weight: 700; margin: 8px 0 6px 0; color: var(--colors-text-primary)">
+			<div class="u-text-center py-md" style="text-align: center; padding: 16px 0">
+				<i
+					class="mdi mdi-check-circle-outline u-text-primary mb-sm"
+					style="font-size: 48px; color: var(--colors-brand-primary)"
+				></i>
+				<h3
+					style="
+						font-size: 16px;
+						font-weight: 700;
+						margin: 8px 0 6px 0;
+						color: var(--colors-text-primary);
+					"
+				>
 					{{ createdCustomerName }} has been created!
 				</h3>
 				<p style="font-size: 13px; color: var(--colors-text-secondary); margin: 0">
-					Would you like to set up an active contract schedule for this customer now?
+					Would you like to set up a contract for this customer now?
 				</p>
 			</div>
 		</Dialog>
-
 	</div>
 </template>
 
@@ -461,12 +543,12 @@ const countryOptions = ref<AutocompleteOption[]>(
 		id: formatCountryName(c.Country),
 		name: formatCountryName(c.Country),
 		code: c.Code,
-	}))
+	})),
 );
 
 const mysStateOptions: AutocompleteOption[] = LHDN_STATES.map((s) => ({
-	id: s.State === "Not Applicable" ? "Others" : s.State,
-	name: s.State === "Not Applicable" ? "Others" : s.State,
+	id: s.State,
+	name: s.State,
 	code: s.Code,
 }));
 
@@ -492,7 +574,7 @@ async function updateStateOptionsForCountry(countryName: string) {
 		(c) =>
 			c.name.toLowerCase() === countryName.toLowerCase() ||
 			String(c.id).toLowerCase() === countryName.toLowerCase() ||
-			(c.code && c.code.toLowerCase() === countryName.toLowerCase())
+			(c.code && c.code.toLowerCase() === countryName.toLowerCase()),
 	);
 
 	const countryCode = selectedCountryObj?.code || countryName;
@@ -512,18 +594,13 @@ async function updateStateOptionsForCountry(countryName: string) {
 		// Ignore API error
 	}
 
-	// Default fallback matching Location Maintenance subNodes
-	stateOptions.value = [
-		{ id: "Standard Region", name: "Standard Region", code: "00" },
-		{ id: "Others", name: "Others", code: "17" },
-	];
+	// Default fallback matching Location Maintenance subNodes (17 - Not Applicable for other countries)
+	stateOptions.value = [{ id: "Not Applicable", name: "Not Applicable", code: "17" }];
 }
 
 async function loadLocationList() {
 	try {
-		const [cRes] = await Promise.all([
-			locationApi.getCountries({ limit: 250 } as any),
-		]);
+		const [cRes] = await Promise.all([locationApi.getCountries({ limit: 250 } as any)]);
 		if (cRes?.data?.data && cRes.data.data.length > 0) {
 			countryOptions.value = cRes.data.data.map((c: any) => ({
 				id: formatCountryName(c.Country || c.name),
@@ -547,6 +624,23 @@ const contractForm = ref({
 const renewForm = ref({
 	newEndDate: "",
 	remarks: "",
+});
+
+const customerCategory = ref<"COMPANY" | "INDIVIDUAL" | "GOVERNMENT">("COMPANY");
+const selectedIdentityType = ref<string>("MyKAD");
+
+watch(customerCategory, (newCat) => {
+	if (newCat === "INDIVIDUAL") {
+		form.value.profile.individualType = selectedIdentityType.value || "MyKAD";
+	} else {
+		form.value.profile.individualType = newCat;
+	}
+});
+
+watch(selectedIdentityType, (newType) => {
+	if (customerCategory.value === "INDIVIDUAL") {
+		form.value.profile.individualType = newType;
+	}
 });
 
 const form = ref<any>({
@@ -579,11 +673,11 @@ watch(
 	() => form.value.address?.country,
 	async (newCountry, oldCountry) => {
 		if (!newCountry) {
-			// When country is cleared or empty -> set state to "Others"
+			// When country is cleared or empty -> set state to "Not Applicable"
 			if (form.value.address) {
-				form.value.address.state = "Others";
+				form.value.address.state = "Not Applicable";
 			}
-			stateOptions.value = [{ id: "Others", name: "Others", code: "17" }];
+			stateOptions.value = [{ id: "Not Applicable", name: "Not Applicable", code: "17" }];
 			return;
 		}
 
@@ -597,11 +691,11 @@ watch(
 				const firstState = stateOptions.value[0].name || stateOptions.value[0].id;
 				form.value.address.state = String(firstState);
 			} else {
-				form.value.address.state = "Others";
+				form.value.address.state = "Not Applicable";
 			}
 		}
 	},
-	{ immediate: true }
+	{ immediate: true },
 );
 
 function computeStatus(endDateStr: string): "Active" | "ExpiringSoon" | "Expired" {
@@ -622,17 +716,20 @@ function formatDate(iso: string) {
 onMounted(async () => {
 	loadLocationList();
 
-	const code = route.query.code;
-	if (route.query.mode === "new" || !code) {
+	const guid = route.query.guid as string | undefined;
+	const code = route.query.code as string | undefined;
+	const identifier = guid || code;
+
+	if (route.query.mode === "new" || !identifier) {
 		isNewMode.value = true;
 	} else {
 		isNewMode.value = false;
-		customerGuid.value = code as string;
+		customerGuid.value = identifier;
 		loading.value = true;
 		try {
-			const { data, error } = await customerApi.getCustomerByGuid(code as string);
-			if (data && data.data) {
-				const c = data.data as any;
+			const { data, error } = await customerApi.getCustomerByGuid(identifier);
+			const c = (data?.data || data) as any;
+			if (c && (c.guid || c.code)) {
 				contracts.value = (c.contracts || []).map((contract: any) => ({
 					...contract,
 					status: computeStatus(contract.endDate),
@@ -644,45 +741,67 @@ onMounted(async () => {
 					isActive: c.isActive ?? true,
 					requestEinvoice: c.requestEinvoice ?? false,
 					addressCode: c.addressCode || "",
-					address: c.address ? {
-						address1: c.address.address1 || "",
-						address2: c.address.address2 || "",
-						city: c.address.city || "",
-						state: c.address.state || "Selangor",
-						postcode: c.address.postcode || "",
-						country: c.address.country || "Malaysia",
-					} : {
-						address1: "",
-						address2: "",
-						city: "",
-						state: "Selangor",
-						postcode: "",
-						country: "Malaysia",
-					},
-					profile: c.profile ? {
-						email: c.profile.email || "",
-						phone: c.profile.phone || "",
-						tin: c.profile.tin || "",
-						brn: c.profile.brn || "",
-						individualType: c.profile.individualType || "COMPANY",
-						identityNo: c.profile.identityNo || "",
-					} : { email: "", phone: "", tin: "", brn: "", individualType: "COMPANY", identityNo: "" },
-					metadata: c.metadata ? {
-						currencyCode: c.metadata.currencyCode || "MYR",
-						creditLimit: c.metadata.creditLimit || "",
-						overdueLimit: c.metadata.overdueLimit || "",
-						controlAccount: c.metadata.controlAccount || "",
-						taxExemptNo: c.metadata.taxExemptNo || "",
-						exemptExpiryDate: c.metadata.exemptExpiryDate || "",
-					} : {
-						currencyCode: "MYR",
-						creditLimit: "",
-						overdueLimit: "",
-						controlAccount: "",
-						taxExemptNo: "",
-						exemptExpiryDate: "",
-					},
+					address: c.address
+						? {
+								address1: c.address.address1 || "",
+								address2: c.address.address2 || "",
+								city: c.address.city || "",
+								state: c.address.state || "Selangor",
+								postcode: c.address.postcode || "",
+								country: c.address.country || "Malaysia",
+							}
+						: {
+								address1: "",
+								address2: "",
+								city: "",
+								state: "Selangor",
+								postcode: "",
+								country: "Malaysia",
+							},
+					profile: c.profile
+						? {
+								email: c.profile.email || "",
+								phone: c.profile.phone || "",
+								tin: c.profile.tin || "",
+								brn: c.profile.brn || "",
+								individualType: c.profile.individualType || "COMPANY",
+								identityNo: c.profile.identityNo || "",
+							}
+						: {
+								email: "",
+								phone: "",
+								tin: "",
+								brn: "",
+								individualType: "COMPANY",
+								identityNo: "",
+							},
+					metadata: c.metadata
+						? {
+								currencyCode: c.metadata.currencyCode || "MYR",
+								creditLimit: c.metadata.creditLimit || "",
+								overdueLimit: c.metadata.overdueLimit || "",
+								controlAccount: c.metadata.controlAccount || "",
+								taxExemptNo: c.metadata.taxExemptNo || "",
+								exemptExpiryDate: c.metadata.exemptExpiryDate || "",
+							}
+						: {
+								currencyCode: "MYR",
+								creditLimit: "",
+								overdueLimit: "",
+								controlAccount: "",
+								taxExemptNo: "",
+								exemptExpiryDate: "",
+							},
 				};
+
+				const rawIndType = c.profile?.individualType || "COMPANY";
+				if (rawIndType === "COMPANY" || rawIndType === "GOVERNMENT") {
+					customerCategory.value = rawIndType as any;
+					selectedIdentityType.value = "MyKAD";
+				} else {
+					customerCategory.value = "INDIVIDUAL";
+					selectedIdentityType.value = rawIndType;
+				}
 			} else if (error) {
 				snackbar.error("Failed to load customer details.");
 				console.error("Failed to load customer details:", error);
@@ -698,9 +817,9 @@ onMounted(async () => {
 	// Auto-trigger Renew Modal if requested via route query params (from Work Order form)
 	if (route.query.action === "renew") {
 		const targetContractNo = route.query.contractNo as string;
-		const targetContract = contracts.value.find(
-			(c: any) => c.contractNo === targetContractNo
-		) || contracts.value[0];
+		const targetContract =
+			contracts.value.find((c: any) => c.contractNo === targetContractNo) ||
+			contracts.value[0];
 		if (targetContract) {
 			openRenewModal(targetContract);
 		}
@@ -715,7 +834,9 @@ function openAddContractModal() {
 		contractNo: `CTR-${custName.slice(0, 3).toUpperCase()}-${new Date().getFullYear()}`,
 		contractName: "Equipment & Maintenance Support Agreement",
 		startDate: new Date().toISOString().slice(0, 10),
-		endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().slice(0, 10),
+		endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+			.toISOString()
+			.slice(0, 10),
 		description: "",
 	};
 	showContractDialog.value = true;
@@ -735,7 +856,12 @@ function openEditContractModal(item: any) {
 }
 
 async function handleSaveContract() {
-	if (!contractForm.value.contractNo || !contractForm.value.contractName || !contractForm.value.startDate || !contractForm.value.endDate) {
+	if (
+		!contractForm.value.contractNo ||
+		!contractForm.value.contractName ||
+		!contractForm.value.startDate ||
+		!contractForm.value.endDate
+	) {
 		snackbar.warning("Please fill in all required contract fields (*).");
 		return;
 	}
@@ -746,7 +872,10 @@ async function handleSaveContract() {
 		submittingContract.value = true;
 		if (isEditingContract.value && editingContractGuid.value) {
 			// Edit existing contract on backend
-			const { error } = await customerApi.updateContract(editingContractGuid.value, contractForm.value);
+			const { error } = await customerApi.updateContract(
+				editingContractGuid.value,
+				contractForm.value,
+			);
 			if (error) {
 				snackbar.error("Failed to save edit: " + (error.error?.message || error));
 				return;
@@ -772,7 +901,11 @@ async function handleSaveContract() {
 				}));
 			}
 		}
-		router.back();
+		if (createdCustomerGuid.value) {
+			router.push(`/customer/profile?guid=${createdCustomerGuid.value}`);
+		} else {
+			router.back();
+		}
 	} catch (e) {
 		snackbar.error("Error saving contract.");
 	} finally {
@@ -791,13 +924,20 @@ function handlePostRegisterAddContract() {
 
 function handlePostRegisterSkip() {
 	showPostRegisterDialog.value = false;
-	router.back();
+	const targetId = createdCustomerGuid.value || customerGuid.value;
+	if (targetId) {
+		router.push(`/customer/profile?guid=${targetId}`);
+	} else {
+		router.back();
+	}
 }
 
 function openRenewModal(contractItem: any) {
 	selectedContractForRenew.value = contractItem;
 	const currentEnd = new Date(contractItem.endDate || new Date());
-	const nextYearEnd = new Date(currentEnd.setFullYear(currentEnd.getFullYear() + 1)).toISOString().slice(0, 10);
+	const nextYearEnd = new Date(currentEnd.setFullYear(currentEnd.getFullYear() + 1))
+		.toISOString()
+		.slice(0, 10);
 	renewForm.value = {
 		newEndDate: nextYearEnd,
 		remarks: "Standard 1-Year Contract Extension",
@@ -814,7 +954,10 @@ async function handleRenewContractSubmit() {
 	if (selectedContractForRenew.value.guid) {
 		try {
 			submittingContract.value = true;
-			const { error } = await customerApi.renewContract(selectedContractForRenew.value.guid, renewForm.value);
+			const { error } = await customerApi.renewContract(
+				selectedContractForRenew.value.guid,
+				renewForm.value,
+			);
 			if (error) {
 				snackbar.error("Failed to renew contract: " + (error.error?.message || error));
 				return;
@@ -860,8 +1003,12 @@ function validateSchemaLogic(): boolean {
 		isValid = false;
 	}
 
-	if (form.value.requestEinvoice && (!form.value.metadata || !form.value.metadata.currencyCode?.trim())) {
-		formErrors.value.currencyCode = "Currency code is required when e-Invoice engine is enabled";
+	if (
+		form.value.requestEinvoice &&
+		(!form.value.metadata || !form.value.metadata.currencyCode?.trim())
+	) {
+		formErrors.value.currencyCode =
+			"Currency code is required when e-Invoice engine is enabled";
 		snackbar.warning("Metadata currency code is required when e-Invoice engine is enabled.");
 		isValid = false;
 	}

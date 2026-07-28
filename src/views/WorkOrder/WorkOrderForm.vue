@@ -8,6 +8,7 @@ import Button from "@/components/Button.vue";
 import Badge from "@/components/Badge.vue";
 import DatePicker from "@/components/DatePicker.vue";
 import Autocomplete from "@/components/Autocomplete.vue";
+import GoogleMapPicker from "@/components/GoogleMapPicker.vue";
 import { useRouter, useRoute } from "vue-router";
 import { customerApi } from "@/api/customer/customer.api";
 import { userApi } from "@/api/user/user.api";
@@ -136,7 +137,11 @@ async function fetchWorkTypeItems(workTypeGuid: string) {
 		return;
 	}
 	try {
-		const res = await workTypeApi.getWorkTypeItems(workTypeGuid, { pageIndex: 0, pageSize: 100, timezone: "UTC" } as any);
+		const res = await workTypeApi.getWorkTypeItems(workTypeGuid, {
+			pageIndex: 0,
+			pageSize: 100,
+			timezone: "UTC",
+		} as any);
 		if (res.data && res.data.data) {
 			workTypeItems.value = res.data.data.map((item: any) => ({
 				code: item.code,
@@ -150,14 +155,19 @@ async function fetchWorkTypeItems(workTypeGuid: string) {
 }
 
 watch(
-	[() => formData.value.workTypeGuid, () => formData.value.orderTypeCode, () => workTypeList.value],
+	[
+		() => formData.value.workTypeGuid,
+		() => formData.value.orderTypeCode,
+		() => workTypeList.value,
+	],
 	async ([newGuid, newCode, types]) => {
 		if (!types || types.length === 0) return;
 		const match = types.find(
 			(wt: any) =>
 				(newGuid && wt.guid === newGuid) ||
 				(newCode && wt.code.toLowerCase() === newCode.toLowerCase()) ||
-				(formData.value.workType && wt.name.toLowerCase() === formData.value.workType.toLowerCase()),
+				(formData.value.workType &&
+					wt.name.toLowerCase() === formData.value.workType.toLowerCase()),
 		);
 		if (match) {
 			if (formData.value.workTypeGuid !== match.guid) {
@@ -181,14 +191,28 @@ watch(
 async function loadOptions() {
 	try {
 		// Fetch Customers
-		const custRes = await customerApi.getCustomers({ pageIndex: 0, pageSize: 100, timezone: "UTC" });
+		const custRes = await customerApi.getCustomers({
+			pageIndex: 0,
+			pageSize: 100,
+			timezone: "UTC",
+		});
 		if (custRes.data && custRes.data.data) {
 			customers.value = custRes.data.data.map((c: any) => ({
 				code: c.code,
 				name: c.name,
 				contracts: c.contracts || [
-					{ contractNo: `CTR-${c.code}-01`, contractName: `Annual Maintenance (${c.code})`, startDate: "2026-01-01", endDate: "2026-12-31" },
-					{ contractNo: `CTR-${c.code}-02`, contractName: `Equipment Overhaul (${c.code})`, startDate: "2026-06-01", endDate: "2027-05-31" },
+					{
+						contractNo: `CTR-${c.code}-01`,
+						contractName: `Annual Maintenance (${c.code})`,
+						startDate: "2026-01-01",
+						endDate: "2026-12-31",
+					},
+					{
+						contractNo: `CTR-${c.code}-02`,
+						contractName: `Equipment Overhaul (${c.code})`,
+						startDate: "2026-06-01",
+						endDate: "2027-05-31",
+					},
 				],
 			}));
 		}
@@ -204,7 +228,11 @@ async function loadOptions() {
 		}
 
 		// Fetch Work Types
-		const wtRes = await workTypeApi.getWorkTypes({ pageIndex: 0, pageSize: 100, timezone: "UTC" });
+		const wtRes = await workTypeApi.getWorkTypes({
+			pageIndex: 0,
+			pageSize: 100,
+			timezone: "UTC",
+		});
 		if (wtRes.data && wtRes.data.data) {
 			workTypeList.value = wtRes.data.data.map((wt: any) => ({
 				guid: wt.guid,
@@ -273,40 +301,91 @@ onMounted(async () => {
 				code: "CUST-001",
 				name: "Petronas Carigali Sdn Bhd",
 				contracts: [
-					{ contractNo: "CTR-PET-2026-01", contractName: "Offshore Equipment Maintenance 2026", startDate: "2026-01-01", endDate: "2027-12-31" },
-					{ contractNo: "CTR-PET-2026-EXPIRE", contractName: "Turbine Inspection & Overhaul", startDate: "2025-08-01", endDate: "2026-08-15" },
-					{ contractNo: "CTR-PET-2025-OLD", contractName: "Platform Safety Audit 2025", startDate: "2025-01-01", endDate: "2025-12-31" },
+					{
+						contractNo: "CTR-PET-2026-01",
+						contractName: "Offshore Equipment Maintenance 2026",
+						startDate: "2026-01-01",
+						endDate: "2027-12-31",
+					},
+					{
+						contractNo: "CTR-PET-2026-EXPIRE",
+						contractName: "Turbine Inspection & Overhaul",
+						startDate: "2025-08-01",
+						endDate: "2026-08-15",
+					},
+					{
+						contractNo: "CTR-PET-2025-OLD",
+						contractName: "Platform Safety Audit 2025",
+						startDate: "2025-01-01",
+						endDate: "2025-12-31",
+					},
 				],
 			},
 			{
 				code: "CUST-002",
 				name: "YTL Power Services Sdn Bhd",
 				contracts: [
-					{ contractNo: "CTR-YTL-2026-01", contractName: "Power Plant Turbine Maintenance", startDate: "2026-03-01", endDate: "2027-02-28" },
-					{ contractNo: "CTR-YTL-2025-OLD", contractName: "Boiler Servicing Contract 2025", startDate: "2024-06-01", endDate: "2025-05-31" },
+					{
+						contractNo: "CTR-YTL-2026-01",
+						contractName: "Power Plant Turbine Maintenance",
+						startDate: "2026-03-01",
+						endDate: "2027-02-28",
+					},
+					{
+						contractNo: "CTR-YTL-2025-OLD",
+						contractName: "Boiler Servicing Contract 2025",
+						startDate: "2024-06-01",
+						endDate: "2025-05-31",
+					},
 				],
 			},
 			{
 				code: "CUST-003",
 				name: "TNB Engineering Corporation",
 				contracts: [
-					{ contractNo: "CTR-TNB-2026-01", contractName: "Substation Transformer Overhaul", startDate: "2026-02-15", endDate: "2026-08-10" },
-					{ contractNo: "CTR-TNB-2025-OLD", contractName: "Grid Line Survey 2025", startDate: "2024-01-01", endDate: "2025-01-01" },
+					{
+						contractNo: "CTR-TNB-2026-01",
+						contractName: "Substation Transformer Overhaul",
+						startDate: "2026-02-15",
+						endDate: "2026-08-10",
+					},
+					{
+						contractNo: "CTR-TNB-2025-OLD",
+						contractName: "Grid Line Survey 2025",
+						startDate: "2024-01-01",
+						endDate: "2025-01-01",
+					},
 				],
 			},
 		];
 	}
 	if (workTypeList.value.length === 0) {
 		workTypeList.value = [
-			{ guid: "wt-1", code: "mechanical", name: "Mechanical Maintenance", withEquipmentForm: true },
-			{ guid: "wt-2", code: "electrical", name: "Electrical Maintenance", withEquipmentForm: false },
+			{
+				guid: "wt-1",
+				code: "mechanical",
+				name: "Mechanical Maintenance",
+				withEquipmentForm: true,
+			},
+			{
+				guid: "wt-2",
+				code: "electrical",
+				name: "Electrical Maintenance",
+				withEquipmentForm: false,
+			},
 			{ guid: "wt-3", code: "hvac", name: "HVAC System", withEquipmentForm: true },
-			{ guid: "wt-4", code: "general", name: "General Maintenance", withEquipmentForm: false },
+			{
+				guid: "wt-4",
+				code: "general",
+				name: "General Maintenance",
+				withEquipmentForm: false,
+			},
 		];
 		if (!formData.value.workTypeGuid) {
-			const match = workTypeList.value.find(
-				(wt) => wt.code.toLowerCase() === formData.value.orderTypeCode.toLowerCase(),
-			) || workTypeList.value[0];
+			const match =
+				workTypeList.value.find(
+					(wt) => wt.code.toLowerCase() === formData.value.orderTypeCode.toLowerCase(),
+				) || workTypeList.value[0];
 			formData.value.workTypeGuid = match.guid;
 			formData.value.withEquipmentForm = match.withEquipmentForm;
 		}
@@ -353,7 +432,9 @@ onMounted(async () => {
 					latitude: w.latitude || 0,
 					longitude: w.longitude || 0,
 					startDate: w.startDate ? w.startDate.slice(0, 16) : todayDateStr,
-					estimatedEndDate: w.estimatedEndDate ? w.estimatedEndDate.slice(0, 16) : nextWeekDateStr,
+					estimatedEndDate: w.estimatedEndDate
+						? w.estimatedEndDate.slice(0, 16)
+						: nextWeekDateStr,
 					leaderCode: w.leaderCode || w.leadEngineerCode || "",
 					leaderIICode: w.leaderIICode || "",
 					technicianCodes: w.technicianCodes || w.assistantEngineers || [],
@@ -362,24 +443,38 @@ onMounted(async () => {
 					contractEndDate: w.contractEndDate ? w.contractEndDate.slice(0, 10) : "",
 					customerPic: w.customerPic || "",
 					customerPicPhone: w.customerPicPhone || "",
-					equipment: w.equipment ? {
-						name: w.equipment.name || "",
-						serialNo: w.equipment.serialNo || "",
-						brand: w.equipment.brand || "",
-						model: w.equipment.model || "",
-						equipmentType: w.equipment.equipmentType || "",
-					} : { name: "", serialNo: "", brand: "", model: "", equipmentType: "" },
-					technical: w.technical ? {
-						flowHead: w.technical.flowHead || "",
-						brandName: w.technical.brandName || "",
-						serialNo: w.technical.serialNo || "",
-						ratedVoltage: w.technical.ratedVoltage || "",
-						ratedSpeed: w.technical.ratedSpeed || "",
-						ratedCurrent: w.technical.ratedCurrent || "",
-						ratedPower: w.technical.ratedPower || "",
-						phase: w.technical.phase || "",
-						frameSize: w.technical.frameSize || "",
-					} : { flowHead: "", brandName: "", serialNo: "", ratedVoltage: "", ratedSpeed: "", ratedCurrent: "", ratedPower: "", phase: "", frameSize: "" },
+					equipment: w.equipment
+						? {
+								name: w.equipment.name || "",
+								serialNo: w.equipment.serialNo || "",
+								brand: w.equipment.brand || "",
+								model: w.equipment.model || "",
+								equipmentType: w.equipment.equipmentType || "",
+							}
+						: { name: "", serialNo: "", brand: "", model: "", equipmentType: "" },
+					technical: w.technical
+						? {
+								flowHead: w.technical.flowHead || "",
+								brandName: w.technical.brandName || "",
+								serialNo: w.technical.serialNo || "",
+								ratedVoltage: w.technical.ratedVoltage || "",
+								ratedSpeed: w.technical.ratedSpeed || "",
+								ratedCurrent: w.technical.ratedCurrent || "",
+								ratedPower: w.technical.ratedPower || "",
+								phase: w.technical.phase || "",
+								frameSize: w.technical.frameSize || "",
+							}
+						: {
+								flowHead: "",
+								brandName: "",
+								serialNo: "",
+								ratedVoltage: "",
+								ratedSpeed: "",
+								ratedCurrent: "",
+								ratedPower: "",
+								phase: "",
+								frameSize: "",
+							},
 					siteInstructionsFiles: [],
 				};
 
@@ -388,8 +483,10 @@ onMounted(async () => {
 					onCustomerChange();
 					if (w.contractNo) {
 						formData.value.contractNo = w.contractNo;
-						if (w.contractStartDate) formData.value.contractStartDate = w.contractStartDate.slice(0, 10);
-						if (w.contractEndDate) formData.value.contractEndDate = w.contractEndDate.slice(0, 10);
+						if (w.contractStartDate)
+							formData.value.contractStartDate = w.contractStartDate.slice(0, 10);
+						if (w.contractEndDate)
+							formData.value.contractEndDate = w.contractEndDate.slice(0, 10);
 					}
 				}
 			}
@@ -411,7 +508,12 @@ const salesAgentUsers = computed(() => {
 	const filtered = users.value.filter((u: any) => {
 		const code = (u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
-		return (code.startsWith("SAL") || !code.startsWith("SA") || r.includes("sales")) && !code.startsWith("ADM") && !code.startsWith("MNG") && !code.startsWith("ENG");
+		return (
+			(code.startsWith("SAL") || !code.startsWith("SA") || r.includes("sales")) &&
+			!code.startsWith("ADM") &&
+			!code.startsWith("MNG") &&
+			!code.startsWith("ENG")
+		);
 	});
 	return filtered;
 });
@@ -420,7 +522,17 @@ const projectPicUsers = computed(() => {
 	const filtered = users.value.filter((u: any) => {
 		const code = (u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
-		return (code.startsWith("MNG") || code.startsWith("MGR") || code.startsWith("PM") || r === "manager" || r === "pm" || r.includes("manager")) && !code.startsWith("ADM") && !code.startsWith("SAL") && !code.startsWith("ENG");
+		return (
+			(code.startsWith("MNG") ||
+				code.startsWith("MGR") ||
+				code.startsWith("PM") ||
+				r === "manager" ||
+				r === "pm" ||
+				r.includes("manager")) &&
+			!code.startsWith("ADM") &&
+			!code.startsWith("SAL") &&
+			!code.startsWith("ENG")
+		);
 	});
 	return filtered;
 });
@@ -429,20 +541,33 @@ const engineerUsers = computed(() => {
 	const filtered = users.value.filter((u: any) => {
 		const code = (u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
-		return (code.startsWith("ENG") || code.startsWith("TECH") || r === "engineer" || r === "eng" || r.includes("engineer")) && !code.startsWith("ADM") && !code.startsWith("SAL") && !code.startsWith("MNG");
+		return (
+			(code.startsWith("ENG") ||
+				code.startsWith("TECH") ||
+				r === "engineer" ||
+				r === "eng" ||
+				r.includes("engineer")) &&
+			!code.startsWith("ADM") &&
+			!code.startsWith("SAL") &&
+			!code.startsWith("MNG")
+		);
 	});
 	return filtered;
 });
 
 const leaderOptions = computed(() => {
 	return engineerUsers.value.filter(
-		(u: any) => u.code !== formData.value.leaderIICode && !formData.value.technicianCodes.includes(u.code),
+		(u: any) =>
+			u.code !== formData.value.leaderIICode &&
+			!formData.value.technicianCodes.includes(u.code),
 	);
 });
 
 const leaderIIOptions = computed(() => {
 	return engineerUsers.value.filter(
-		(u: any) => u.code !== formData.value.leaderCode && !formData.value.technicianCodes.includes(u.code),
+		(u: any) =>
+			u.code !== formData.value.leaderCode &&
+			!formData.value.technicianCodes.includes(u.code),
 	);
 });
 
@@ -452,15 +577,15 @@ const technicianOptions = computed(() => {
 	);
 });
 
-function getContractStatus(c: any): 'Active' | 'ExpiringSoon' | 'Expired' {
+function getContractStatus(c: any): "Active" | "ExpiringSoon" | "Expired" {
 	if (c.status) return c.status;
-	if (!c.endDate) return 'Active';
+	if (!c.endDate) return "Active";
 	const now = new Date();
 	const end = new Date(c.endDate);
-	if (end < now) return 'Expired';
+	if (end < now) return "Expired";
 	const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-	if (end <= thirtyDays) return 'ExpiringSoon';
-	return 'Active';
+	if (end <= thirtyDays) return "ExpiringSoon";
+	return "Active";
 }
 
 const availableContracts = computed(() => {
@@ -478,7 +603,7 @@ const selectedContractInfo = computed(() => {
 });
 
 function onCustomerChange() {
-	const validContracts = availableContracts.value.filter((c: any) => c.status !== 'Expired');
+	const validContracts = availableContracts.value.filter((c: any) => c.status !== "Expired");
 	if (validContracts.length > 0) {
 		onContractChange(validContracts[0].contractNo);
 	} else {
@@ -492,7 +617,9 @@ function onContractChange(contractNo: string) {
 	formData.value.contractNo = contractNo;
 	const selected = availableContracts.value.find((c: any) => c.contractNo === contractNo);
 	if (selected) {
-		formData.value.contractStartDate = selected.startDate ? selected.startDate.slice(0, 10) : "";
+		formData.value.contractStartDate = selected.startDate
+			? selected.startDate.slice(0, 10)
+			: "";
 		formData.value.contractEndDate = selected.endDate ? selected.endDate.slice(0, 10) : "";
 	}
 }
@@ -500,9 +627,15 @@ function onContractChange(contractNo: string) {
 const contractSelectOptions = computed<any[]>(() => {
 	return availableContracts.value.map((c: any) => ({
 		value: c.contractNo,
-		label: `${c.contractNo} ${c.contractName ? ' - ' + c.contractName : ''}`,
-		badgeText: c.status === 'Expired' ? 'Expired' : c.status === 'ExpiringSoon' ? 'Expiring Soon' : 'Active Contract',
-		badgeType: c.status === 'Expired' ? 'error' : c.status === 'ExpiringSoon' ? 'warning' : 'success',
+		label: `${c.contractNo} ${c.contractName ? " - " + c.contractName : ""}`,
+		badgeText:
+			c.status === "Expired"
+				? "Expired"
+				: c.status === "ExpiringSoon"
+					? "Expiring Soon"
+					: "Active Contract",
+		badgeType:
+			c.status === "Expired" ? "error" : c.status === "ExpiringSoon" ? "warning" : "success",
 	}));
 });
 
@@ -572,6 +705,10 @@ function validateForm() {
 		formErrors.value.customerCode = "Customer is required";
 		isValid = false;
 	}
+	if (!formData.value.siteCode) {
+		formErrors.value.siteCode = "Site is required";
+		isValid = false;
+	}
 
 	// End date must be after start date
 	if (formData.value.startDate && formData.value.estimatedEndDate) {
@@ -621,14 +758,22 @@ function buildBody(): Record<string, any> {
 		location: formData.value.location || undefined,
 		latitude: formData.value.latitude || undefined,
 		longitude: formData.value.longitude || undefined,
-		startDate: formData.value.startDate ? new Date(formData.value.startDate).toISOString() : undefined,
-		estimatedEndDate: formData.value.estimatedEndDate ? new Date(formData.value.estimatedEndDate).toISOString() : undefined,
+		startDate: formData.value.startDate
+			? new Date(formData.value.startDate).toISOString()
+			: undefined,
+		estimatedEndDate: formData.value.estimatedEndDate
+			? new Date(formData.value.estimatedEndDate).toISOString()
+			: undefined,
 		leaderCode: formData.value.leaderCode || undefined,
 		leaderIICode: formData.value.leaderIICode || undefined,
 		technicianCodes: formData.value.technicianCodes,
 		contractNo: formData.value.contractNo || undefined,
-		contractStartDate: formData.value.contractStartDate ? new Date(formData.value.contractStartDate).toISOString() : undefined,
-		contractEndDate: formData.value.contractEndDate ? new Date(formData.value.contractEndDate).toISOString() : undefined,
+		contractStartDate: formData.value.contractStartDate
+			? new Date(formData.value.contractStartDate).toISOString()
+			: undefined,
+		contractEndDate: formData.value.contractEndDate
+			? new Date(formData.value.contractEndDate).toISOString()
+			: undefined,
 		customerPic: formData.value.customerPic || undefined,
 		customerPicPhone: formData.value.customerPicPhone || undefined,
 		equipment: showEquipmentForm.value ? [formData.value.equipment] : undefined,
@@ -642,7 +787,7 @@ async function submitDraft() {
 		loading.value = true;
 		const id = route.params.id;
 		const body = buildBody();
-		body.status = "Draft";
+		delete body.status;
 		if (id && typeof id === "string") {
 			const { error } = await workOrderApi.updateDraft(id, body);
 			if (error) {
@@ -717,7 +862,10 @@ async function submitAndRequestApproval() {
 			}
 			alert("Work order submitted for approval (Status: Pending Approval)!");
 		} else {
-			const { error } = await workOrderApi.createNew({ ...body, status: "PendingApproval" } as any);
+			const { error } = await workOrderApi.createNew({
+				...body,
+				status: "PendingApproval",
+			} as any);
 			if (error) {
 				alert(`Failed to request approval: ${error.error?.message || error.message}`);
 				return;
@@ -812,15 +960,26 @@ const priorityColors: Record<string, string> = {
 			<div class="form-helper-banner__text">
 				<div class="helper-line">
 					<span class="helper-bullet">-</span>
-					<span><strong>Save as Draft</strong> creates a New editable work order. <em>(Required: Work Type, Title, Customer, Description)</em></span>
+					<span
+						><strong>Save as Draft</strong> creates a New editable work order.
+						<em
+							>(Required: Work Type, Title, Sales Agent, Customer, Description)</em
+						></span
+					>
 				</div>
 				<div class="helper-line">
 					<span class="helper-bullet">-</span>
-					<span><strong>Submit</strong> creates a Work Order with status <strong>New</strong>.</span>
+					<span
+						><strong>Submit</strong> creates a Work Order with status
+						<strong>New</strong>.</span
+					>
 				</div>
 				<div class="helper-line">
 					<span class="helper-bullet">-</span>
-					<span><strong>Save & Request Approval</strong> submits the work order for approval with status <strong>Pending Approval</strong>.</span>
+					<span
+						><strong>Save & Request Approval</strong> submits the work order for
+						approval with status <strong>Pending Approval</strong>.</span
+					>
 				</div>
 			</div>
 		</div>
@@ -831,12 +990,18 @@ const priorityColors: Record<string, string> = {
 				<Card>
 					<template #header>
 						<h2>Work Order Details</h2>
-						<div style="display: flex; gap: 8px; align-items: center;">
+						<div style="display: flex; gap: 8px; align-items: center">
 							<Badge type="primary" icon="mdi-tools">{{ formData.workType }}</Badge>
 							<Badge
 								v-if="formData.jobPriority"
 								:type="priorityColors[formData.jobPriority] as any"
-								:icon="formData.jobPriority === 'High' ? 'mdi-alert-circle' : formData.jobPriority === 'Medium' ? 'mdi-alert' : 'mdi-information'"
+								:icon="
+									formData.jobPriority === 'High'
+										? 'mdi-alert-circle'
+										: formData.jobPriority === 'Medium'
+											? 'mdi-alert'
+											: 'mdi-information'
+								"
 							>
 								{{ formData.jobPriority }} Priority
 							</Badge>
@@ -845,10 +1010,7 @@ const priorityColors: Record<string, string> = {
 					<div class="grid-row">
 						<!-- Row 1: Job Priority + Work Type Item -->
 						<div class="col-6">
-							<Select
-								v-model="formData.jobPriority"
-								label="Job Priority"
-							>
+							<Select v-model="formData.jobPriority" label="Job Priority">
 								<option value="">Select Priority</option>
 								<option v-for="p in JOB_PRIORITIES" :key="p.value" :value="p.value">
 									{{ p.label }}
@@ -858,11 +1020,13 @@ const priorityColors: Record<string, string> = {
 						<div class="col-6">
 							<Autocomplete
 								v-model="formData.orderTypeItemCode"
-								:options="workTypeItems.map((item) => ({
-									id: item.code,
-									name: item.name,
-									code: item.code,
-								}))"
+								:options="
+									workTypeItems.map((item) => ({
+										id: item.code,
+										name: item.name,
+										code: item.code,
+									}))
+								"
 								label="Work Type Item *"
 								placeholder="Search or select work type item..."
 								:error="formErrors.orderTypeItemCode"
@@ -881,11 +1045,13 @@ const priorityColors: Record<string, string> = {
 						<div class="col-6">
 							<Autocomplete
 								v-model="formData.salesAgentCode"
-								:options="salesAgentUsers.map((u) => ({
-									id: u.code,
-									name: u.name,
-									code: u.code,
-								}))"
+								:options="
+									salesAgentUsers.map((u) => ({
+										id: u.code,
+										name: u.name,
+										code: u.code,
+									}))
+								"
 								label="Sales Agent *"
 								placeholder="Search or select Sales Agent..."
 								:error="formErrors.salesAgentCode"
@@ -894,11 +1060,13 @@ const priorityColors: Record<string, string> = {
 						<div class="col-6">
 							<Autocomplete
 								v-model="formData.personInChargeCode"
-								:options="projectPicUsers.map((u) => ({
-									id: u.code,
-									name: u.name,
-									code: u.code,
-								}))"
+								:options="
+									projectPicUsers.map((u) => ({
+										id: u.code,
+										name: u.name,
+										code: u.code,
+									}))
+								"
 								label="Project PIC"
 								placeholder="Search or select Project PIC..."
 								:error="formErrors.personInChargeCode"
@@ -928,11 +1096,13 @@ const priorityColors: Record<string, string> = {
 						<div class="col-6">
 							<Autocomplete
 								v-model="formData.leaderCode"
-								:options="leaderOptions.map((u) => ({
-									id: u.code,
-									name: u.name,
-									code: u.code,
-								}))"
+								:options="
+									leaderOptions.map((u) => ({
+										id: u.code,
+										name: u.name,
+										code: u.code,
+									}))
+								"
 								label="Leader"
 								placeholder="Search or select Leader..."
 								:error="formErrors.leaderCode"
@@ -941,11 +1111,13 @@ const priorityColors: Record<string, string> = {
 						<div class="col-6">
 							<Autocomplete
 								v-model="formData.leaderIICode"
-								:options="leaderIIOptions.map((u) => ({
-									id: u.code,
-									name: u.name,
-									code: u.code,
-								}))"
+								:options="
+									leaderIIOptions.map((u) => ({
+										id: u.code,
+										name: u.name,
+										code: u.code,
+									}))
+								"
 								label="Leader II"
 								placeholder="Search or select Leader II..."
 							/>
@@ -994,7 +1166,8 @@ const priorityColors: Record<string, string> = {
 						</Badge>
 					</template>
 					<p class="section-subtitle">
-						Attach site instruction documents (e.g. PO, WhatsApp images). Minimum 2, maximum 3 files. <strong>Cannot be deleted once uploaded.</strong>
+						Attach site instruction documents (e.g. PO, WhatsApp images). Minimum 2,
+						maximum 3 files. <strong>Cannot be deleted once uploaded.</strong>
 					</p>
 
 					<div class="site-instructions-zone">
@@ -1034,7 +1207,11 @@ const priorityColors: Record<string, string> = {
 							@click="triggerSiteInstructionsUpload"
 						>
 							<i class="mdi mdi-cloud-upload-outline"></i>
-							<span>Click to upload ({{ formData.siteInstructionsFiles.length }}/3)</span>
+							<span
+								>Click to upload ({{
+									formData.siteInstructionsFiles.length
+								}}/3)</span
+							>
 							<small>Images, PDF, Word documents accepted</small>
 						</button>
 
@@ -1235,32 +1412,54 @@ const priorityColors: Record<string, string> = {
 								@change="(e: any) => onContractChange(e.target.value)"
 							>
 								<template #suffix>
-									<div v-if="selectedContractInfo" style="display: flex; align-items: center; gap: 4px;">
-										<Badge v-if="selectedContractInfo.status === 'Active'" type="success" icon="mdi-check-circle" size="sm">
+									<div
+										v-if="selectedContractInfo"
+										style="display: flex; align-items: center; gap: 4px"
+									>
+										<Badge
+											v-if="selectedContractInfo.status === 'Active'"
+											type="success"
+											icon="mdi-check-circle"
+											size="sm"
+										>
 											Active Contract
 										</Badge>
-										<template v-else-if="selectedContractInfo.status === 'ExpiringSoon'">
-											<Badge type="warning" icon="mdi-clock-alert-outline" size="sm">
+										<template
+											v-else-if="
+												selectedContractInfo.status === 'ExpiringSoon'
+											"
+										>
+											<Badge
+												type="warning"
+												icon="mdi-clock-alert-outline"
+												size="sm"
+											>
 												Expiring Soon
 											</Badge>
 											<button
 												type="button"
-												class="badge-action-btn badge-action-btn--warning"
+												class="badge-action-btn badge-action-btn--primary"
 												title="Go to Customer Form to extend contract"
-												@click.stop="redirectToCustomerRenew(selectedContractInfo)"
+												@click.stop="
+													redirectToCustomerRenew(selectedContractInfo)
+												"
 											>
 												<i class="mdi mdi-open-in-new"></i> Extend
 											</button>
 										</template>
-										<template v-else-if="selectedContractInfo.status === 'Expired'">
+										<template
+											v-else-if="selectedContractInfo.status === 'Expired'"
+										>
 											<Badge type="error" icon="mdi-alert-circle" size="sm">
 												Expired
 											</Badge>
 											<button
 												type="button"
-												class="badge-action-btn badge-action-btn--error"
+												class="badge-action-btn badge-action-btn--primary"
 												title="Go to Customer Form to renew contract"
-												@click.stop="redirectToCustomerRenew(selectedContractInfo)"
+												@click.stop="
+													redirectToCustomerRenew(selectedContractInfo)
+												"
 											>
 												<i class="mdi mdi-open-in-new"></i> Renew
 											</button>
@@ -1314,13 +1513,16 @@ const priorityColors: Record<string, string> = {
 						<div class="col-12">
 							<Autocomplete
 								v-model="formData.siteCode"
-								:options="sites.map((site) => ({
-									id: site.code,
-									name: site.name,
-									code: site.code,
-								}))"
-								label="Site"
+								:options="
+									sites.map((site) => ({
+										id: site.code,
+										name: site.name,
+										code: site.code,
+									}))
+								"
+								label="Site *"
 								placeholder="Search or select Site..."
+								:error="formErrors.siteCode"
 							/>
 						</div>
 					</div>
@@ -1329,37 +1531,20 @@ const priorityColors: Record<string, string> = {
 				<!-- Location Card -->
 				<Card style="margin-top: var(--spacing-lg)">
 					<template #header>
-						<h2>Location</h2>
+						<h2>Location & Map</h2>
 					</template>
 					<p class="section-subtitle">
-						Enter custom location address and coordinates.
+						Search address, pin location or drop marker on Google Map.
 					</p>
-					<div class="grid-row">
-						<div class="col-12">
-							<Textbox
-								v-model="formData.location"
-								label="Location"
-								placeholder="Enter Location Address"
-							>
-								<template #suffix>
-									<i
-										class="mdi mdi-map-marker text-muted"
-										style="margin-right: 8px"
-									></i>
-								</template>
-							</Textbox>
-						</div>
-						<div class="col-12">
-							<div class="map-placeholder">
-								<i class="mdi mdi-map"></i>
-								<span>Google Map Integration</span>
-							</div>
-						</div>
-					</div>
+					<GoogleMapPicker
+						v-model:location="formData.location"
+						v-model:latitude="formData.latitude"
+						v-model:longitude="formData.longitude"
+						height="320px"
+					/>
 				</Card>
 			</div>
 		</div>
-
 	</div>
 </template>
 
@@ -1634,7 +1819,9 @@ const priorityColors: Record<string, string> = {
 		padding: 4px;
 		border-radius: 4px;
 		line-height: 1;
-		transition: color 0.2s, background-color 0.2s;
+		transition:
+			color 0.2s,
+			background-color 0.2s;
 
 		&:hover {
 			color: var(--colors-state-error);
@@ -1659,7 +1846,10 @@ const priorityColors: Record<string, string> = {
 	background: transparent;
 	cursor: pointer;
 	color: var(--colors-text-muted);
-	transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+	transition:
+		border-color 0.2s,
+		background-color 0.2s,
+		color 0.2s;
 	width: 100%;
 
 	&:hover {

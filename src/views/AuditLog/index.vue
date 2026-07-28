@@ -225,6 +225,7 @@ onMounted(() => {
 		<Card class="table-scroll-container" style="padding: 0;">
 			<Table
 				paginate
+				storageKey="audit-log-list"
 				:headers="headers"
 				:items="filteredLogs"
 				emptyMessage="No audit logs found for the selected criteria."

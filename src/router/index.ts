@@ -57,24 +57,25 @@ const routes = [
 	{
 		path: "/customer",
 		component: MainLayout,
+		meta: { breadcrumb: false },
 		children: [
 			{
 				path: "list",
 				name: "Customer List",
 				component: () => import("@/views/Customer/CustomerList.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, breadcrumb: "Customer List" },
 			},
 			{
 				path: "profile",
 				name: "Customer Profile",
 				component: () => import("@/views/Customer/CustomerProfile.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, breadcrumb: "Customer Profile" },
 			},
 			{
 				path: "form",
 				name: "Customer Form",
 				component: () => import("@/views/Customer/CustomerForm.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, breadcrumb: "Customer Form" },
 			},
 		],
 	},
@@ -135,21 +136,25 @@ const routes = [
 	{
 		path: "/user",
 		component: MainLayout,
+		meta: { breadcrumb: false },
 		children: [
 			{
 				path: "list",
 				name: "User List",
 				component: () => import("@/views/User/UserList.vue"),
+				meta: { requiresAuth: true, breadcrumb: "Employee List" },
 			},
 			{
 				path: "profile",
 				name: "User Profile",
 				component: () => import("@/views/User/UserProfile.vue"),
+				meta: { requiresAuth: true, breadcrumb: "User Profile" },
 			},
 			{
 				path: "form",
 				name: "User Form",
 				component: () => import("@/views/User/UserProfile.vue"),
+				meta: { requiresAuth: true, breadcrumb: "User Form" },
 			},
 		],
 	},

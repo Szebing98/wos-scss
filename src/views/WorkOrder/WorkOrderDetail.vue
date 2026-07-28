@@ -8,6 +8,7 @@ import Select from "@/components/Select.vue";
 import DatePicker from "@/components/DatePicker.vue";
 import Table from "@/components/Table.vue";
 import Dialog from "@/components/Dialog.vue";
+import GoogleMapPicker from "@/components/GoogleMapPicker.vue";
 import NumericField from "@/components/NumericField.vue";
 import MultiSelect from "@/components/MultiSelect.vue";
 import Badge from "@/components/Badge.vue";
@@ -2255,14 +2256,14 @@ onUnmounted(() => {
 		</Dialog>
 
 		<!-- Map Dialog -->
-		<Dialog v-model="isMapDialogOpen" title="Location Map" maxWidth="600px">
-			<div class="map-container">
-				<i class="mdi mdi-map"></i>
-				<span>Google Maps Integration</span>
-				<p class="text-muted" style="font-size: 13px; margin-top: 8px">
-					Location: {{ workOrder.location || "Not Set" }}
-				</p>
-			</div>
+		<Dialog v-model="isMapDialogOpen" title="Location Map" maxWidth="700px">
+			<GoogleMapPicker
+				:location="workOrder.location"
+				:latitude="workOrder.latitude"
+				:longitude="workOrder.longitude"
+				readonly
+				height="350px"
+			/>
 			<template #footer>
 				<Button variant="primary" @click="isMapDialogOpen = false">Close</Button>
 			</template>

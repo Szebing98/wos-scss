@@ -309,6 +309,7 @@ async function confirmToggleStatus() {
 			<Card class="table-card" style="padding: 0;">
 				<Table
 					paginate
+					storageKey="site-maintenance"
 					:headers="tableHeaders"
 					:items="filteredSites"
 					emptyMessage="No maintenance sites found."
