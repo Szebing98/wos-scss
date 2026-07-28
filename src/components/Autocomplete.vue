@@ -36,9 +36,13 @@ const selectedOption = computed(() => {
 // Sync input display text with selected model value when closed
 watch(
 	() => props.modelValue,
-	() => {
-		if (selectedOption.value) {
+	(val) => {
+		if (!val) {
+			searchInput.value = "";
+		} else if (selectedOption.value) {
 			searchInput.value = selectedOption.value.name;
+		} else {
+			searchInput.value = String(val);
 		}
 	},
 	{ immediate: true },
@@ -71,6 +75,14 @@ function selectOption(option: AutocompleteOption) {
 	emit("select", option);
 	searchInput.value = option.name;
 	isOpen.value = false;
+}
+
+function clearSelection(event?: MouseEvent) {
+	if (event) event.stopPropagation();
+	if (props.disabled) return;
+	searchInput.value = "";
+	emit("update:modelValue", "");
+	isOpen.value = true;
 }
 
 function handleClickOutside(event: MouseEvent) {
@@ -123,7 +135,17 @@ onUnmounted(() => {
 				@click="onInputClick"
 				class="autocomplete-input"
 			/>
+			<div v-if="$slots.suffix" class="autocomplete-suffix" @click.stop>
+				<slot name="suffix"></slot>
+			</div>
 			<i
+				v-if="modelValue || searchInput"
+				class="mdi mdi-close-circle clear-icon"
+				title="Clear selection"
+				@click.stop="clearSelection"
+			></i>
+			<i
+				v-else
 				class="mdi mdi-chevron-down chevron-icon"
 				@click.stop="!disabled && (isOpen = !isOpen)"
 			></i>
@@ -220,12 +242,33 @@ onUnmounted(() => {
 		}
 	}
 
+	.autocomplete-suffix {
+		position: absolute;
+		right: 32px;
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+	}
+
 	.chevron-icon {
 		position: absolute;
 		right: 10px;
 		color: var(--colors-text-muted, #94a3b8);
 		font-size: 18px;
 		cursor: pointer;
+	}
+
+	.clear-icon {
+		position: absolute;
+		right: 10px;
+		color: var(--colors-text-muted, #94a3b8);
+		font-size: 16px;
+		cursor: pointer;
+		transition: color 0.2s ease;
+
+		&:hover {
+			color: #ef4444;
+		}
 	}
 }
 

@@ -1,34 +1,34 @@
 <template>
 	<div class="maintenance-view">
+		<!-- Header -->
 		<div class="maintenance-view__header">
 			<div class="maintenance-view__title-area">
-				<button class="btn btn--text" style="color: var(--colors-brand-primary); padding: 0" @click="router.back()">
-					<i class="mdi mdi-arrow-left"></i> Cancel
-				</button>
-				<h1 class="mt-xs">
-					{{
-						isNewMode ? "Register New Customer Account" : "Modify Configuration Schema"
-					}}
+				<h1>
+					{{ isNewMode ? "Register New Customer Account" : "Edit Customer Account" }}
 				</h1>
 			</div>
-			<button class="btn btn--primary" @click="handleSubmitForm">
-				<i class="mdi mdi-content-save-check-outline"></i> Commit Changes
+			<button class="btn btn--primary" :disabled="loading" @click="handleSubmitForm">
+				<i v-if="!loading" class="mdi mdi-content-save-check-outline"></i>
+				<i v-else class="mdi mdi-loading mdi-spin"></i>
+				{{ loading ? "Saving..." : (isNewMode ? "Register Customer" : "Commit Changes") }}
 			</button>
 		</div>
 
 		<div class="form-scroll-layout">
+			<!-- Core Primary Block -->
 			<div class="panel-card mb-lg">
 				<h2 class="panel-card__title mb-md">
-					<i class="mdi mdi-card-account-details-outline"></i> Core Primary Block
+					<i class="mdi mdi-card-account-details-outline"></i> Core Account & Identity Block
 				</h2>
 				<div class="form-grid">
-					<div class="form-group">
-						<label class="form-group__label"
-							>Customer Name <span class="u-required">*</span></label
-						>
+					<div class="form-group form-group--full">
+						<label class="form-group__label">
+							Customer Name <span class="u-required">*</span>
+						</label>
 						<Textbox
 							v-model="form.name"
-							placeholder="Legal full name"
+							placeholder="Legal full name or company title"
+							:error="formErrors.name"
 						/>
 					</div>
 					<div class="form-group">
@@ -39,158 +39,515 @@
 						/>
 					</div>
 					<div class="form-group">
-						<label class="form-group__label">License Number</label>
-						<Textbox v-model="form.licenseNo" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">System Base Address Code</label>
-						<Textbox v-model="form.addressCode" />
+						<label class="form-group__label">License / Operating Permit No</label>
+						<Textbox v-model="form.licenseNo" placeholder="Business license reference" />
 					</div>
 
-					<div class="form-group form-group--checkbox-row mt-xs">
-						<label class="switch-toggle mr-lg">
+					<!-- Side-by-side switches in the exact same row -->
+					<div class="form-group mt-sm">
+						<label class="switch-toggle">
 							<input type="checkbox" v-model="form.isActive" />
 							<span class="switch-toggle__slider"></span>
 							<span class="switch-toggle__label">Account Active Status</span>
 						</label>
+					</div>
 
+					<div class="form-group mt-sm">
 						<label class="switch-toggle">
 							<input type="checkbox" v-model="form.requestEinvoice" />
 							<span class="switch-toggle__slider"></span>
-							<span class="switch-toggle__label"
-								>Enable LHDN e-Invoice Validation Engine</span
-							>
+							<span class="switch-toggle__label">Enable LHDN e-Invoice Validation Engine</span>
 						</label>
 					</div>
 				</div>
 			</div>
 
+			<!-- Customer Address Block -->
+			<div class="panel-card mb-lg">
+				<div class="panel-card__header">
+					<h2>
+						<i class="mdi mdi-map-marker-outline u-text-primary"></i> Customer Primary Address
+					</h2>
+				</div>
+
+				<div class="form-grid">
+					<div class="form-group form-group--full">
+						<label class="form-group__label">Address Line 1</label>
+						<Textbox v-model="form.address.address1" placeholder="Street address, building name, floor/unit no." />
+					</div>
+					<div class="form-group form-group--full">
+						<label class="form-group__label">Address Line 2</label>
+						<Textbox v-model="form.address.address2" placeholder="Industrial park, section, landmark (optional)" />
+					</div>
+					<div class="form-group">
+						<label class="form-group__label">Country</label>
+						<Autocomplete
+							v-model="form.address.country"
+							:options="countryOptions"
+							placeholder="Search or select country..."
+						/>
+					</div>
+					<div class="form-group">
+						<label class="form-group__label">State</label>
+						<Autocomplete
+							v-model="form.address.state"
+							:options="stateOptions"
+							placeholder="Search or select state..."
+						/>
+					</div>
+					<div class="form-group">
+						<label class="form-group__label">City / Town</label>
+						<Textbox v-model="form.address.city" placeholder="e.g. Petaling Jaya / Puchong" />
+					</div>
+					<div class="form-group">
+						<label class="form-group__label">Postcode</label>
+						<Textbox v-model="form.address.postcode" placeholder="e.g. 47100" />
+					</div>
+				</div>
+			</div>
+
+			<!-- Customer Contracts Block (Shown in Edit Mode) -->
+			<div v-if="!isNewMode" class="panel-card mb-lg">
+				<div class="panel-card__header">
+					<h2>
+						<i class="mdi mdi-file-document-multiple-outline u-text-primary"></i> Customer Contracts
+					</h2>
+					<button class="btn btn--sm btn--primary" type="button" @click="openAddContractModal">
+						<i class="mdi mdi-plus"></i> Add Contract
+					</button>
+				</div>
+
+				<div v-if="contracts.length > 0" class="contracts-list">
+					<div
+						v-for="c in contracts"
+						:key="c.guid || c.contractNo"
+						class="contract-item-card"
+						:class="{
+							'contract-item-card--expiring': c.status === 'ExpiringSoon',
+							'contract-item-card--expired': c.status === 'Expired'
+						}"
+					>
+						<div class="contract-item-card__main">
+							<div class="contract-item-card__header">
+								<span class="contract-item-card__no u-font-mono">
+									<i class="mdi mdi-file-document-outline"></i> {{ c.contractNo }}
+								</span>
+								<span class="contract-item-card__title">{{ c.contractName }}</span>
+
+								<Badge v-if="c.status === 'Active'" type="success" icon="mdi-check-circle">
+									Active
+								</Badge>
+								<Badge v-else-if="c.status === 'ExpiringSoon'" type="warning" icon="mdi-clock-alert-outline">
+									Expiring Soon (In 1 Mo)
+								</Badge>
+								<Badge v-else type="error" icon="mdi-alert-circle-outline">
+									Expired
+								</Badge>
+							</div>
+
+							<div class="contract-item-card__dates mt-xs">
+								<span>Start: <strong>{{ formatDate(c.startDate) }}</strong></span>
+								<span class="mx-xs">•</span>
+								<span>Expiry: <strong>{{ formatDate(c.endDate) }}</strong></span>
+							</div>
+
+							<p v-if="c.description" class="contract-item-card__desc mt-xs">
+								{{ c.description }}
+							</p>
+
+							<!-- Expiry Alert Banners -->
+							<div v-if="c.status === 'ExpiringSoon'" class="contract-alert contract-alert--warning mt-xs">
+								<i class="mdi mdi-alert-circle"></i> Notice: Contract will expire within 1 month. Click Renew to extend validity.
+							</div>
+							<div v-else-if="c.status === 'Expired'" class="contract-alert contract-alert--danger mt-xs">
+								<i class="mdi mdi-close-circle"></i> Warning: Contract has expired and is disabled for selection in Work Orders.
+							</div>
+						</div>
+
+						<!-- Uniform size action buttons -->
+						<div class="contract-item-card__actions">
+							<button
+								class="btn btn--sm btn--secondary"
+								type="button"
+								title="Edit Contract Details"
+								@click="openEditContractModal(c)"
+							>
+								<i class="mdi mdi-pencil-outline"></i> Edit
+							</button>
+
+							<button
+								v-if="c.status === 'ExpiringSoon' || c.status === 'Expired'"
+								class="btn btn--sm btn--warning"
+								type="button"
+								@click="openRenewModal(c)"
+							>
+								<i class="mdi mdi-autorenew"></i> Renew
+							</button>
+							<button
+								v-else
+								class="btn btn--sm btn--secondary"
+								type="button"
+								@click="openRenewModal(c)"
+							>
+								<i class="mdi mdi-calendar-plus"></i> Extend
+							</button>
+						</div>
+					</div>
+				</div>
+				<div v-else class="empty-contracts">
+					<i class="mdi mdi-file-hidden-outline"></i>
+					<p>No contracts added yet. Click Add Contract to create a new contract schedule.</p>
+				</div>
+			</div>
+
+			<!-- Debtor Profile Block -->
 			<div
 				class="panel-card mb-lg"
 				:class="{ 'panel-card--disabled-mask': form.accountNo && !form.profile }"
 			>
 				<div class="panel-card__header">
 					<h2>
-						<i class="mdi mdi-badge-account-horizontal-outline"></i> Debtor Profile
-						Block
+						<i class="mdi mdi-badge-account-horizontal-outline"></i> Tax Profile & Contacts Block
 					</h2>
-					<Chip v-if="form.accountNo" type="warning">Mandatory (Has AccountNo)</Chip>
+					<Chip v-if="form.accountNo" type="warning">Mandatory (Has AutoCount AccountNo)</Chip>
 				</div>
 
 				<div class="form-grid">
 					<div class="form-group">
-						<label class="form-group__label">Login/Notification Email</label>
+						<label class="form-group__label">
+							Login / Notification Email <span v-if="form.accountNo" class="u-required">*</span>
+						</label>
 						<Textbox
 							v-model="form.profile.email"
 							type="email"
+							placeholder="finance@company.com"
+							:error="formErrors.email"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Contact Phone</label>
-						<Textbox v-model="form.profile.phone" />
+						<Textbox v-model="form.profile.phone" placeholder="+60123456789" />
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Tax Identity No (TIN)</label>
 						<Textbox
 							v-model="form.profile.tin"
+							placeholder="C2580000000"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Business Reg No (BRN)</label>
 						<Textbox
 							v-model="form.profile.brn"
+							placeholder="202601000123 (123456-X)"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Individual Type Selection</label>
 						<Select v-model="form.profile.individualType">
-							<option value="COMPANY">COMPANY</option>
-							<option value="MyKAD">MyKAD (Malaysian Identity)</option>
-							<option value="PASSPORT">PASSPORT (Foreigner)</option>
-							<option value="GOVERNMENT">GOVERNMENT</option>
+							<option value="COMPANY">COMPANY (Corporate Entity)</option>
+							<option value="MyKAD">MyKAD (Malaysian Citizen)</option>
+							<option value="PASSPORT">PASSPORT (Foreigner / Expat)</option>
+							<option value="GOVERNMENT">GOVERNMENT (Gov Agency)</option>
 						</Select>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Identity Document Number</label>
 						<Textbox
 							v-model="form.profile.identityNo"
+							placeholder="MyKAD or Passport Number"
 						/>
 					</div>
 				</div>
 			</div>
 
+			<!-- Credit & Tax Metadata Block -->
 			<div
 				class="panel-card"
 				:class="{ 'panel-card--disabled-mask': form.requestEinvoice && !form.metadata }"
 			>
 				<div class="panel-card__header">
 					<h2>
-						<i class="mdi mdi-file-document-edit-outline"></i> Credit & Tax Metadata
-						Block
+						<i class="mdi mdi-file-document-edit-outline"></i> Credit & Tax Metadata Block
 					</h2>
-					<Chip v-if="form.requestEinvoice" type="error"
-						>Required for e-Invoice Integration</Chip
-					>
+					<Chip v-if="form.requestEinvoice" type="error">Required for e-Invoice Integration</Chip>
 				</div>
 
 				<div class="form-grid">
 					<div class="form-group">
-						<label class="form-group__label">Default Transaction Currency</label>
+						<label class="form-group__label">
+							Default Transaction Currency <span v-if="form.requestEinvoice" class="u-required">*</span>
+						</label>
 						<Textbox
 							v-model="form.metadata.currencyCode"
 							placeholder="MYR"
+							:error="formErrors.currencyCode"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Credit Limit Amount</label>
 						<Textbox
 							v-model="form.metadata.creditLimit"
+							placeholder="50000.00"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Overdue Limit Amount</label>
 						<Textbox
 							v-model="form.metadata.overdueLimit"
+							placeholder="10000.00"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Linked Accounting Control Account</label>
 						<Textbox
 							v-model="form.metadata.controlAccount"
+							placeholder="300-0000"
 						/>
 					</div>
 					<div class="form-group">
 						<label class="form-group__label">Tax Exemption Reference Number</label>
 						<Textbox
 							v-model="form.metadata.taxExemptNo"
+							placeholder="EXEMPT-2026-9"
 						/>
 					</div>
 					<div class="form-group">
-						<label class="form-group__label">Exemption Expiry Date (ISO)</label>
+						<label class="form-group__label">Exemption Expiry Date (YYYY-MM-DD)</label>
 						<Textbox
 							v-model="form.metadata.exemptExpiryDate"
-							placeholder="YYYY-MM-DD"
+							placeholder="2026-12-31"
 						/>
 					</div>
 				</div>
 			</div>
 		</div>
+
+		<!-- Dialog: Add / Edit Contract -->
+		<Dialog
+			v-model="showContractDialog"
+			:title="isEditingContract ? 'Edit Customer Contract' : 'Add New Customer Contract'"
+			:confirmText="isEditingContract ? 'Save Edit' : 'Create Contract'"
+			cancelText="Cancel"
+			:loading="submittingContract"
+			overflowVisible
+			@confirm="handleSaveContract"
+		>
+			<div class="dialog-form">
+				<div class="form-group mb-md">
+					<label class="form-group__label">Contract No <span class="u-required">*</span></label>
+					<Textbox v-model="contractForm.contractNo" placeholder="e.g. CTR-2026-001" />
+				</div>
+				<div class="form-group mb-md">
+					<label class="form-group__label">Contract Title / Name <span class="u-required">*</span></label>
+					<Textbox v-model="contractForm.contractName" placeholder="e.g. Annual Equipment Maintenance" />
+				</div>
+				<div class="form-grid-2 mb-md">
+					<div class="form-group">
+						<label class="form-group__label">Start Date <span class="u-required">*</span></label>
+						<DatePicker v-model="contractForm.startDate" />
+					</div>
+					<div class="form-group">
+						<label class="form-group__label">End Date (Expiry) <span class="u-required">*</span></label>
+						<DatePicker v-model="contractForm.endDate" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="form-group__label">Description / Remarks</label>
+					<Textbox v-model="contractForm.description" placeholder="Optional contract terms or notes..." />
+				</div>
+			</div>
+		</Dialog>
+
+		<!-- Dialog: Renew Contract -->
+		<Dialog
+			v-model="showRenewDialog"
+			title="Renew Contract"
+			confirmText="Confirm Renewal"
+			cancelText="Cancel"
+			:loading="submittingContract"
+			overflowVisible
+			@confirm="handleRenewContractSubmit"
+		>
+			<div class="dialog-form" v-if="selectedContractForRenew">
+				<p class="mb-md" style="font-size: 13px; color: var(--colors-text-muted)">
+					Renewing contract <strong class="u-font-mono u-text-primary">{{ selectedContractForRenew.contractNo }}</strong> ({{ selectedContractForRenew.contractName }})
+				</p>
+				<div class="form-group mb-md">
+					<label class="form-group__label">New Expiration Date <span class="u-required">*</span></label>
+					<DatePicker v-model="renewForm.newEndDate" />
+				</div>
+				<div class="form-group">
+					<label class="form-group__label">Renewal Remarks / Notes</label>
+					<Textbox v-model="renewForm.remarks" placeholder="Reason for extension / renewal terms..." />
+				</div>
+			</div>
+		</Dialog>
+
+		<!-- Dialog: Post-Registration Contract Prompt -->
+		<Dialog
+			v-model="showPostRegisterDialog"
+			title="Customer Registered Successfully"
+			confirmText="Add Contract Now"
+			cancelText="Done / Go to Directory"
+			@confirm="handlePostRegisterAddContract"
+			@cancel="handlePostRegisterSkip"
+		>
+			<div class="u-text-center py-md" style="text-align: center; padding: 16px 0;">
+				<i class="mdi mdi-check-circle-outline u-text-primary mb-sm" style="font-size: 48px; color: var(--colors-brand-primary)"></i>
+				<h3 style="font-size: 16px; font-weight: 700; margin: 8px 0 6px 0; color: var(--colors-text-primary)">
+					{{ createdCustomerName }} has been created!
+				</h3>
+				<p style="font-size: 13px; color: var(--colors-text-secondary); margin: 0">
+					Would you like to set up an active contract schedule for this customer now?
+				</p>
+			</div>
+		</Dialog>
+
 	</div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Chip from "@/components/Chip.vue";
+import Badge from "@/components/Badge.vue";
+import Dialog from "@/components/Dialog.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
+import DatePicker from "@/components/DatePicker.vue";
+import Autocomplete from "@/components/Autocomplete.vue";
+import type { AutocompleteOption } from "@/components/Autocomplete.vue";
 import { customerApi } from "@/api/customer/customer.api";
+import { locationApi } from "@/api/maintenance/location/location.api";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+
+import { LHDN_COUNTRIES, LHDN_STATES } from "@/utils/lhdn-countries";
 
 const route = useRoute();
 const router = useRouter();
+const snackbar = useSnackbarStore();
+
 const isNewMode = ref(true);
 const customerGuid = ref<string | null>(null);
 const loading = ref(false);
+const contracts = ref<any[]>([]);
+const formErrors = ref<Record<string, string>>({});
+
+// Post-Registration Prompt State
+const showPostRegisterDialog = ref(false);
+const createdCustomerGuid = ref<string | null>(null);
+const createdCustomerName = ref("");
+
+// Dialog States
+const showContractDialog = ref(false);
+const isEditingContract = ref(false);
+const editingContractGuid = ref<string | null>(null);
+const showRenewDialog = ref(false);
+const selectedContractForRenew = ref<any>(null);
+const submittingContract = ref(false);
+
+function formatCountryName(str: string): string {
+	if (!str) return "";
+	return str
+		.toLowerCase()
+		.split(" ")
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(" ");
+}
+
+const countryOptions = ref<AutocompleteOption[]>(
+	LHDN_COUNTRIES.map((c) => ({
+		id: formatCountryName(c.Country),
+		name: formatCountryName(c.Country),
+		code: c.Code,
+	}))
+);
+
+const mysStateOptions: AutocompleteOption[] = LHDN_STATES.map((s) => ({
+	id: s.State === "Not Applicable" ? "Others" : s.State,
+	name: s.State === "Not Applicable" ? "Others" : s.State,
+	code: s.Code,
+}));
+
+const stateOptions = ref<AutocompleteOption[]>(mysStateOptions);
+
+async function updateStateOptionsForCountry(countryName: string) {
+	if (!countryName) {
+		stateOptions.value = mysStateOptions;
+		return;
+	}
+
+	const isMalaysia =
+		countryName.toLowerCase() === "malaysia" ||
+		countryName.toUpperCase() === "MYS" ||
+		countryName.toUpperCase() === "MY";
+
+	if (isMalaysia) {
+		stateOptions.value = mysStateOptions;
+		return;
+	}
+
+	const selectedCountryObj = countryOptions.value.find(
+		(c) =>
+			c.name.toLowerCase() === countryName.toLowerCase() ||
+			String(c.id).toLowerCase() === countryName.toLowerCase() ||
+			(c.code && c.code.toLowerCase() === countryName.toLowerCase())
+	);
+
+	const countryCode = selectedCountryObj?.code || countryName;
+
+	try {
+		const sRes = await locationApi.getStates({ countryCode } as any);
+		const rawStates = sRes?.data?.data || sRes?.data || [];
+		if (Array.isArray(rawStates) && rawStates.length > 0) {
+			stateOptions.value = rawStates.map((s: any) => ({
+				id: s.name || s.State || s.code || s.Code,
+				name: s.name || s.State || s.code || s.Code,
+				code: s.code || s.Code,
+			}));
+			return;
+		}
+	} catch (e) {
+		// Ignore API error
+	}
+
+	// Default fallback matching Location Maintenance subNodes
+	stateOptions.value = [
+		{ id: "Standard Region", name: "Standard Region", code: "00" },
+		{ id: "Others", name: "Others", code: "17" },
+	];
+}
+
+async function loadLocationList() {
+	try {
+		const [cRes] = await Promise.all([
+			locationApi.getCountries({ limit: 250 } as any),
+		]);
+		if (cRes?.data?.data && cRes.data.data.length > 0) {
+			countryOptions.value = cRes.data.data.map((c: any) => ({
+				id: formatCountryName(c.Country || c.name),
+				name: formatCountryName(c.Country || c.name),
+				code: c.Code || c.code,
+			}));
+		}
+	} catch (e) {
+		// Fallback options already present
+	}
+}
+
+const contractForm = ref({
+	contractNo: "",
+	contractName: "",
+	startDate: "",
+	endDate: "",
+	description: "",
+});
+
+const renewForm = ref({
+	newEndDate: "",
+	remarks: "",
+});
 
 const form = ref<any>({
 	accountNo: "",
@@ -199,6 +556,14 @@ const form = ref<any>({
 	isActive: true,
 	requestEinvoice: false,
 	addressCode: "",
+	address: {
+		address1: "",
+		address2: "",
+		city: "",
+		state: "Selangor",
+		postcode: "",
+		country: "Malaysia",
+	},
 	profile: { email: "", phone: "", tin: "", brn: "", individualType: "COMPANY", identityNo: "" },
 	metadata: {
 		currencyCode: "MYR",
@@ -210,7 +575,53 @@ const form = ref<any>({
 	},
 });
 
+watch(
+	() => form.value.address?.country,
+	async (newCountry, oldCountry) => {
+		if (!newCountry) {
+			// When country is cleared or empty -> set state to "Others"
+			if (form.value.address) {
+				form.value.address.state = "Others";
+			}
+			stateOptions.value = [{ id: "Others", name: "Others", code: "17" }];
+			return;
+		}
+
+		await updateStateOptionsForCountry(newCountry);
+
+		const isCountrySwitched = oldCountry !== undefined && oldCountry !== newCountry;
+		const isStateEmpty = !form.value.address?.state;
+
+		if (isCountrySwitched || isStateEmpty) {
+			if (stateOptions.value && stateOptions.value.length > 0) {
+				const firstState = stateOptions.value[0].name || stateOptions.value[0].id;
+				form.value.address.state = String(firstState);
+			} else {
+				form.value.address.state = "Others";
+			}
+		}
+	},
+	{ immediate: true }
+);
+
+function computeStatus(endDateStr: string): "Active" | "ExpiringSoon" | "Expired" {
+	if (!endDateStr) return "Active";
+	const now = new Date();
+	const end = new Date(endDateStr);
+	if (end < now) return "Expired";
+	const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+	if (end <= thirtyDays) return "ExpiringSoon";
+	return "Active";
+}
+
+function formatDate(iso: string) {
+	if (!iso) return "—";
+	return iso.slice(0, 10);
+}
+
 onMounted(async () => {
+	loadLocationList();
+
 	const code = route.query.code;
 	if (route.query.mode === "new" || !code) {
 		isNewMode.value = true;
@@ -222,6 +633,10 @@ onMounted(async () => {
 			const { data, error } = await customerApi.getCustomerByGuid(code as string);
 			if (data && data.data) {
 				const c = data.data as any;
+				contracts.value = (c.contracts || []).map((contract: any) => ({
+					...contract,
+					status: computeStatus(contract.endDate),
+				}));
 				form.value = {
 					accountNo: c.accountNo || "",
 					name: c.name || "",
@@ -229,6 +644,21 @@ onMounted(async () => {
 					isActive: c.isActive ?? true,
 					requestEinvoice: c.requestEinvoice ?? false,
 					addressCode: c.addressCode || "",
+					address: c.address ? {
+						address1: c.address.address1 || "",
+						address2: c.address.address2 || "",
+						city: c.address.city || "",
+						state: c.address.state || "Selangor",
+						postcode: c.address.postcode || "",
+						country: c.address.country || "Malaysia",
+					} : {
+						address1: "",
+						address2: "",
+						city: "",
+						state: "Selangor",
+						postcode: "",
+						country: "Malaysia",
+					},
 					profile: c.profile ? {
 						email: c.profile.email || "",
 						phone: c.profile.phone || "",
@@ -254,57 +684,227 @@ onMounted(async () => {
 					},
 				};
 			} else if (error) {
+				snackbar.error("Failed to load customer details.");
 				console.error("Failed to load customer details:", error);
 			}
 		} catch (e) {
+			snackbar.error("Error loading customer profile.");
 			console.error(e);
 		} finally {
 			loading.value = false;
 		}
 	}
+
+	// Auto-trigger Renew Modal if requested via route query params (from Work Order form)
+	if (route.query.action === "renew") {
+		const targetContractNo = route.query.contractNo as string;
+		const targetContract = contracts.value.find(
+			(c: any) => c.contractNo === targetContractNo
+		) || contracts.value[0];
+		if (targetContract) {
+			openRenewModal(targetContract);
+		}
+	}
 });
 
-function validateSchemaLogic(): boolean {
-	if (form.value.accountNo && (!form.value.profile || !form.value.profile.email)) {
-		alert(
-			"Validation Fail: Profile schema details are required when AutoCount accountNo is provided.",
-		);
-		return false;
-	}
-	if (form.value.requestEinvoice && (!form.value.metadata || !form.value.metadata.currencyCode)) {
-		alert("Validation Fail: Metadata schema required when e-Invoice engine is requested.");
-		return false;
-	}
-	return true;
+function openAddContractModal() {
+	isEditingContract.value = false;
+	editingContractGuid.value = null;
+	const custName = createdCustomerName.value || form.value.name || "CUST";
+	contractForm.value = {
+		contractNo: `CTR-${custName.slice(0, 3).toUpperCase()}-${new Date().getFullYear()}`,
+		contractName: "Equipment & Maintenance Support Agreement",
+		startDate: new Date().toISOString().slice(0, 10),
+		endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().slice(0, 10),
+		description: "",
+	};
+	showContractDialog.value = true;
 }
 
-async function handleSubmitForm() {
-	if (!form.value.name) {
-		alert("Customer Name is strictly mandatory.");
+function openEditContractModal(item: any) {
+	isEditingContract.value = true;
+	editingContractGuid.value = item.guid || null;
+	contractForm.value = {
+		contractNo: item.contractNo || "",
+		contractName: item.contractName || "",
+		startDate: item.startDate ? item.startDate.slice(0, 10) : "",
+		endDate: item.endDate ? item.endDate.slice(0, 10) : "",
+		description: item.description || "",
+	};
+	showContractDialog.value = true;
+}
+
+async function handleSaveContract() {
+	if (!contractForm.value.contractNo || !contractForm.value.contractName || !contractForm.value.startDate || !contractForm.value.endDate) {
+		snackbar.warning("Please fill in all required contract fields (*).");
 		return;
 	}
 
+	const targetGuid = customerGuid.value || createdCustomerGuid.value;
+
+	try {
+		submittingContract.value = true;
+		if (isEditingContract.value && editingContractGuid.value) {
+			// Edit existing contract on backend
+			const { error } = await customerApi.updateContract(editingContractGuid.value, contractForm.value);
+			if (error) {
+				snackbar.error("Failed to save edit: " + (error.error?.message || error));
+				return;
+			}
+			snackbar.success("Contract updated successfully!");
+		} else if (targetGuid) {
+			// Create new contract on backend
+			const { error } = await customerApi.createContract(targetGuid, contractForm.value);
+			if (error) {
+				snackbar.error("Failed to create contract: " + (error.error?.message || error));
+				return;
+			}
+			snackbar.success("New contract added successfully!");
+		}
+
+		showContractDialog.value = false;
+		if (targetGuid) {
+			const { data } = await customerApi.getCustomerByGuid(targetGuid);
+			if (data && data.data) {
+				contracts.value = (data.data.contracts || []).map((c: any) => ({
+					...c,
+					status: computeStatus(c.endDate),
+				}));
+			}
+		}
+		router.back();
+	} catch (e) {
+		snackbar.error("Error saving contract.");
+	} finally {
+		submittingContract.value = false;
+	}
+}
+
+function handlePostRegisterAddContract() {
+	showPostRegisterDialog.value = false;
+	if (createdCustomerGuid.value) {
+		customerGuid.value = createdCustomerGuid.value;
+		isNewMode.value = false;
+	}
+	openAddContractModal();
+}
+
+function handlePostRegisterSkip() {
+	showPostRegisterDialog.value = false;
+	router.back();
+}
+
+function openRenewModal(contractItem: any) {
+	selectedContractForRenew.value = contractItem;
+	const currentEnd = new Date(contractItem.endDate || new Date());
+	const nextYearEnd = new Date(currentEnd.setFullYear(currentEnd.getFullYear() + 1)).toISOString().slice(0, 10);
+	renewForm.value = {
+		newEndDate: nextYearEnd,
+		remarks: "Standard 1-Year Contract Extension",
+	};
+	showRenewDialog.value = true;
+}
+
+async function handleRenewContractSubmit() {
+	if (!selectedContractForRenew.value || !renewForm.value.newEndDate) {
+		snackbar.warning("Please specify a valid new expiration date.");
+		return;
+	}
+
+	if (selectedContractForRenew.value.guid) {
+		try {
+			submittingContract.value = true;
+			const { error } = await customerApi.renewContract(selectedContractForRenew.value.guid, renewForm.value);
+			if (error) {
+				snackbar.error("Failed to renew contract: " + (error.error?.message || error));
+				return;
+			}
+			snackbar.success("Contract renewed successfully!");
+			showRenewDialog.value = false;
+			const targetGuid = customerGuid.value || createdCustomerGuid.value;
+			if (targetGuid) {
+				const { data } = await customerApi.getCustomerByGuid(targetGuid);
+				if (data && data.data) {
+					contracts.value = (data.data.contracts || []).map((c: any) => ({
+						...c,
+						status: computeStatus(c.endDate),
+					}));
+				}
+			}
+		} catch (e) {
+			snackbar.error("Failed to submit renewal.");
+		} finally {
+			submittingContract.value = false;
+		}
+	} else {
+		selectedContractForRenew.value.endDate = renewForm.value.newEndDate;
+		selectedContractForRenew.value.status = computeStatus(renewForm.value.newEndDate);
+		snackbar.success("Contract extended in form!");
+		showRenewDialog.value = false;
+	}
+}
+
+function validateSchemaLogic(): boolean {
+	formErrors.value = {};
+	let isValid = true;
+
+	if (!form.value.name?.trim()) {
+		formErrors.value.name = "Customer Name is strictly required";
+		snackbar.warning("Customer Name is strictly mandatory.");
+		isValid = false;
+	}
+
+	if (form.value.accountNo && (!form.value.profile || !form.value.profile.email?.trim())) {
+		formErrors.value.email = "Email is required when AutoCount AccountNo is set";
+		snackbar.warning("Profile email is required when AutoCount AccountNo is provided.");
+		isValid = false;
+	}
+
+	if (form.value.requestEinvoice && (!form.value.metadata || !form.value.metadata.currencyCode?.trim())) {
+		formErrors.value.currencyCode = "Currency code is required when e-Invoice engine is enabled";
+		snackbar.warning("Metadata currency code is required when e-Invoice engine is enabled.");
+		isValid = false;
+	}
+
+	return isValid;
+}
+
+async function handleSubmitForm() {
 	if (!validateSchemaLogic()) return;
 
 	try {
 		loading.value = true;
+		const payload = {
+			...form.value,
+			contractNo: contracts.value[0]?.contractNo || "",
+			metadata: {
+				...form.value.metadata,
+				contractNo: contracts.value[0]?.contractNo || "",
+			},
+		};
+
 		if (isNewMode.value) {
-			const { error } = await customerApi.createCustomer(form.value);
+			const { data, error } = await customerApi.createCustomer(payload);
 			if (error) {
-				alert(`Failed to create customer: ${error.error.message}`);
+				snackbar.error(`Failed to create customer: ${error.error?.message || error}`);
 				return;
 			}
-			alert("Customer registered successfully!");
+			const newGuid = data?.data?.guid || data?.guid;
+			createdCustomerGuid.value = newGuid;
+			createdCustomerName.value = form.value.name;
+			snackbar.success("Customer registered successfully!");
+			showPostRegisterDialog.value = true;
 		} else if (customerGuid.value) {
-			const { error } = await customerApi.updateCustomer(customerGuid.value, form.value);
+			const { error } = await customerApi.updateCustomer(customerGuid.value, payload);
 			if (error) {
-				alert(`Failed to update customer: ${error.error.message}`);
+				snackbar.error(`Failed to update customer: ${error.error?.message || error}`);
 				return;
 			}
-			alert("Customer configuration updated successfully!");
+			snackbar.success("Customer configuration updated successfully!");
+			router.back();
 		}
-		router.back();
-	} catch (e) {
+	} catch (e: any) {
+		snackbar.error("An unexpected error occurred while saving.");
 		console.error("Error submitting customer form:", e);
 	} finally {
 		loading.value = false;
@@ -332,333 +932,239 @@ async function handleSubmitForm() {
 		gap: var(--spacing-md);
 	}
 	&__title-area {
-		p {
-			font-size: 13px;
-			color: #64748b;
-			margin: 0;
+		h1 {
+			font-size: 22px;
+			font-weight: 700;
+			color: var(--colors-text-primary);
+			margin: 4px 0 0;
 		}
 	}
 }
 
-// 极简圆形加号雷达
-.title-with-action {
-	@include flex-row($align: center, $gap: 12px);
-	h1 {
-		font-size: 24px;
-		font-weight: 700;
-		margin: 0;
-		color: #0f172a;
-	}
-
-	.icon-action-btn--primary {
-		background-color: rgba(80, 88, 242, 0.08);
-		color: var(--colors-brand-primary);
-		border-radius: 50%;
-		width: 32px;
-		height: 32px;
-		&:hover {
-			background-color: var(--colors-brand-primary);
-			color: white;
-		}
-	}
-}
-
-.back-link-btn {
-	background: transparent;
-	border: none;
-	font-size: 13px;
-	font-weight: 600;
-	color: #64748b;
-	cursor: pointer;
-	padding: 0;
-	@include flex-row($align: center, $gap: 4px);
-	&:hover {
-		color: var(--colors-brand-primary);
-	}
-}
-
-// 纵向混合税务元数据
-.tax-cell {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	&__tin {
-		font-size: 13px;
-		font-weight: 700;
-		color: #1e293b;
-	}
-	&__type {
-		font-size: 11px;
-		color: #64748b;
-	}
-}
-
-// 员工头像骨架项
-.employee-cell {
-	@include flex-row($align: center, $gap: 12px);
-	&__avatar {
-		width: 36px;
-		height: 36px;
-		border-radius: 50%;
-		color: white;
-		font-weight: 700;
-		font-size: 14px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	&__info {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	&__name {
-		font-size: 14px;
-		font-weight: 700;
-		color: #1e293b;
-	}
-	&__title {
-		font-size: 11px;
-		color: #94a3b8;
-	}
-}
-
-// 🌟 读写分离联动卡片结构
-.profile-grid {
-	display: grid;
-	grid-template-columns: 3.8fr 8.2fr;
-	gap: var(--spacing-lg);
-	align-items: start;
-	@media (max-width: 960px) {
-		grid-template-columns: 1fr;
-	}
-}
-
-.user-meta-card {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	text-align: center;
-	padding: var(--spacing-xl) var(--spacing-lg) !important;
-	background: linear-gradient(180deg, #ffffff, #fcfdfe);
-
-	&__avatar {
-		width: 80px;
-		height: 80px;
-		border-radius: 50%;
-		background: var(--colors-brand-primary);
-		color: white;
-		font-size: 32px;
-		font-weight: 800;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 6px 20px rgba(80, 88, 242, 0.15);
-		margin-bottom: 14px;
-	}
-	&__name {
-		font-size: 18px;
-		font-weight: 700;
-		color: #0f172a;
-		margin: 0 0 4px 0;
-	}
-	&__email {
-		font-size: 12px;
-		color: #64748b;
-		font-family: monospace;
-	}
-	&__badges {
-		@include flex-row($align: center, $gap: 6px);
-	}
-}
-
-.quick-nav-box {
-	text-align: left;
-	&__label {
-		font-size: 11px;
-		font-weight: 700;
-		color: #94a3b8;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
-	}
-	p {
-		font-size: 12px;
-		color: #64748b;
-		line-height: 1.5;
-		margin: 6px 0 12px 0;
-	}
-}
-
-// MSIC 发票代码卡盒
-.msic-display-box {
-	background-color: #f8fafc;
-	border: 1px solid var(--border-color);
-	border-radius: 8px;
-	padding: 12px;
-	&__code {
-		font-family: monospace;
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--colors-brand-primary);
-	}
-	&__desc {
-		font-size: 12px;
-		color: #475569;
-		margin: 4px 0 0 0;
-		line-height: 1.4;
-	}
-}
-
-// 🌟 核心：对应 Zod 动态规则未满足时的“危险拦截状态类”
-.panel-card--disabled-mask {
-	border: 1px dashed #fca5a5 !important;
-	background: linear-gradient(180deg, #ffffff, #fef2f2) !important; // 微微泛红提示风险
-	box-shadow: none !important;
-}
-
-// 只读页网格
-.panel-card--readonly {
-	border-top: 4px solid var(--colors-brand-primary);
-}
-.readonly-grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 16px var(--spacing-md);
-	padding: 4px 0;
-	@media (max-width: 640px) {
-		grid-template-columns: 1fr;
-	}
-}
-.readonly-item {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	&__label {
-		font-size: 11px;
-		font-weight: 600;
-		color: #94a3b8;
-		text-transform: uppercase;
-	}
-	&__value {
-		font-size: 13px;
-		font-weight: 600;
-		color: #1e293b;
-	}
-}
-
-// 公用面板、检索与表格底层
 .panel-card {
-	background: white;
-	border: 1px solid var(--border-color);
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
 	border-radius: 12px;
 	padding: 24px;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+
 	.panel-card__header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 14px;
+		margin-bottom: 16px;
+
 		h2 {
 			font-size: 15px;
 			font-weight: 700;
-			color: #1e293b;
+			color: var(--colors-text-primary);
 			margin: 0;
-			@include flex-row($align: center, $gap: 6px);
+			@include flex-row($align: center, $gap: 8px);
+
 			i {
 				font-size: 18px;
+				color: var(--colors-brand-primary);
 			}
 		}
 	}
 }
-.filter-panel {
-	background: white;
-	border: 1px solid var(--border-color);
-	border-radius: 12px;
-	padding: var(--spacing-md);
+
+.panel-card__title {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--colors-text-primary);
+	margin: 0;
+	@include flex-row($align: center, $gap: 8px);
+
+	i {
+		font-size: 18px;
+		color: var(--colors-brand-primary);
+	}
+}
+
+.contracts-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.contract-item-card {
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 10px;
+	padding: 14px 16px;
 	display: flex;
 	justify-content: space-between;
-	align-items: center;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
-	&__left {
+	align-items: flex-start;
+	gap: 16px;
+	transition: all 0.2s ease;
+
+	&--expiring {
+		border-color: rgba(245, 158, 11, 0.4);
+		background: rgba(245, 158, 11, 0.02);
+	}
+
+	&--expired {
+		border-color: rgba(239, 68, 68, 0.4);
+		background: rgba(239, 68, 68, 0.02);
+	}
+
+	&__main {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		flex: 1;
+	}
+
+	&__header {
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-lg);
-		flex-grow: 1;
+		gap: 10px;
 		flex-wrap: wrap;
 	}
-}
-.table-scroll-container {
-	max-height: 640px;
-	overflow-y: auto;
-	padding: 0 !important;
-}
-.data-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 13px;
-	th,
-	td {
-		padding: 12px;
-		text-align: left;
-		vertical-align: middle;
+
+	&__no {
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--colors-brand-primary);
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
 	}
-	th {
-		color: #64748b;
-		border-bottom: 1px solid var(--border-color);
+
+	&__title {
+		font-size: 14px;
 		font-weight: 600;
-		background: white;
-		position: sticky;
-		top: 0;
-		z-index: 10;
+		color: var(--colors-text-primary);
 	}
-	tr {
-		border-bottom: 1px solid #f1f5f9;
-	}
-	&--striped {
-		tbody tr:nth-child(even) {
-			background-color: #f8fafc;
+
+	&__dates {
+		font-size: 12px;
+		color: var(--colors-text-muted);
+		display: flex;
+		align-items: center;
+		gap: 6px;
+
+		strong {
+			color: var(--colors-text-primary);
 		}
 	}
-	&__empty {
-		text-align: center !important;
-		color: #94a3b8;
-		padding: 40px !important;
+
+	&__desc {
+		font-size: 12px;
+		color: var(--colors-text-secondary);
+		margin: 0;
 	}
+
+	&__actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-shrink: 0;
+	}
+}
+
+.contract-alert {
+	font-size: 12px;
+	padding: 8px 12px;
+	border-radius: 6px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 500;
+
+	&--warning {
+		background: rgba(245, 158, 11, 0.1);
+		border: 1px solid rgba(245, 158, 11, 0.3);
+		color: #d97706;
+	}
+
+	&--danger {
+		background: rgba(239, 68, 68, 0.1);
+		border: 1px solid rgba(239, 68, 68, 0.3);
+		color: #dc2626;
+	}
+}
+
+.empty-contracts {
+	text-align: center;
+	padding: 28px 16px;
+	color: var(--colors-text-muted);
+
+	i {
+		font-size: 36px;
+		margin-bottom: 8px;
+		display: block;
+		color: var(--colors-text-muted);
+	}
+
+	p {
+		font-size: 13px;
+		margin: 0 0 16px 0;
+	}
+}
+
+.dialog-form {
+	display: flex;
+	flex-direction: column;
+}
+
+.form-grid-2 {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 12px;
 }
 
 .form-grid {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
 	gap: 16px;
-	@media (max-width: 540px) {
+
+	@media (max-width: 640px) {
 		grid-template-columns: 1fr;
 	}
 }
+
 .form-group {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
+
 	&--full {
 		grid-column: span 2;
+		@media (max-width: 640px) {
+			grid-column: span 1;
+		}
 	}
+
 	&--checkbox-row {
 		grid-column: span 2;
 		@include flex-row($align: center);
+		flex-wrap: wrap;
+		gap: var(--spacing-lg);
+
+		@media (max-width: 640px) {
+			grid-column: span 1;
+		}
 	}
+
 	&__label {
 		font-size: 13px;
 		font-weight: 600;
 		color: var(--colors-text-secondary);
 	}
 }
+
 .switch-toggle {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
 	cursor: pointer;
+
 	input {
 		display: none;
 	}
+
 	&__slider {
 		width: 34px;
 		height: 18px;
@@ -666,6 +1172,7 @@ async function handleSubmitForm() {
 		border-radius: 20px;
 		position: relative;
 		transition: background-color 0.2s;
+
 		&::before {
 			content: "";
 			position: absolute;
@@ -678,13 +1185,16 @@ async function handleSubmitForm() {
 			transition: transform 0.2s;
 		}
 	}
+
 	input:checked + &__slider {
-		background-color: var(--status-completed);
+		background-color: var(--colors-brand-primary);
+
 		&::before {
 			transform: translateX(16px);
 			background-color: #ffffff;
 		}
 	}
+
 	&__label {
 		font-size: 13px;
 		font-weight: 600;
@@ -692,20 +1202,14 @@ async function handleSubmitForm() {
 	}
 }
 
-
-
 .mt-xs {
 	margin-top: var(--spacing-xs);
 }
 .mt-sm {
 	margin-top: var(--spacing-sm);
 }
-.my-md {
+.mt-md {
 	margin-top: var(--spacing-md);
-	margin-bottom: var(--spacing-md);
-}
-.mb-xs {
-	margin-bottom: var(--spacing-xs);
 }
 .mb-md {
 	margin-bottom: var(--spacing-md);
@@ -716,33 +1220,18 @@ async function handleSubmitForm() {
 .mr-lg {
 	margin-right: var(--spacing-lg);
 }
-.w-full {
-	width: 100% !important;
+.mx-xs {
+	margin-left: var(--spacing-xs);
+	margin-right: var(--spacing-xs);
 }
-.divider {
-	height: 1px;
-	background-color: var(--border-color);
-	width: 100%;
-}
-.u-text-right {
-	text-align: right !important;
-}
-.u-text-muted {
-	color: #94a3b8;
+.u-required {
+	color: #ef4444;
+	font-weight: bold;
 }
 .u-font-mono {
 	font-family: monospace;
 }
-.u-font-weight-medium {
-	font-weight: 500;
-}
-.u-font-weight-bold {
-	font-weight: 700;
-}
 .u-text-primary {
 	color: var(--colors-brand-primary) !important;
-}
-.u-required {
-	color: #ef4444;
 }
 </style>

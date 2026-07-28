@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, watch, useSlots, onMounted, onUnmounted } from "vue";
+import Badge from "@/components/Badge.vue";
 
 export interface SelectOption {
 	value: string | number;
 	label: string;
 	disabled?: boolean;
+	badgeText?: string;
+	badgeType?: "success" | "warning" | "error" | "info" | "primary" | "secondary";
 }
 
 const props = defineProps<{
@@ -171,6 +174,9 @@ onUnmounted(() => {
 			<span class="selected-text" :class="{ 'selected-text--placeholder': !selectedOption }">
 				{{ selectedLabel }}
 			</span>
+			<div v-if="$slots.suffix" class="select-suffix" @click.stop>
+				<slot name="suffix"></slot>
+			</div>
 			<i class="mdi mdi-chevron-down chevron-icon" :class="{ 'chevron-icon--open': isOpen }"></i>
 		</div>
 
@@ -187,7 +193,16 @@ onUnmounted(() => {
 					}"
 					@click.stop="selectOption(opt)"
 				>
-					<span class="option-name">{{ opt.label }}</span>
+					<div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+						<span class="option-name">{{ opt.label }}</span>
+						<Badge
+							v-if="opt.badgeText"
+							:type="(opt.badgeType || 'info') as any"
+							size="sm"
+						>
+							{{ opt.badgeText }}
+						</Badge>
+					</div>
 					<i v-if="String(opt.value) === String(modelValue)" class="mdi mdi-check check-icon"></i>
 				</li>
 			</ul>
@@ -269,6 +284,14 @@ onUnmounted(() => {
 		&--placeholder {
 			color: var(--colors-text-muted, #94a3b8);
 		}
+	}
+
+	.select-suffix {
+		display: flex;
+		align-items: center;
+		margin-left: auto;
+		margin-right: 8px;
+		flex-shrink: 0;
 	}
 
 	.chevron-icon {

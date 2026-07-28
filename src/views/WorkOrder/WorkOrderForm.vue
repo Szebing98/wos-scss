@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
@@ -149,6 +149,35 @@ async function fetchWorkTypeItems(workTypeGuid: string) {
 	}
 }
 
+watch(
+	[() => formData.value.workTypeGuid, () => formData.value.orderTypeCode, () => workTypeList.value],
+	async ([newGuid, newCode, types]) => {
+		if (!types || types.length === 0) return;
+		const match = types.find(
+			(wt: any) =>
+				(newGuid && wt.guid === newGuid) ||
+				(newCode && wt.code.toLowerCase() === newCode.toLowerCase()) ||
+				(formData.value.workType && wt.name.toLowerCase() === formData.value.workType.toLowerCase()),
+		);
+		if (match) {
+			if (formData.value.workTypeGuid !== match.guid) {
+				formData.value.workTypeGuid = match.guid;
+			}
+			if (formData.value.orderTypeCode !== match.code) {
+				formData.value.orderTypeCode = match.code;
+			}
+			if (formData.value.workType !== match.name) {
+				formData.value.workType = match.name;
+			}
+			formData.value.withEquipmentForm = !!match.withEquipmentForm;
+			if (match.guid && workTypeItems.value.length === 0) {
+				await fetchWorkTypeItems(match.guid);
+			}
+		}
+	},
+	{ immediate: true },
+);
+
 async function loadOptions() {
 	try {
 		// Fetch Customers
@@ -244,8 +273,9 @@ onMounted(async () => {
 				code: "CUST-001",
 				name: "Petronas Carigali Sdn Bhd",
 				contracts: [
-					{ contractNo: "CTR-PET-2026-01", contractName: "Offshore Equipment Maintenance 2026", startDate: "2026-01-01", endDate: "2026-12-31" },
-					{ contractNo: "CTR-PET-2026-02", contractName: "Facility Inspection & Overhaul", startDate: "2026-06-01", endDate: "2027-05-31" },
+					{ contractNo: "CTR-PET-2026-01", contractName: "Offshore Equipment Maintenance 2026", startDate: "2026-01-01", endDate: "2027-12-31" },
+					{ contractNo: "CTR-PET-2026-EXPIRE", contractName: "Turbine Inspection & Overhaul", startDate: "2025-08-01", endDate: "2026-08-15" },
+					{ contractNo: "CTR-PET-2025-OLD", contractName: "Platform Safety Audit 2025", startDate: "2025-01-01", endDate: "2025-12-31" },
 				],
 			},
 			{
@@ -253,13 +283,15 @@ onMounted(async () => {
 				name: "YTL Power Services Sdn Bhd",
 				contracts: [
 					{ contractNo: "CTR-YTL-2026-01", contractName: "Power Plant Turbine Maintenance", startDate: "2026-03-01", endDate: "2027-02-28" },
+					{ contractNo: "CTR-YTL-2025-OLD", contractName: "Boiler Servicing Contract 2025", startDate: "2024-06-01", endDate: "2025-05-31" },
 				],
 			},
 			{
 				code: "CUST-003",
 				name: "TNB Engineering Corporation",
 				contracts: [
-					{ contractNo: "CTR-TNB-2026-01", contractName: "Substation Transformer Overhaul", startDate: "2026-02-15", endDate: "2026-11-15" },
+					{ contractNo: "CTR-TNB-2026-01", contractName: "Substation Transformer Overhaul", startDate: "2026-02-15", endDate: "2026-08-10" },
+					{ contractNo: "CTR-TNB-2025-OLD", contractName: "Grid Line Survey 2025", startDate: "2024-01-01", endDate: "2025-01-01" },
 				],
 			},
 		];
@@ -420,16 +452,35 @@ const technicianOptions = computed(() => {
 	);
 });
 
+function getContractStatus(c: any): 'Active' | 'ExpiringSoon' | 'Expired' {
+	if (c.status) return c.status;
+	if (!c.endDate) return 'Active';
+	const now = new Date();
+	const end = new Date(c.endDate);
+	if (end < now) return 'Expired';
+	const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+	if (end <= thirtyDays) return 'ExpiringSoon';
+	return 'Active';
+}
+
 const availableContracts = computed(() => {
 	if (!formData.value.customerCode) return [];
 	const cust = customers.value.find((c: any) => c.code === formData.value.customerCode);
-	return cust?.contracts || [];
+	return (cust?.contracts || []).map((c: any) => ({
+		...c,
+		status: getContractStatus(c),
+	}));
+});
+
+const selectedContractInfo = computed(() => {
+	if (!formData.value.contractNo) return null;
+	return availableContracts.value.find((c: any) => c.contractNo === formData.value.contractNo);
 });
 
 function onCustomerChange() {
-	const contracts = availableContracts.value;
-	if (contracts.length > 0) {
-		onContractChange(contracts[0].contractNo);
+	const validContracts = availableContracts.value.filter((c: any) => c.status !== 'Expired');
+	if (validContracts.length > 0) {
+		onContractChange(validContracts[0].contractNo);
 	} else {
 		formData.value.contractNo = "";
 		formData.value.contractStartDate = "";
@@ -439,11 +490,39 @@ function onCustomerChange() {
 
 function onContractChange(contractNo: string) {
 	formData.value.contractNo = contractNo;
-	const selectedContract = availableContracts.value.find((c: any) => c.contractNo === contractNo);
-	if (selectedContract) {
-		formData.value.contractStartDate = selectedContract.startDate;
-		formData.value.contractEndDate = selectedContract.endDate;
+	const selected = availableContracts.value.find((c: any) => c.contractNo === contractNo);
+	if (selected) {
+		formData.value.contractStartDate = selected.startDate ? selected.startDate.slice(0, 10) : "";
+		formData.value.contractEndDate = selected.endDate ? selected.endDate.slice(0, 10) : "";
 	}
+}
+
+const contractSelectOptions = computed<any[]>(() => {
+	return availableContracts.value.map((c: any) => ({
+		value: c.contractNo,
+		label: `${c.contractNo} ${c.contractName ? ' - ' + c.contractName : ''}`,
+		badgeText: c.status === 'Expired' ? 'Expired' : c.status === 'ExpiringSoon' ? 'Expiring Soon' : 'Active Contract',
+		badgeType: c.status === 'Expired' ? 'error' : c.status === 'ExpiringSoon' ? 'warning' : 'success',
+	}));
+});
+
+function redirectToCustomerRenew(contract: any) {
+	if (!formData.value.customerCode) {
+		alert("Please select a Customer first.");
+		return;
+	}
+	const cust = customers.value.find((c: any) => c.code === formData.value.customerCode);
+	const custGuid = cust?.guid || cust?.code || formData.value.customerCode;
+	const targetContractNo = contract?.contractNo || formData.value.contractNo;
+
+	router.push({
+		path: "/customers/form",
+		query: {
+			code: custGuid,
+			action: "renew",
+			contractNo: targetContractNo,
+		},
+	});
 }
 
 const showEquipmentForm = computed(() => {
@@ -1148,24 +1227,53 @@ const priorityColors: Record<string, string> = {
 						<div class="col-12">
 							<Select
 								v-model="formData.contractNo"
+								:options="contractSelectOptions"
 								label="Contract No"
+								placeholder="Select Contract"
 								:disabled="!formData.customerCode"
+								:error="formErrors.contractNo"
 								@change="(e: any) => onContractChange(e.target.value)"
 							>
-								<option value="">{{ availableContracts.length > 0 ? "Select Contract" : "No Contracts Available" }}</option>
-								<option
-									v-for="c in availableContracts"
-									:key="c.contractNo"
-									:value="c.contractNo"
-								>
-									{{ c.contractNo }} {{ c.contractName ? ' - ' + c.contractName : '' }}
-								</option>
+								<template #suffix>
+									<div v-if="selectedContractInfo" style="display: flex; align-items: center; gap: 4px;">
+										<Badge v-if="selectedContractInfo.status === 'Active'" type="success" icon="mdi-check-circle" size="sm">
+											Active Contract
+										</Badge>
+										<template v-else-if="selectedContractInfo.status === 'ExpiringSoon'">
+											<Badge type="warning" icon="mdi-clock-alert-outline" size="sm">
+												Expiring Soon
+											</Badge>
+											<button
+												type="button"
+												class="badge-action-btn badge-action-btn--warning"
+												title="Go to Customer Form to extend contract"
+												@click.stop="redirectToCustomerRenew(selectedContractInfo)"
+											>
+												<i class="mdi mdi-open-in-new"></i> Extend
+											</button>
+										</template>
+										<template v-else-if="selectedContractInfo.status === 'Expired'">
+											<Badge type="error" icon="mdi-alert-circle" size="sm">
+												Expired
+											</Badge>
+											<button
+												type="button"
+												class="badge-action-btn badge-action-btn--error"
+												title="Go to Customer Form to renew contract"
+												@click.stop="redirectToCustomerRenew(selectedContractInfo)"
+											>
+												<i class="mdi mdi-open-in-new"></i> Renew
+											</button>
+										</template>
+									</div>
+								</template>
 							</Select>
 						</div>
 						<div class="col-12">
 							<DatePicker
 								v-model="formData.contractStartDate"
 								label="Contract Start Date"
+								:disabled="true"
 								:enableTime="false"
 							/>
 						</div>
@@ -1173,7 +1281,7 @@ const priorityColors: Record<string, string> = {
 							<DatePicker
 								v-model="formData.contractEndDate"
 								label="Contract End Date"
-								:min="formData.contractStartDate"
+								:disabled="true"
 								:enableTime="false"
 							/>
 						</div>
@@ -1251,10 +1359,45 @@ const priorityColors: Record<string, string> = {
 				</Card>
 			</div>
 		</div>
+
 	</div>
 </template>
 
 <style lang="scss" scoped>
+.badge-action-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	padding: 2px 7px;
+	border-radius: 4px;
+	font-size: 11px;
+	font-weight: 600;
+	cursor: pointer;
+	border: none;
+	transition: all 0.15s ease;
+	line-height: 1.2;
+
+	&--warning {
+		background: #fef3c7;
+		color: #d97706;
+
+		&:hover {
+			background: #fde68a;
+			color: #b45309;
+		}
+	}
+
+	&--error {
+		background: #fee2e2;
+		color: #dc2626;
+
+		&:hover {
+			background: #fca5a5;
+			color: #b91c1c;
+		}
+	}
+}
+
 .workorder-form-view {
 	display: flex;
 	flex-direction: column;

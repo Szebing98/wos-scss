@@ -287,6 +287,16 @@ async function fetchWorkOrderDetails() {
 	}
 }
 
+const contractStatus = computed(() => {
+	if (!workOrder.value?.contractEndDate) return null;
+	const now = new Date();
+	const end = new Date(workOrder.value.contractEndDate);
+	if (end < now) return 'Expired';
+	const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+	if (end <= thirtyDays) return 'ExpiringSoon';
+	return 'Active';
+});
+
 const users = [
 	{ code: "usr-1", name: "Alice Admin" },
 	{ code: "usr-2", name: "Bob Sales" },
@@ -1196,7 +1206,15 @@ onUnmounted(() => {
 						</div>
 						<div class="col-4">
 							<label class="custom-label">Contract No.</label>
-							<div class="read-only-val">{{ workOrder.contractNo || '—' }}</div>
+							<div class="read-only-val" style="display: flex; align-items: center; gap: 8px;">
+								<span>{{ workOrder.contractNo || '—' }}</span>
+								<Badge v-if="contractStatus === 'Expired'" type="error" icon="mdi-alert-circle">
+									Contract Expired
+								</Badge>
+								<Badge v-else-if="contractStatus === 'ExpiringSoon'" type="warning" icon="mdi-clock-alert-outline">
+									Expiring Soon
+								</Badge>
+							</div>
 						</div>
 						<div class="col-4">
 							<label class="custom-label">Contract Start</label>

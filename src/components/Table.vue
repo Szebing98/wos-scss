@@ -531,10 +531,12 @@ const paginationText = computed(() => {
 <style lang="scss" scoped>
 .mud-table-container {
 	width: 100%;
+	max-width: 100%;
 	background-color: var(--colors-surface-card);
 	color: var(--colors-text-primary);
-	border-radius: 4px;
+	border-radius: 6px;
 	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
 	transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
 
 	&.mud-table-outlined {
@@ -544,10 +546,10 @@ const paginationText = computed(() => {
 
 .mud-table-root {
 	width: 100%;
+	min-width: max-content;
 	display: table;
 	border-spacing: 0;
 	border-collapse: collapse;
-	min-width: 100%;
 
 	&--bordered {
 		.mud-table-cell {
@@ -566,11 +568,12 @@ const paginationText = computed(() => {
 	
 	.mud-table-cell {
 		color: #ffffff;
-		font-weight: 500;
+		font-weight: 600;
 		line-height: 1.5rem;
 		border-bottom: 1px solid var(--colors-surface-border);
-		padding: 16px;
+		padding: 14px 16px;
 		white-space: nowrap;
+		box-sizing: border-box;
 	}
 
 	:global([data-theme="dark"]) & {

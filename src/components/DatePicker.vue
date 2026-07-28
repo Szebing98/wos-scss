@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 
 const props = defineProps<{
 	modelValue?: string | null;
@@ -21,8 +21,10 @@ const emit = defineEmits<{
 
 const isOpen = ref(false);
 const datepickerRef = ref<HTMLElement | null>(null);
+const popoverRef = ref<HTMLElement | null>(null);
 const placement = ref<"bottom" | "top">("bottom");
 const inputValue = ref("");
+const popoverStyle = ref<Record<string, string>>({});
 
 const currentMonth = ref(new Date().getMonth());
 const currentYear = ref(new Date().getFullYear());
@@ -177,34 +179,67 @@ function handleTimeChange() {
 	updateModelValue(dateStr);
 }
 
-// Automatic direction detection (Top vs Bottom flip)
+// Automatic direction & viewport position calculation (Fixed overlay to avoid clipping in modals)
 function checkPlacement() {
 	if (!datepickerRef.value) return;
 	const rect = datepickerRef.value.getBoundingClientRect();
 	const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-	const popoverHeight = props.enableTime ? 450 : 390;
+	const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+	const popoverHeight = props.enableTime ? 440 : 380;
+	const popoverWidth = Math.min(320, viewportWidth - 24);
+
 	const spaceBelow = viewportHeight - rect.bottom;
 	const spaceAbove = rect.top;
 
+	let top = rect.bottom + 4;
 	if (spaceBelow < popoverHeight && spaceAbove > spaceBelow) {
+		top = Math.max(10, rect.top - popoverHeight - 4);
 		placement.value = "top";
 	} else {
 		placement.value = "bottom";
 	}
+
+	let left = rect.left;
+	if (props.align === "right") {
+		left = rect.right - popoverWidth;
+	} else if (props.align === "center") {
+		left = rect.left + rect.width / 2 - popoverWidth / 2;
+	}
+
+	if (left + popoverWidth > viewportWidth - 12) {
+		left = viewportWidth - popoverWidth - 12;
+	}
+	if (left < 12) left = 12;
+
+	popoverStyle.value = {
+		position: "fixed",
+		top: `${top}px`,
+		left: `${left}px`,
+		width: `${popoverWidth}px`,
+		zIndex: "99999",
+	};
 }
 
 function openCalendar() {
 	if (props.disabled) return;
 	checkPlacement();
 	isOpen.value = true;
+	nextTick(() => checkPlacement());
 }
 
 function toggleCalendar() {
 	if (props.disabled) return;
 	if (!isOpen.value) {
+		openCalendar();
+	} else {
+		isOpen.value = false;
+	}
+}
+
+function handleScrollOrResize() {
+	if (isOpen.value) {
 		checkPlacement();
 	}
-	isOpen.value = !isOpen.value;
 }
 
 // Manual typing handler
@@ -217,7 +252,6 @@ function onManualInput(e: Event) {
 		return;
 	}
 
-	// Try parsing YYYY-MM-DD or YYYY-MM-DD HH:mm
 	const dateObj = new Date(val);
 	if (!isNaN(dateObj.getTime())) {
 		const y = dateObj.getFullYear();
@@ -237,17 +271,27 @@ function onInputBlur() {
 }
 
 function handleClickOutside(event: MouseEvent) {
-	if (datepickerRef.value && !datepickerRef.value.contains(event.target as Node)) {
-		isOpen.value = false;
+	if (!isOpen.value) return;
+	const target = event.target as Node;
+	if (datepickerRef.value && datepickerRef.value.contains(target)) {
+		return;
 	}
+	if (popoverRef.value && popoverRef.value.contains(target)) {
+		return;
+	}
+	isOpen.value = false;
 }
 
 onMounted(() => {
-	document.addEventListener("click", handleClickOutside);
+	document.addEventListener("click", handleClickOutside, true);
+	window.addEventListener("scroll", handleScrollOrResize, true);
+	window.addEventListener("resize", handleScrollOrResize);
 });
 
 onUnmounted(() => {
-	document.removeEventListener("click", handleClickOutside);
+	document.removeEventListener("click", handleClickOutside, true);
+	window.removeEventListener("scroll", handleScrollOrResize, true);
+	window.removeEventListener("resize", handleScrollOrResize);
 });
 </script>
 
@@ -292,72 +336,75 @@ onUnmounted(() => {
 			<slot name="suffix" />
 		</div>
 
-		<!-- Popover -->
-		<Transition name="popover-fade">
-			<div
-				class="datepicker-popover"
-				:class="[`datepicker-popover--${align || 'left'}`, `datepicker-popover--${placement}`]"
-				v-if="isOpen"
-			>
-				<div class="datepicker-popover__header">
-					<div class="datepicker-popover__year" v-if="modelValue && !isNaN(new Date(modelValue).getTime())">
-						{{ new Date(modelValue).getFullYear() }}
-					</div>
-					<div class="datepicker-popover__date">
-						{{ displayDateHeader }}
-					</div>
-				</div>
-
-				<div class="datepicker-popover__toolbar">
-					<button class="datepicker-btn" @click.prevent="prevMonth" type="button">
-						<i class="mdi mdi-chevron-left"></i>
-					</button>
-					<div class="datepicker-popover__month-year">{{ displayMonthYear }}</div>
-					<button class="datepicker-btn" @click.prevent="nextMonth" type="button">
-						<i class="mdi mdi-chevron-right"></i>
-					</button>
-				</div>
-
-				<div class="datepicker-grid">
-					<div class="datepicker-grid__header">
-						<div class="datepicker-grid__day-name" v-for="d in weekDays" :key="d">{{ d }}</div>
-					</div>
-					<div class="datepicker-grid__body">
-						<div
-							v-for="(day, idx) in daysInMonth"
-							:key="idx"
-							class="datepicker-grid__cell"
-						>
-							<button
-								v-if="!day.empty"
-								type="button"
-								class="datepicker-day"
-								:class="{
-									'datepicker-day--selected': day.selected,
-									'datepicker-day--disabled': day.disabled,
-								}"
-								:disabled="day.disabled"
-								@click.prevent="selectDate(day)"
-							>
-								{{ day.day }}
-							</button>
+		<!-- Teleported Popover -->
+		<Teleport to="body">
+			<Transition name="popover-fade">
+				<div
+					ref="popoverRef"
+					class="datepicker-popover datepicker-popover--teleported"
+					:style="popoverStyle"
+					v-if="isOpen"
+				>
+					<div class="datepicker-popover__header">
+						<div class="datepicker-popover__year" v-if="modelValue && !isNaN(new Date(modelValue).getTime())">
+							{{ new Date(modelValue).getFullYear() }}
+						</div>
+						<div class="datepicker-popover__date">
+							{{ displayDateHeader }}
 						</div>
 					</div>
-				</div>
 
-				<!-- Optional Time Picker Section -->
-				<div v-if="enableTime" class="datepicker-time-picker">
-					<i class="mdi mdi-clock-outline"></i>
-					<span>Time:</span>
-					<input
-						type="time"
-						v-model="selectedTime"
-						class="time-input"
-						@change="handleTimeChange"
-					/>
+					<div class="datepicker-popover__toolbar">
+						<button class="datepicker-btn" @click.prevent="prevMonth" type="button">
+							<i class="mdi mdi-chevron-left"></i>
+						</button>
+						<div class="datepicker-popover__month-year">{{ displayMonthYear }}</div>
+						<button class="datepicker-btn" @click.prevent="nextMonth" type="button">
+							<i class="mdi mdi-chevron-right"></i>
+						</button>
+					</div>
+
+					<div class="datepicker-grid">
+						<div class="datepicker-grid__header">
+							<div class="datepicker-grid__day-name" v-for="d in weekDays" :key="d">{{ d }}</div>
+						</div>
+						<div class="datepicker-grid__body">
+							<div
+								v-for="(day, idx) in daysInMonth"
+								:key="idx"
+								class="datepicker-grid__cell"
+							>
+								<button
+									v-if="!day.empty"
+									type="button"
+									class="datepicker-day"
+									:class="{
+										'datepicker-day--selected': day.selected,
+										'datepicker-day--disabled': day.disabled,
+									}"
+									:disabled="day.disabled"
+									@click.prevent="selectDate(day)"
+								>
+									{{ day.day }}
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- Optional Time Picker Section -->
+					<div v-if="enableTime" class="datepicker-time-picker">
+						<i class="mdi mdi-clock-outline"></i>
+						<span>Time:</span>
+						<input
+							type="time"
+							v-model="selectedTime"
+							class="time-input"
+							@change="handleTimeChange"
+						/>
+					</div>
 				</div>
-			</div>
-		</Transition>
+			</Transition>
+		</Teleport>
 
 		<div class="textbox-field__footer" v-if="!hideFooter">
 			<Transition name="fade-slide">
@@ -397,57 +444,12 @@ onUnmounted(() => {
 }
 
 .datepicker-popover {
-	position: absolute;
-	z-index: 1000;
-	width: 320px;
 	background: var(--colors-surface-card, #ffffff);
 	border-radius: var(--radius-lg, 8px);
-	box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.2), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
 	border: 1px solid var(--colors-surface-border);
 	overflow: hidden;
-
-	&--bottom {
-		top: calc(100% + 4px);
-		bottom: auto;
-	}
-
-	&--top {
-		bottom: calc(100% + 4px);
-		top: auto;
-	}
-
-	&--left {
-		left: 0;
-		right: auto;
-	}
-
-	&--right {
-		right: 0;
-		left: auto;
-	}
-
-	&--center {
-		left: 50%;
-		right: auto;
-		transform: translateX(-50%);
-	}
-
-	@media (max-width: 640px) {
-		left: 50% !important;
-		right: auto !important;
-		transform: translateX(-50%) !important;
-		width: min(310px, calc(100vw - 24px)) !important;
-
-		&.datepicker-popover--top {
-			bottom: calc(100% + 6px) !important;
-			top: auto !important;
-		}
-
-		&.datepicker-popover--bottom {
-			top: calc(100% + 6px) !important;
-			bottom: auto !important;
-		}
-	}
+	user-select: none;
 
 	&__header {
 		background: var(--colors-brand-primary, #4f46e5);

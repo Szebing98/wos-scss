@@ -18,4 +18,17 @@ export const customerApi = {
 
 	deactivateCustomer: (guid: string) =>
 		client.PATCH("/api/customers/deactivate/{guid}", { params: { path: { guid } } }) as any,
+
+	// --- Contract APIs ---
+	getContracts: (customerGuid: string) =>
+		client.GET("/api/customers/{guid}/contracts" as any, { params: { path: { guid: customerGuid } } }) as any,
+
+	createContract: (customerGuid: string, body: { contractNo: string; contractName: string; startDate: string; endDate: string; description?: string }) =>
+		client.POST("/api/customers/{guid}/contracts" as any, { params: { path: { guid: customerGuid } }, body }) as any,
+
+	updateContract: (contractGuid: string, body: { contractNo?: string; contractName?: string; startDate?: string; endDate?: string; description?: string; isActive?: boolean }) =>
+		client.PUT("/api/customers/contracts/{contractGuid}" as any, { params: { path: { contractGuid } }, body }) as any,
+
+	renewContract: (contractGuid: string, body: { newEndDate: string; newContractNo?: string; newContractName?: string; remarks?: string }) =>
+		client.POST("/api/customers/contracts/{contractGuid}/renew" as any, { params: { path: { contractGuid } }, body }) as any,
 };

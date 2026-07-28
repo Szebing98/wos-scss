@@ -7,16 +7,17 @@ import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Badge from "@/components/Badge.vue";
-import { customerApi } from "@/api/customer/customer.api";
 import HighlightText from "@/components/HighlightText.vue";
+import { customerApi } from "@/api/customer/customer.api";
 
 const headers: TableHeader[] = [
-	{ key: "status", label: "Status" },
-	{ key: "customer", label: "Customer / Debtor" },
-	{ key: "autocount", label: "AutoCount No" },
-	{ key: "tax", label: "Tax Info / Type" },
-	{ key: "einvoice", label: "e-Invoice" },
-	{ key: "actions", label: "Actions", align: "right", width: "100px" },
+	{ key: "status", label: "Status", width: "110px", minWidth: "100px" },
+	{ key: "customer", label: "Customer / Debtor", minWidth: "220px" },
+	{ key: "autocount", label: "AutoCount No", width: "150px", minWidth: "140px" },
+	{ key: "contractNo", label: "Contract No", width: "150px", minWidth: "140px" },
+	{ key: "tax", label: "Tax Info / Identity", minWidth: "200px" },
+	{ key: "einvoice", label: "e-Invoice", width: "140px", minWidth: "130px" },
+	{ key: "actions", label: "Actions", align: "right", width: "110px", minWidth: "100px" },
 ];
 
 const router = useRouter();
@@ -26,6 +27,7 @@ const filterStatus = ref("all");
 const filterEinvoice = ref("all");
 
 function resetFilters() {
+	searchQuery.value = "";
 	identityFilter.value = "all";
 	filterStatus.value = "all";
 	filterEinvoice.value = "all";
@@ -53,6 +55,7 @@ async function fetchCustomers() {
 				code: c.code,
 				accountNo: c.accountNo,
 				name: c.name,
+				contractNo: c.contractNo || c.metadata?.contractNo || "",
 				licenseNo: c.licenseNo,
 				isActive: c.isActive,
 				requestEinvoice: c.requestEinvoice,
@@ -83,16 +86,43 @@ onMounted(() => {
 	fetchCustomers();
 });
 
-watch([searchQuery, filterStatus, identityFilter, filterEinvoice], () => {
+watch([searchQuery, filterStatus, identityFilter], () => {
 	fetchCustomers();
 });
 
 const filteredCustomers = computed(() => {
-	return customers.value;
+	return customers.value.filter((item) => {
+		if (filterEinvoice.value === "required" && !item.requestEinvoice) return false;
+		if (filterEinvoice.value === "standard" && item.requestEinvoice) return false;
+
+		if (searchQuery.value) {
+			const q = searchQuery.value.toLowerCase();
+			const matchName = item.name?.toLowerCase().includes(q);
+			const matchCode = item.code?.toLowerCase().includes(q);
+			const matchAccount = item.accountNo?.toLowerCase().includes(q);
+			const matchContract = item.contractNo?.toLowerCase().includes(q);
+			const matchTin = item.profile?.tin?.toLowerCase().includes(q);
+			const matchBrn = item.profile?.brn?.toLowerCase().includes(q);
+			const matchId = item.profile?.identityNo?.toLowerCase().includes(q);
+			return matchName || matchCode || matchAccount || matchContract || matchTin || matchBrn || matchId;
+		}
+
+		return true;
+	});
 });
+
+// KPI Metrics
+const totalCount = computed(() => customers.value.length);
+const activeCount = computed(() => customers.value.filter((c) => c.isActive).length);
+const einvoiceCount = computed(() => customers.value.filter((c) => c.requestEinvoice).length);
+const corporateCount = computed(() => customers.value.filter((c) => c.profile?.individualType === "COMPANY").length);
 
 function handleCreateCustomer() {
 	router.push("/customer/form");
+}
+
+function handleEditCustomer(code: string) {
+	router.push(`/customer/form?code=${code}`);
 }
 
 function viewCustomerDetail(code: string) {
@@ -100,8 +130,8 @@ function viewCustomerDetail(code: string) {
 }
 
 function getAvatarStyle(name: string) {
-	const colors = ["#202359", "#3D4170", "#5058F2", "#14B8A6", "#06B6D4"];
-	const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+	const colors = ["#4F46E5", "#0284C7", "#0D9488", "#7C3AED", "#DB2777"];
+	const hash = (name || "C").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
 	return { backgroundColor: colors[hash % colors.length] };
 }
 
@@ -111,12 +141,13 @@ function countryFormatAccount(acc: string) {
 </script>
 
 <template>
-	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+	<div class="customer-view">
+		<!-- Header -->
+		<div class="customer-view__header">
+			<div class="customer-view__title-area">
 				<h1>Customer Directory</h1>
-				<p class="maintenance-view__subtitle">
-					Manage debtors, individual tax identities, and LHDN MyInvois profiles
+				<p class="customer-view__subtitle">
+					Manage debtors, individual tax identities, contract references, and LHDN MyInvois profiles
 				</p>
 			</div>
 			<button class="btn btn--primary" @click="handleCreateCustomer">
@@ -124,29 +155,73 @@ function countryFormatAccount(acc: string) {
 			</button>
 		</div>
 
+		<!-- KPI Metric Cards -->
+		<div class="metrics-grid">
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--indigo">
+					<i class="mdi mdi-account-group-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">Total Customers</span>
+					<span class="metric-card__value">{{ totalCount }}</span>
+				</div>
+			</div>
+
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--emerald">
+					<i class="mdi mdi-check-circle-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">Active Accounts</span>
+					<span class="metric-card__value">{{ activeCount }}</span>
+				</div>
+			</div>
+
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--sky">
+					<i class="mdi mdi-file-check-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">e-Invoice Ready</span>
+					<span class="metric-card__value">{{ einvoiceCount }}</span>
+				</div>
+			</div>
+
+			<div class="metric-card">
+				<div class="metric-card__icon metric-card__icon--purple">
+					<i class="mdi mdi-office-building-outline"></i>
+				</div>
+				<div class="metric-card__content">
+					<span class="metric-card__label">Corporate Clients</span>
+					<span class="metric-card__value">{{ corporateCount }}</span>
+				</div>
+			</div>
+		</div>
+
+		<!-- Filter Bar -->
 		<div class="filter-panel">
-			<div class="filter-bar" style="width: 100%;">
+			<div class="filter-bar">
 				<Textbox
 					v-model="searchQuery"
-					placeholder="Search Name, AutoCount No or Tax ID..."
-					style="flex: 1"
+					placeholder="Search Name, AutoCount No, Contract No, or Tax ID..."
+					style="flex: 1; min-width: 260px;"
 					hide-footer
 				>
 					<template #prefix>
-						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px"></i>
+						<i class="mdi mdi-magnify" style="font-size: 18px; margin-right: 4px; color: var(--colors-text-muted);"></i>
 					</template>
 				</Textbox>
 
 				<FilterPanel show-reset align="right" @reset="resetFilters">
 					<Select v-model="identityFilter" label="Identity Type">
 						<option value="all">All Types</option>
+						<option value="COMPANY">Corporate / BRN</option>
 						<option value="MyKAD">MyKAD (Citizen)</option>
 						<option value="PASSPORT">Passport (Foreigner)</option>
-						<option value="COMPANY">Corporate / BRN</option>
 					</Select>
 
 					<Select v-model="filterStatus" label="Status">
-						<option value="all">All</option>
+						<option value="all">All Status</option>
 						<option value="active">Active</option>
 						<option value="inactive">Disabled</option>
 					</Select>
@@ -160,7 +235,8 @@ function countryFormatAccount(acc: string) {
 			</div>
 		</div>
 
-		<div class="panel-card table-scroll-container">
+		<!-- Customers Data Table -->
+		<div class="panel-card table-card">
 			<Table
 				paginate
 				hover
@@ -168,80 +244,90 @@ function countryFormatAccount(acc: string) {
 				:items="filteredCustomers"
 				:loading="loading"
 				:search-query="searchQuery"
-				emptyMessage="No customer records matching matrix metrics."
+				emptyMessage="No customer records found."
 				@row-click="(customer) => viewCustomerDetail(customer.code)"
 			>
 				<template #item-customer="{ item: customer }">
-					<div class="employee-cell">
-						<div class="employee-cell__avatar" :style="getAvatarStyle(customer.name)">
+					<div class="customer-cell">
+						<div class="customer-cell__avatar" :style="getAvatarStyle(customer.name)">
 							{{ customer.name ? customer.name[0].toUpperCase() : 'C' }}
 						</div>
-						<div class="employee-cell__info">
-							<span class="employee-cell__name">
+						<div class="customer-cell__info">
+							<span class="customer-cell__name">
 								<HighlightText :text="customer.name" :query="searchQuery" />
 							</span>
-							<span class="employee-cell__title">
+							<span class="customer-cell__code">
 								System Code: <HighlightText :text="customer.code" :query="searchQuery" />
 							</span>
 						</div>
 					</div>
 				</template>
+
 				<template #item-autocount="{ item: customer }">
-					<span
-						v-if="customer.accountNo"
-						class="u-font-mono u-font-weight-bold u-text-primary"
-					>
+					<span v-if="customer.accountNo" class="u-font-mono u-font-weight-bold u-text-primary">
 						<HighlightText :text="countryFormatAccount(customer.accountNo)" :query="searchQuery" />
 					</span>
 					<span v-else class="u-text-muted">—</span>
 				</template>
+
+				<template #item-contractNo="{ item: customer }">
+					<span v-if="customer.contractNo" class="contract-badge">
+						<i class="mdi mdi-file-document-outline"></i>
+						<HighlightText :text="customer.contractNo" :query="searchQuery" />
+					</span>
+					<span v-else class="u-text-muted">—</span>
+				</template>
+
 				<template #item-tax="{ item: customer }">
 					<div v-if="customer.profile" class="tax-cell">
 						<span class="tax-cell__tin">TIN: {{ customer.profile.tin || "N/A" }}</span>
-						<span class="tax-cell__type"
-							>{{ customer.profile.individualType }} |
-							{{ customer.profile.identityNo || "No ID" }}</span
-						>
+						<span class="tax-cell__type">
+							{{ customer.profile.individualType }} | {{ customer.profile.identityNo || customer.profile.brn || "No ID" }}
+						</span>
 					</div>
 					<span v-else class="u-text-muted">No Profile Registered</span>
 				</template>
+
 				<template #item-einvoice="{ item: customer }">
 					<Badge
-						:type="customer.requestEinvoice ? 'info' : 'error'"
-						:icon="customer.requestEinvoice ? 'mdi-file-check-outline' : 'mdi-close-circle-outline'"
+						:type="customer.requestEinvoice ? 'info' : 'default'"
+						:icon="customer.requestEinvoice ? 'mdi-file-check-outline' : 'mdi-minus-circle-outline'"
 					>
-						{{ customer.requestEinvoice ? "Required" : "Not required" }}
-				</Badge>
-				</template>
-				<template #item-status="{ item: customer }">
-					<Badge :type="customer.isActive ? 'success' : 'error'">
-						{{ customer.isActive ? "Active" : "Inactive" }}
+						{{ customer.requestEinvoice ? "Required" : "Standard" }}
 					</Badge>
 				</template>
+
+				<template #item-status="{ item: customer }">
+					<Badge :type="customer.isActive ? 'success' : 'error'">
+						{{ customer.isActive ? "Active" : "Disabled" }}
+					</Badge>
+				</template>
+
 				<template #item-actions="{ item: customer }">
-					<button
-						class="btn btn--icon"
-						@click.stop="viewCustomerDetail(customer.code)"
-						title="View Details / Profile"
-					>
-						<i class="mdi mdi-text-box-search-outline"></i>
-					</button>
+					<div class="action-buttons" @click.stop>
+						<button
+							class="btn btn--icon"
+							@click="handleEditCustomer(customer.code)"
+							title="Edit Customer Form"
+						>
+							<i class="mdi mdi-pencil-outline"></i>
+						</button>
+						<button
+							class="btn btn--icon"
+							@click="viewCustomerDetail(customer.code)"
+							title="View Profile Details"
+						>
+							<i class="mdi mdi-eye-outline"></i>
+						</button>
+					</div>
 				</template>
 			</Table>
 		</div>
 	</div>
-
-
 </template>
 
 <style lang="scss" scoped>
-@mixin flex-row($align: stretch, $gap: 0) {
-	display: flex;
-	align-items: $align;
-	gap: $gap;
-}
-
-.maintenance-view {
+.customer-view {
 	display: flex;
 	flex-direction: column;
 	gap: var(--spacing-lg);
@@ -253,6 +339,7 @@ function countryFormatAccount(acc: string) {
 		flex-wrap: wrap;
 		gap: var(--spacing-md);
 	}
+
 	&__title-area {
 		h1 {
 			font-size: 24px;
@@ -268,37 +355,106 @@ function countryFormatAccount(acc: string) {
 	}
 }
 
-.back-link-btn {
-	background: transparent;
-	border: none;
-	font-size: 13px;
-	font-weight: 600;
-	color: #64748b;
-	cursor: pointer;
-	padding: 0;
-	@include flex-row($align: center, $gap: 4px);
-	&:hover {
-		color: var(--colors-brand-primary);
+// KPI Grid
+.metrics-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: var(--spacing-md);
+
+	@media (max-width: 1024px) {
+		grid-template-columns: repeat(2, 1fr);
+	}
+	@media (max-width: 540px) {
+		grid-template-columns: 1fr;
 	}
 }
 
-.tax-cell {
+.metric-card {
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 12px;
+	padding: 16px 20px;
 	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	&__tin {
-		font-size: 13px;
+	align-items: center;
+	gap: 16px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+	}
+
+	&__icon {
+		width: 44px;
+		height: 44px;
+		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 22px;
+
+		&--indigo {
+			background: rgba(79, 70, 229, 0.1);
+			color: #4f46e5;
+		}
+		&--emerald {
+			background: rgba(16, 185, 129, 0.1);
+			color: #10b981;
+		}
+		&--sky {
+			background: rgba(14, 165, 233, 0.1);
+			color: #0ea5e9;
+		}
+		&--purple {
+			background: rgba(139, 92, 246, 0.1);
+			color: #8b5cf6;
+		}
+	}
+
+	&__content {
+		display: flex;
+		flex-direction: column;
+	}
+
+	&__label {
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--colors-text-muted);
+	}
+
+	&__value {
+		font-size: 22px;
 		font-weight: 700;
 		color: var(--colors-text-primary);
-	}
-	&__type {
-		font-size: 11px;
-		color: var(--colors-text-primary);
+		line-height: 1.2;
+		margin-top: 2px;
 	}
 }
 
-.employee-cell {
-	@include flex-row($align: center, $gap: 12px);
+// Filter Panel
+.filter-panel {
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 12px;
+	padding: var(--spacing-md);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.filter-bar {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-md);
+	flex-wrap: wrap;
+	width: 100%;
+}
+
+// Customer Cell
+.customer-cell {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+
 	&__avatar {
 		width: 36px;
 		height: 36px;
@@ -309,240 +465,78 @@ function countryFormatAccount(acc: string) {
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		flex-shrink: 0;
 	}
+
 	&__info {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
 	}
+
 	&__name {
 		font-size: 14px;
-		font-weight: 700;
+		font-weight: 600;
 		color: var(--colors-text-primary);
 	}
-	&__title {
+
+	&__code {
 		font-size: 11px;
 		color: var(--colors-text-muted);
 	}
 }
 
-.profile-grid {
-	display: grid;
-	grid-template-columns: 3.8fr 8.2fr;
-	gap: var(--spacing-lg);
-	align-items: start;
-	@media (max-width: 960px) {
-		grid-template-columns: 1fr;
-	}
-}
-
-.user-meta-card {
-	display: flex;
-	flex-direction: column;
+.contract-badge {
+	display: inline-flex;
 	align-items: center;
-	text-align: center;
-	padding: var(--spacing-xl) var(--spacing-lg) !important;
-	background: linear-gradient(180deg, #ffffff, #fcfdfe);
+	gap: 4px;
+	font-family: monospace;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--colors-brand-primary);
+	background: rgba(79, 70, 229, 0.08);
+	padding: 2px 8px;
+	border-radius: 6px;
 
-	&__avatar {
-		width: 80px;
-		height: 80px;
-		border-radius: 50%;
-		background: var(--colors-brand-primary);
-		color: white;
-		font-size: 32px;
-		font-weight: 800;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 6px 20px rgba(80, 88, 242, 0.15);
-		margin-bottom: 14px;
-	}
-	&__name {
-		font-size: 18px;
-		font-weight: 700;
-		color: #0f172a;
-		margin: 0 0 4px 0;
-	}
-	&__email {
-		font-size: 12px;
-		color: #64748b;
-		font-family: monospace;
-	}
-	&__badges {
-		@include flex-row($align: center, $gap: 6px);
-	}
-}
-
-.quick-nav-box {
-	text-align: left;
-	&__label {
-		font-size: 11px;
-		font-weight: 700;
-		color: #94a3b8;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
-	}
-	p {
-		font-size: 12px;
-		color: #64748b;
-		line-height: 1.5;
-		margin: 6px 0 12px 0;
-	}
-}
-
-.msic-display-box {
-	background-color: #f8fafc;
-	border: 1px solid var(--border-color);
-	border-radius: 8px;
-	padding: 12px;
-	&__code {
-		font-family: monospace;
+	i {
 		font-size: 14px;
-		font-weight: 700;
-		color: var(--colors-brand-primary);
-	}
-	&__desc {
-		font-size: 12px;
-		color: #475569;
-		margin: 4px 0 0 0;
-		line-height: 1.4;
 	}
 }
 
-.panel-card--disabled-mask {
-	border: 1px dashed var(--colors-state-danger) !important;
-	background: var(--colors-state-danger-light, rgba(239, 68, 68, 0.05)) !important;
-	box-shadow: none !important;
-}
-
-.panel-card--readonly {
-	border-top: 4px solid var(--colors-brand-primary);
-}
-.readonly-grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 16px var(--spacing-md);
-	padding: 4px 0;
-	@media (max-width: 640px) {
-		grid-template-columns: 1fr;
-	}
-}
-.readonly-item {
+.tax-cell {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	&__label {
-		font-size: 11px;
-		font-weight: 600;
-		color: #94a3b8;
-		text-transform: uppercase;
-	}
-	&__value {
+	gap: 2px;
+
+	&__tin {
 		font-size: 13px;
 		font-weight: 600;
-		color: #1e293b;
+		color: var(--colors-text-primary);
+	}
+
+	&__type {
+		font-size: 11px;
+		color: var(--colors-text-muted);
 	}
 }
 
-.panel-card {
+.table-card {
 	background: var(--colors-surface-card);
 	border: 1px solid var(--colors-surface-border);
 	border-radius: 12px;
-	padding: 24px;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
-	.panel-card__header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 14px;
-		h2 {
-			font-size: 15px;
-			font-weight: 700;
-			color: #1e293b;
-			margin: 0;
-			@include flex-row($align: center, $gap: 6px);
-			i {
-				font-size: 18px;
-			}
-		}
-	}
-}
-.filter-panel {
-	background: var(--colors-surface-card);
-	border: 1px solid var(--colors-surface-border);
-	border-radius: 12px;
-	padding: var(--spacing-md);
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
-	&__left {
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-lg);
-		flex-grow: 1;
-		flex-wrap: wrap;
-	}
-}
-
-.filter-bar {
-	display: flex;
-	align-items: center;
-	gap: var(--spacing-sm);
-	flex-wrap: wrap;
-}
-
-.table-scroll-container {
-	max-height: 640px;
-	overflow-y: auto;
 	padding: 0 !important;
+	overflow: hidden;
 }
 
+.action-buttons {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 4px;
+}
 
-
-
-.mt-xs {
-	margin-top: var(--spacing-xs);
-}
-.mt-sm {
-	margin-top: var(--spacing-sm);
-}
-.my-md {
-	margin-top: var(--spacing-md);
-	margin-bottom: var(--spacing-md);
-}
-.mb-xs {
-	margin-bottom: var(--spacing-xs);
-}
-.mb-md {
-	margin-bottom: var(--spacing-md);
-}
-.mb-lg {
-	margin-bottom: var(--spacing-lg);
-}
-.mr-lg {
-	margin-right: var(--spacing-lg);
-}
-.w-full {
-	width: 100% !important;
-}
-.divider {
-	height: 1px;
-	background-color: var(--border-color);
-	width: 100%;
-}
-.u-text-right {
-	text-align: right !important;
-}
-.u-text-muted {
-	color: #94a3b8;
-}
 .u-font-mono {
 	font-family: monospace;
-}
-.u-font-weight-medium {
-	font-weight: 500;
 }
 .u-font-weight-bold {
 	font-weight: 700;
@@ -550,7 +544,7 @@ function countryFormatAccount(acc: string) {
 .u-text-primary {
 	color: var(--colors-brand-primary) !important;
 }
-.u-required {
-	color: #ef4444;
+.u-text-muted {
+	color: var(--colors-text-muted) !important;
 }
 </style>
