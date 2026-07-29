@@ -37,6 +37,7 @@ interface TechnicalModel {
 }
 
 interface WorkOrderModel {
+	guid?: string;
 	woNumber: string;
 	title: string;
 	personInCharge: string;
@@ -195,7 +196,7 @@ function viewFullDetails() {
 		isOpen.value = false;
 		router.push({
 			name: "Work Order Detail",
-			params: { id: props.workOrder.woNumber },
+			params: { id: props.workOrder.guid || props.workOrder.woNumber },
 			query: { status: props.workOrder.status.toLowerCase() },
 		});
 	}

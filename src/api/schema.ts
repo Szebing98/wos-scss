@@ -1203,7 +1203,8 @@ export interface paths {
         };
         /** @description Get the effective ability list for a specific user (by user code, including group abilitys and overrides). */
         get: operations["getApiAbilitiesUsersByUserCode"];
-        put?: never;
+        /** @description Replace (sync) all override permissions for a user via direct allow/deny settings. */
+        put: operations["putApiAbilitiesUsersByUserCode"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1274,6 +1275,23 @@ export interface paths {
         post?: never;
         /** @description Remove a single ability from a user group (soft-delete). */
         delete: operations["deleteApiAbilitiesGroupsByCodeRemove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/abilities/users/{userCode}/inherited": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get all group-inherited abilities assigned to a user. */
+        get: operations["getApiAbilitiesUsersByUserCodeInherited"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2610,6 +2628,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -4126,6 +4145,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -4138,6 +4158,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Paginated list of customers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
             /** @description Not authenticated. */
             401: {
                 headers: {
@@ -4191,260 +4220,17 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Autocount debtor code */
-                    accountNo?: string;
-                    /** @description Customer fullname */
-                    name: string;
-                    /** @description License No */
-                    licenseNo?: string;
-                    /**
-                     * @description Customer's status
-                     * @default true
-                     */
-                    isActive: boolean;
-                    /**
-                     * @description Request for e-invoice
-                     * @default false
-                     */
-                    requestEinvoice: boolean;
-                    /** @description Customer's address */
-                    addressCode?: string;
-                    /** @description Customer debtor profile */
-                    profile?: {
-                        /**
-                         * Format: email
-                         * @description Customer email address
-                         */
-                        email: string;
-                        /** @description Customer contact phone */
-                        phone?: string;
-                        /** @description Customer tax no */
-                        tin?: string;
-                        /** @description Customer business registration no */
-                        brn?: string;
-                        /** @description Customer type [MyKAD | MyPR | MyKAS | PASSPORT | ARMY] */
-                        individualType?: string;
-                        /** @description Customer identity no */
-                        identityNo?: string;
-                        /** @description Customer Person In Charge name */
-                        picName?: string;
-                        /** @description Customer Person In Charge phone */
-                        picPhone?: string;
-                        /** @description Customer contract no */
-                        contractNo?: string;
-                        /** @description Contract start date */
-                        contractStartDate?: string | null;
-                        /** @description Contract end date */
-                        contractEndDate?: string | null;
-                    };
-                    /** @description Customer e-invoice information */
-                    metadata?: {
-                        /** @description Customer fax number */
-                        faxNo?: string;
-                        /**
-                         * Format: uri
-                         * @description Customer website URL
-                         */
-                        webURL?: string;
-                        /** @description Customer delivery address */
-                        deliveryAddressCode?: string;
-                        /** @description Attention or recipient name */
-                        attention?: string;
-                        /** @description Tax exemption reference number */
-                        taxExemptNo?: string;
-                        /**
-                         * Format: date-time
-                         * @description Tax exemption expiry date
-                         */
-                        exemptExpiryDate: string;
-                        /** @description Tourism tax registration number */
-                        tourismTaxRegNo?: string;
-                        /** @description Previous GST registration number */
-                        prevGstRegNo?: string;
-                        /** @description Nature of customer business */
-                        natureOfBusiness?: string;
-                        /** @description Linked accounting control account */
-                        controlAccount?: string;
-                        /** @description Customer default transaction currency code */
-                        currencyCode?: string;
-                        /** @description Customer credit limit amount */
-                        creditLimit?: string;
-                        /** @description Customer overdue limit amount */
-                        overdueLimit?: string;
-                    };
+        requestBody?: never;
+        responses: {
+            /** @description Customer created successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
                 };
-                "application/x-www-form-urlencoded": {
-                    /** @description Autocount debtor code */
-                    accountNo?: string;
-                    /** @description Customer fullname */
-                    name: string;
-                    /** @description License No */
-                    licenseNo?: string;
-                    /**
-                     * @description Customer's status
-                     * @default true
-                     */
-                    isActive: boolean;
-                    /**
-                     * @description Request for e-invoice
-                     * @default false
-                     */
-                    requestEinvoice: boolean;
-                    /** @description Customer's address */
-                    addressCode?: string;
-                    /** @description Customer debtor profile */
-                    profile?: {
-                        /**
-                         * Format: email
-                         * @description Customer email address
-                         */
-                        email: string;
-                        /** @description Customer contact phone */
-                        phone?: string;
-                        /** @description Customer tax no */
-                        tin?: string;
-                        /** @description Customer business registration no */
-                        brn?: string;
-                        /** @description Customer type [MyKAD | MyPR | MyKAS | PASSPORT | ARMY] */
-                        individualType?: string;
-                        /** @description Customer identity no */
-                        identityNo?: string;
-                        /** @description Customer Person In Charge name */
-                        picName?: string;
-                        /** @description Customer Person In Charge phone */
-                        picPhone?: string;
-                        /** @description Customer contract no */
-                        contractNo?: string;
-                        /** @description Contract start date */
-                        contractStartDate?: string | null;
-                        /** @description Contract end date */
-                        contractEndDate?: string | null;
-                    };
-                    /** @description Customer e-invoice information */
-                    metadata?: {
-                        /** @description Customer fax number */
-                        faxNo?: string;
-                        /**
-                         * Format: uri
-                         * @description Customer website URL
-                         */
-                        webURL?: string;
-                        /** @description Customer delivery address */
-                        deliveryAddressCode?: string;
-                        /** @description Attention or recipient name */
-                        attention?: string;
-                        /** @description Tax exemption reference number */
-                        taxExemptNo?: string;
-                        /**
-                         * Format: date-time
-                         * @description Tax exemption expiry date
-                         */
-                        exemptExpiryDate: string;
-                        /** @description Tourism tax registration number */
-                        tourismTaxRegNo?: string;
-                        /** @description Previous GST registration number */
-                        prevGstRegNo?: string;
-                        /** @description Nature of customer business */
-                        natureOfBusiness?: string;
-                        /** @description Linked accounting control account */
-                        controlAccount?: string;
-                        /** @description Customer default transaction currency code */
-                        currencyCode?: string;
-                        /** @description Customer credit limit amount */
-                        creditLimit?: string;
-                        /** @description Customer overdue limit amount */
-                        overdueLimit?: string;
-                    };
-                };
-                "multipart/form-data": {
-                    /** @description Autocount debtor code */
-                    accountNo?: string;
-                    /** @description Customer fullname */
-                    name: string;
-                    /** @description License No */
-                    licenseNo?: string;
-                    /**
-                     * @description Customer's status
-                     * @default true
-                     */
-                    isActive: boolean;
-                    /**
-                     * @description Request for e-invoice
-                     * @default false
-                     */
-                    requestEinvoice: boolean;
-                    /** @description Customer's address */
-                    addressCode?: string;
-                    /** @description Customer debtor profile */
-                    profile?: {
-                        /**
-                         * Format: email
-                         * @description Customer email address
-                         */
-                        email: string;
-                        /** @description Customer contact phone */
-                        phone?: string;
-                        /** @description Customer tax no */
-                        tin?: string;
-                        /** @description Customer business registration no */
-                        brn?: string;
-                        /** @description Customer type [MyKAD | MyPR | MyKAS | PASSPORT | ARMY] */
-                        individualType?: string;
-                        /** @description Customer identity no */
-                        identityNo?: string;
-                        /** @description Customer Person In Charge name */
-                        picName?: string;
-                        /** @description Customer Person In Charge phone */
-                        picPhone?: string;
-                        /** @description Customer contract no */
-                        contractNo?: string;
-                        /** @description Contract start date */
-                        contractStartDate?: string | null;
-                        /** @description Contract end date */
-                        contractEndDate?: string | null;
-                    };
-                    /** @description Customer e-invoice information */
-                    metadata?: {
-                        /** @description Customer fax number */
-                        faxNo?: string;
-                        /**
-                         * Format: uri
-                         * @description Customer website URL
-                         */
-                        webURL?: string;
-                        /** @description Customer delivery address */
-                        deliveryAddressCode?: string;
-                        /** @description Attention or recipient name */
-                        attention?: string;
-                        /** @description Tax exemption reference number */
-                        taxExemptNo?: string;
-                        /**
-                         * Format: date-time
-                         * @description Tax exemption expiry date
-                         */
-                        exemptExpiryDate: string;
-                        /** @description Tourism tax registration number */
-                        tourismTaxRegNo?: string;
-                        /** @description Previous GST registration number */
-                        prevGstRegNo?: string;
-                        /** @description Nature of customer business */
-                        natureOfBusiness?: string;
-                        /** @description Linked accounting control account */
-                        controlAccount?: string;
-                        /** @description Customer default transaction currency code */
-                        currencyCode?: string;
-                        /** @description Customer credit limit amount */
-                        creditLimit?: string;
-                        /** @description Customer overdue limit amount */
-                        overdueLimit?: string;
-                    };
+                content: {
+                    "application/json": unknown;
                 };
             };
-        };
-        responses: {
             /** @description Validation error. */
             400: {
                 headers: {
@@ -4553,6 +4339,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description Customer unique identifier (GUID) */
+                        guid: string;
                         /** @description Customer code */
                         code: string;
                         /** @description Autocount debtor code */
@@ -4582,10 +4370,7 @@ export interface operations {
                         profile?: {
                             /** @description Customer code */
                             customerCode: string;
-                            /**
-                             * Format: email
-                             * @description Customer email
-                             */
+                            /** @description Customer email */
                             email: string;
                             /** @description Customer contact phone */
                             phone: string | null;
@@ -4593,7 +4378,7 @@ export interface operations {
                             tin: string | null;
                             /** @description Customer business registration no */
                             brn: string | null;
-                            /** @description Customer type [MyKAD | MyPR | MyKAS | PASSPORT | ARMY] */
+                            /** @description Customer type [MyKAD | MyPR | MyKAS | PASSPORT | ARMY | COMPANY | GOVERNMENT] */
                             individualType: string;
                             /** @description Customer identity no */
                             identityNo: string | null;
@@ -4611,20 +4396,52 @@ export interface operations {
                              * @description MSIC Code
                              * @default 00000
                              */
-                            msicCode: string;
+                            msicCode: string | null;
                             /**
                              * @description Business Activity Description
                              * @default NOT APPLICABLE
                              */
-                            msicDesc: string;
+                            msicDesc: string | null;
+                        } | null;
+                        /** @description Associated contracts */
+                        contracts?: unknown[];
+                        /** @description Contract numbers list */
+                        contractNoList?: string[];
+                        address?: {
+                            /** @description Street address line 1 */
+                            address1: string;
+                            /** @description Street address line 2 */
+                            address2?: string | null;
+                            /** @description Street address line 3 */
+                            address3?: string | null;
+                            /** @description Postal / zip code */
+                            postcode?: string | null;
+                            /** @description Country code (e.g. MYS) */
+                            countryCode?: string | null;
+                            /** @description State code (e.g. 14) */
+                            stateCode?: string | null;
+                            /** @description City code */
+                            cityCode?: string | null;
+                            /** @description Country name */
+                            country?: string | null;
+                            /** @description State name */
+                            state?: string | null;
+                            /** @description City name */
+                            city?: string | null;
+                            /** @description Custom state text */
+                            stateCustom?: string | null;
+                            /** @description Custom city text */
+                            cityCustom?: string | null;
                         } | null;
                         metadata?: {
                             /** @description Customer code */
                             customerCode: string;
                             /** @description Customer fax no */
                             faxNo: string | null;
-                            /** @description Customer code */
-                            webURL: string | null;
+                            /** @description Customer website URL */
+                            webURL?: string | null;
+                            /** @description Customer website URL */
+                            web_url?: string | null;
                             /** @description Customer delivery address */
                             deliveryAddressCode: string | null;
                             /** @description Attention or recipient name */
@@ -4637,6 +4454,8 @@ export interface operations {
                             tourismTaxRegNo: string | null;
                             /** @description Previous GST registration number */
                             prevGstRegNo: string | null;
+                            /** @description SST Registration Number */
+                            sstRegNo?: string | null;
                             /** @description Nature of customer business */
                             natureOfBusiness: string | null;
                             /** @description Linked accounting control account */
@@ -4728,260 +4547,17 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Autocount debtor code */
-                    accountNo?: string;
-                    /** @description Customer fullname */
-                    name?: string;
-                    /** @description License No */
-                    licenseNo?: string;
-                    /**
-                     * @description Customer's status
-                     * @default true
-                     */
-                    isActive?: boolean;
-                    /**
-                     * @description Request for e-invoice
-                     * @default false
-                     */
-                    requestEinvoice?: boolean;
-                    /** @description Customer's address */
-                    addressCode?: string;
-                    /** @description Customer debtor profile */
-                    profile?: {
-                        /**
-                         * Format: email
-                         * @description Customer email address
-                         */
-                        email: string;
-                        /** @description Customer contact phone */
-                        phone?: string;
-                        /** @description Customer tax no */
-                        tin?: string;
-                        /** @description Customer business registration no */
-                        brn?: string;
-                        /** @description Customer type [MyKAD | MyPR | MyKAS | PASSPORT | ARMY] */
-                        individualType?: string;
-                        /** @description Customer identity no */
-                        identityNo?: string;
-                        /** @description Customer Person In Charge name */
-                        picName?: string;
-                        /** @description Customer Person In Charge phone */
-                        picPhone?: string;
-                        /** @description Customer contract no */
-                        contractNo?: string;
-                        /** @description Contract start date */
-                        contractStartDate?: string | null;
-                        /** @description Contract end date */
-                        contractEndDate?: string | null;
-                    };
-                    /** @description Customer e-invoice information */
-                    metadata?: {
-                        /** @description Customer fax number */
-                        faxNo?: string;
-                        /**
-                         * Format: uri
-                         * @description Customer website URL
-                         */
-                        webURL?: string;
-                        /** @description Customer delivery address */
-                        deliveryAddressCode?: string;
-                        /** @description Attention or recipient name */
-                        attention?: string;
-                        /** @description Tax exemption reference number */
-                        taxExemptNo?: string;
-                        /**
-                         * Format: date-time
-                         * @description Tax exemption expiry date
-                         */
-                        exemptExpiryDate: string;
-                        /** @description Tourism tax registration number */
-                        tourismTaxRegNo?: string;
-                        /** @description Previous GST registration number */
-                        prevGstRegNo?: string;
-                        /** @description Nature of customer business */
-                        natureOfBusiness?: string;
-                        /** @description Linked accounting control account */
-                        controlAccount?: string;
-                        /** @description Customer default transaction currency code */
-                        currencyCode?: string;
-                        /** @description Customer credit limit amount */
-                        creditLimit?: string;
-                        /** @description Customer overdue limit amount */
-                        overdueLimit?: string;
-                    };
+        requestBody?: never;
+        responses: {
+            /** @description Customer updated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
                 };
-                "application/x-www-form-urlencoded": {
-                    /** @description Autocount debtor code */
-                    accountNo?: string;
-                    /** @description Customer fullname */
-                    name?: string;
-                    /** @description License No */
-                    licenseNo?: string;
-                    /**
-                     * @description Customer's status
-                     * @default true
-                     */
-                    isActive?: boolean;
-                    /**
-                     * @description Request for e-invoice
-                     * @default false
-                     */
-                    requestEinvoice?: boolean;
-                    /** @description Customer's address */
-                    addressCode?: string;
-                    /** @description Customer debtor profile */
-                    profile?: {
-                        /**
-                         * Format: email
-                         * @description Customer email address
-                         */
-                        email: string;
-                        /** @description Customer contact phone */
-                        phone?: string;
-                        /** @description Customer tax no */
-                        tin?: string;
-                        /** @description Customer business registration no */
-                        brn?: string;
-                        /** @description Customer type [MyKAD | MyPR | MyKAS | PASSPORT | ARMY] */
-                        individualType?: string;
-                        /** @description Customer identity no */
-                        identityNo?: string;
-                        /** @description Customer Person In Charge name */
-                        picName?: string;
-                        /** @description Customer Person In Charge phone */
-                        picPhone?: string;
-                        /** @description Customer contract no */
-                        contractNo?: string;
-                        /** @description Contract start date */
-                        contractStartDate?: string | null;
-                        /** @description Contract end date */
-                        contractEndDate?: string | null;
-                    };
-                    /** @description Customer e-invoice information */
-                    metadata?: {
-                        /** @description Customer fax number */
-                        faxNo?: string;
-                        /**
-                         * Format: uri
-                         * @description Customer website URL
-                         */
-                        webURL?: string;
-                        /** @description Customer delivery address */
-                        deliveryAddressCode?: string;
-                        /** @description Attention or recipient name */
-                        attention?: string;
-                        /** @description Tax exemption reference number */
-                        taxExemptNo?: string;
-                        /**
-                         * Format: date-time
-                         * @description Tax exemption expiry date
-                         */
-                        exemptExpiryDate: string;
-                        /** @description Tourism tax registration number */
-                        tourismTaxRegNo?: string;
-                        /** @description Previous GST registration number */
-                        prevGstRegNo?: string;
-                        /** @description Nature of customer business */
-                        natureOfBusiness?: string;
-                        /** @description Linked accounting control account */
-                        controlAccount?: string;
-                        /** @description Customer default transaction currency code */
-                        currencyCode?: string;
-                        /** @description Customer credit limit amount */
-                        creditLimit?: string;
-                        /** @description Customer overdue limit amount */
-                        overdueLimit?: string;
-                    };
-                };
-                "multipart/form-data": {
-                    /** @description Autocount debtor code */
-                    accountNo?: string;
-                    /** @description Customer fullname */
-                    name?: string;
-                    /** @description License No */
-                    licenseNo?: string;
-                    /**
-                     * @description Customer's status
-                     * @default true
-                     */
-                    isActive?: boolean;
-                    /**
-                     * @description Request for e-invoice
-                     * @default false
-                     */
-                    requestEinvoice?: boolean;
-                    /** @description Customer's address */
-                    addressCode?: string;
-                    /** @description Customer debtor profile */
-                    profile?: {
-                        /**
-                         * Format: email
-                         * @description Customer email address
-                         */
-                        email: string;
-                        /** @description Customer contact phone */
-                        phone?: string;
-                        /** @description Customer tax no */
-                        tin?: string;
-                        /** @description Customer business registration no */
-                        brn?: string;
-                        /** @description Customer type [MyKAD | MyPR | MyKAS | PASSPORT | ARMY] */
-                        individualType?: string;
-                        /** @description Customer identity no */
-                        identityNo?: string;
-                        /** @description Customer Person In Charge name */
-                        picName?: string;
-                        /** @description Customer Person In Charge phone */
-                        picPhone?: string;
-                        /** @description Customer contract no */
-                        contractNo?: string;
-                        /** @description Contract start date */
-                        contractStartDate?: string | null;
-                        /** @description Contract end date */
-                        contractEndDate?: string | null;
-                    };
-                    /** @description Customer e-invoice information */
-                    metadata?: {
-                        /** @description Customer fax number */
-                        faxNo?: string;
-                        /**
-                         * Format: uri
-                         * @description Customer website URL
-                         */
-                        webURL?: string;
-                        /** @description Customer delivery address */
-                        deliveryAddressCode?: string;
-                        /** @description Attention or recipient name */
-                        attention?: string;
-                        /** @description Tax exemption reference number */
-                        taxExemptNo?: string;
-                        /**
-                         * Format: date-time
-                         * @description Tax exemption expiry date
-                         */
-                        exemptExpiryDate: string;
-                        /** @description Tourism tax registration number */
-                        tourismTaxRegNo?: string;
-                        /** @description Previous GST registration number */
-                        prevGstRegNo?: string;
-                        /** @description Nature of customer business */
-                        natureOfBusiness?: string;
-                        /** @description Linked accounting control account */
-                        controlAccount?: string;
-                        /** @description Customer default transaction currency code */
-                        currencyCode?: string;
-                        /** @description Customer credit limit amount */
-                        creditLimit?: string;
-                        /** @description Customer overdue limit amount */
-                        overdueLimit?: string;
-                    };
+                content: {
+                    "application/json": unknown;
                 };
             };
-        };
-        responses: {
             /** @description Validation error. */
             400: {
                 headers: {
@@ -5173,6 +4749,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Customer activated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
             /** @description Not authenticated. */
             401: {
                 headers: {
@@ -5230,6 +4815,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Customer deactivated successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
             /** @description Not authenticated. */
             401: {
                 headers: {
@@ -5446,6 +5040,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -6147,6 +5742,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -7769,6 +7365,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -8494,6 +8091,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -8639,6 +8237,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -8785,6 +8384,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -9289,6 +8889,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -9536,6 +9137,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -9604,6 +9206,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -9672,6 +9275,7 @@ export interface operations {
             query: {
                 pageIndex: number;
                 pageSize: number;
+                limit?: number;
                 sort?: string;
                 q?: string;
                 timezone: string;
@@ -10047,44 +9651,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Auto increment ID */
-                        id: number;
-                        /** @description Unique code for abilities */
-                        code: string;
-                        /** @description Action type (create | read | update | delete | manage) */
-                        action: string;
-                        /** @description Resource/module name (e.g. user, content, system) */
-                        subject: string;
-                        /** @description Optional JSON fields for ABAC rules */
-                        fields: unknown | null;
-                        /** @description Optional JSON conditions for ABAC rules */
-                        conditions: unknown | null;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Last update timestamp
-                         */
-                        updatedAt: string;
-                        /** @description Soft delete timestamp */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        updatedBy: string | null;
-                    }[];
-                };
-            };
             /** @description Response for status 401 */
             401: {
                 headers: {
@@ -10140,44 +9706,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Auto increment ID */
-                        id: number;
-                        /** @description Unique code for abilities */
-                        code: string;
-                        /** @description Action type (create | read | update | delete | manage) */
-                        action: string;
-                        /** @description Resource/module name (e.g. user, content, system) */
-                        subject: string;
-                        /** @description Optional JSON fields for ABAC rules */
-                        fields: unknown | null;
-                        /** @description Optional JSON conditions for ABAC rules */
-                        conditions: unknown | null;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Last update timestamp
-                         */
-                        updatedAt: string;
-                        /** @description Soft delete timestamp */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        updatedBy: string | null;
-                    }[];
-                };
-            };
             /** @description Response for status 401 */
             401: {
                 headers: {
@@ -10213,6 +9741,87 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Response for status 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Response for status 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    putApiAbilitiesUsersByUserCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    abilities: {
+                        action: string;
+                        subject: string;
+                        inverted: boolean;
+                    }[];
+                };
+                "application/x-www-form-urlencoded": {
+                    abilities: {
+                        action: string;
+                        subject: string;
+                        inverted: boolean;
+                    }[];
+                };
+                "multipart/form-data": {
+                    abilities: {
+                        action: string;
+                        subject: string;
+                        inverted: boolean;
+                    }[];
+                };
+            };
+        };
+        responses: {
             /** @description Response for status 200 */
             200: {
                 headers: {
@@ -10220,35 +9829,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        /** @description Auto increment ID */
-                        id: number;
-                        /** @description Unique code for abilities */
-                        code: string;
-                        /** @description Action type (create | read | update | delete | manage) */
-                        action: string;
-                        /** @description Resource/module name (e.g. user, content, system) */
-                        subject: string;
-                        /** @description Optional JSON fields for ABAC rules */
-                        fields: unknown | null;
-                        /** @description Optional JSON conditions for ABAC rules */
-                        conditions: unknown | null;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Last update timestamp
-                         */
-                        updatedAt: string;
-                        /** @description Soft delete timestamp */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        updatedBy: string | null;
-                    }[];
+                        message: string;
+                    };
                 };
             };
             /** @description Response for status 401 */
@@ -10308,44 +9890,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Auto increment ID */
-                        id: number;
-                        /** @description Unique code for abilities */
-                        code: string;
-                        /** @description Action type (create | read | update | delete | manage) */
-                        action: string;
-                        /** @description Resource/module name (e.g. user, content, system) */
-                        subject: string;
-                        /** @description Optional JSON fields for ABAC rules */
-                        fields: unknown | null;
-                        /** @description Optional JSON conditions for ABAC rules */
-                        conditions: unknown | null;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Last update timestamp
-                         */
-                        updatedAt: string;
-                        /** @description Soft delete timestamp */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        updatedBy: string | null;
-                    }[];
-                };
-            };
             /** @description Response for status 401 */
             401: {
                 headers: {
@@ -10663,6 +10207,63 @@ export interface operations {
             };
         };
     };
+    getApiAbilitiesUsersByUserCodeInherited: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response for status 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Response for status 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
     getApiAbilitiesUsersByUserCodeOverrides: {
         parameters: {
             query?: never;
@@ -10674,44 +10275,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Response for status 200 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Auto increment ID */
-                        id: number;
-                        /** @description Unique code for abilities */
-                        code: string;
-                        /** @description Action type (create | read | update | delete | manage) */
-                        action: string;
-                        /** @description Resource/module name (e.g. user, content, system) */
-                        subject: string;
-                        /** @description Optional JSON fields for ABAC rules */
-                        fields: unknown | null;
-                        /** @description Optional JSON conditions for ABAC rules */
-                        conditions: unknown | null;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Last update timestamp
-                         */
-                        updatedAt: string;
-                        /** @description Soft delete timestamp */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        updatedBy: string | null;
-                    }[];
-                };
-            };
             /** @description Response for status 401 */
             401: {
                 headers: {
@@ -11519,7 +11082,7 @@ export interface operations {
                      * @enum {string}
                      */
                     jobPriority?: "High" | "Medium" | "Low";
-                    siteCode?: string | null;
+                    siteCode: string;
                     location?: string | null;
                     latitude?: number | null;
                     longitude?: number | null;
@@ -11667,7 +11230,7 @@ export interface operations {
                      * @enum {string}
                      */
                     jobPriority?: "High" | "Medium" | "Low";
-                    siteCode?: string | null;
+                    siteCode: string;
                     location?: string | null;
                     latitude?: number | null;
                     longitude?: number | null;
@@ -11815,7 +11378,7 @@ export interface operations {
                      * @enum {string}
                      */
                     jobPriority?: "High" | "Medium" | "Low";
-                    siteCode?: string | null;
+                    siteCode: string;
                     location?: string | null;
                     latitude?: number | null;
                     longitude?: number | null;
@@ -11976,7 +11539,7 @@ export interface operations {
                      * @enum {string}
                      */
                     jobPriority?: "High" | "Medium" | "Low";
-                    siteCode?: string | null;
+                    siteCode: string;
                     location?: string | null;
                     latitude?: number | null;
                     longitude?: number | null;
@@ -12124,7 +11687,7 @@ export interface operations {
                      * @enum {string}
                      */
                     jobPriority?: "High" | "Medium" | "Low";
-                    siteCode?: string | null;
+                    siteCode: string;
                     location?: string | null;
                     latitude?: number | null;
                     longitude?: number | null;
@@ -12272,7 +11835,7 @@ export interface operations {
                      * @enum {string}
                      */
                     jobPriority?: "High" | "Medium" | "Low";
-                    siteCode?: string | null;
+                    siteCode: string;
                     location?: string | null;
                     latitude?: number | null;
                     longitude?: number | null;

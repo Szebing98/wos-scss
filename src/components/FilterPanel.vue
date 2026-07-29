@@ -2,13 +2,13 @@
 	<div class="filter-panel-wrapper" ref="wrapperRef">
 		<div @click="toggle" class="filter-trigger">
 			<slot name="trigger" :isActive="isOpen">
-				<Button 
-					variant="outlined" 
-					:class="{ 'btn--active': isOpen }" 
+				<Button
+					variant="outlined"
+					:class="{ 'btn--active': isOpen }"
 					title="Filter"
-                    style="display: inline-flex; align-items: center; gap: 6px;"
+					style="display: inline-flex; align-items: center; gap: 6px"
 				>
-					<i class="mdi mdi-filter-variant" style="font-size: 18px;"></i>
+					<i class="mdi mdi-filter-variant" style="font-size: 18px"></i>
 					<span class="filter-label-text">Filter</span>
 				</Button>
 			</slot>
@@ -18,7 +18,7 @@
 			<Transition name="fade">
 				<div v-if="isOpen" class="filter-backdrop" @click="close"></div>
 			</Transition>
-			
+
 			<Transition name="popover">
 				<div v-if="isOpen" class="filter-modal-container" @click.self="close">
 					<div class="filter-popover filter-popover--modal">
@@ -32,7 +32,9 @@
 							<slot></slot>
 						</div>
 						<div class="filter-popover__footer">
-							<Button v-if="showReset" variant="text" @click="handleReset">Reset Filters</Button>
+							<Button v-if="showReset" variant="text" @click="handleReset"
+								>Reset Filters</Button
+							>
 							<div style="flex-grow: 1"></div>
 							<Button variant="primary" @click="handleApply">Apply</Button>
 						</div>
@@ -55,7 +57,7 @@ withDefaults(
 	}>(),
 	{
 		showReset: true,
-	}
+	},
 );
 
 const emit = defineEmits<{
@@ -82,7 +84,6 @@ function handleReset() {
 	emit("reset");
 	close();
 }
-
 </script>
 
 <style lang="scss" scoped>
@@ -220,7 +221,9 @@ function handleReset() {
 
 .popover-enter-active,
 .popover-leave-active {
-	transition: opacity 0.2s, transform 0.2s;
+	transition:
+		opacity 0.2s,
+		transform 0.2s;
 }
 
 .popover-enter-from,

@@ -1,3 +1,257 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import Textbox from "@/components/Textbox.vue";
+import http from "@/utils/http";
+
+const route = useRoute();
+
+interface UserModel {
+	guid?: string;
+	code: string;
+	name: string;
+	email: string;
+}
+
+interface PermissionModel {
+	guid?: string;
+	code: string;
+	action: string;
+	subject: string;
+	inverted: boolean;
+}
+
+const selectedUserCode = ref("");
+const selectedUser = ref<UserModel | null>(null);
+const searchQuery = ref("");
+const isLoadingPermissions = ref(false);
+const showPermissionMatrix = ref(false);
+const isSaving = ref(false);
+
+const userSearchQuery = ref("");
+const showUserList = ref(false);
+const autocompleteRef = ref<HTMLElement | null>(null);
+
+const filteredAutocompleteUsers = computed(() => {
+	if (!userSearchQuery.value) return users.value;
+	const q = userSearchQuery.value.toLowerCase();
+	return users.value.filter(
+		(u) =>
+			u.name.toLowerCase().includes(q) ||
+			u.email.toLowerCase().includes(q) ||
+			u.code.toLowerCase().includes(q),
+	);
+});
+
+const users = ref<UserModel[]>([]);
+const allPermissions = ref<PermissionModel[]>([]);
+
+const inheritedPermissions = ref<Set<string>>(new Set());
+const userOverrides = ref<Map<string, "allow" | "deny">>(new Map());
+
+// 1. Load users
+async function loadUsers() {
+	try {
+		const res = await http.get("/user", { params: { pageSize: 100 } });
+		const data = res.data?.data || res.data || [];
+		if (Array.isArray(data)) {
+			users.value = data.map((u: any) => ({
+				guid: u.guid,
+				code: u.code || u.guid.substring(0, 8).toUpperCase(),
+				name: u.name || u.displayName || u.profile?.displayName || "Unknown User",
+				email: u.email || "",
+			}));
+		}
+	} catch (e) {
+		console.error("Failed to load users", e);
+		users.value = [];
+	}
+}
+
+// 2. Load abilities
+async function loadAllPermissions() {
+	try {
+		const res = await http.get("/abilities");
+		const data = res.data?.data || res.data || [];
+		if (Array.isArray(data)) {
+			allPermissions.value = data.map((p: any) => ({
+				guid: p.guid,
+				code: p.code || `${p.action}_${p.subject}`,
+				action: p.action,
+				subject: p.subject,
+				inverted: p.inverted ?? false,
+			}));
+		}
+	} catch (e) {
+		console.error("Failed to load abilities", e);
+	}
+}
+
+async function handleUserSelection(user: UserModel) {
+	userSearchQuery.value = `${user.name} (${user.email})`;
+	showUserList.value = false;
+	showPermissionMatrix.value = false;
+
+	selectedUserCode.value = user.code;
+	selectedUser.value = user;
+	isLoadingPermissions.value = true;
+
+	inheritedPermissions.value.clear();
+	userOverrides.value.clear();
+
+	try {
+		if (user.guid) {
+			const [inheritedRes, overridesRes] = await Promise.all([
+				http.get(`/abilities/users/${user.guid}/inherited`),
+				http.get(`/abilities/users/${user.guid}/overrides`),
+			]);
+			const inheritedList: PermissionModel[] =
+				inheritedRes.data?.data || inheritedRes.data || [];
+			const overridesList: PermissionModel[] =
+				overridesRes.data?.data || overridesRes.data || [];
+
+			if (Array.isArray(inheritedList)) {
+				inheritedList.forEach((p) => {
+					const code = p.code || `${p.action}_${p.subject}`;
+					inheritedPermissions.value.add(code);
+				});
+			}
+
+			if (Array.isArray(overridesList)) {
+				overridesList.forEach((p) => {
+					const code = p.code || `${p.action}_${p.subject}`;
+					userOverrides.value.set(code, p.inverted ? "deny" : "allow");
+				});
+			}
+		}
+		showPermissionMatrix.value = true;
+	} catch (e) {
+		console.error("Failed to load user abilities", e);
+	} finally {
+		isLoadingPermissions.value = false;
+	}
+}
+
+function handleClickOutside(e: MouseEvent) {
+	if (autocompleteRef.value && !autocompleteRef.value.contains(e.target as Node)) {
+		showUserList.value = false;
+		if (
+			selectedUser.value &&
+			userSearchQuery.value !== `${selectedUser.value.name} (${selectedUser.value.email})`
+		) {
+			userSearchQuery.value = `${selectedUser.value.name} (${selectedUser.value.email})`;
+		}
+	}
+}
+
+function selectAllPermissions(action: "allow" | "deny") {
+	// Reset overrides and set all permissions to the chosen action
+	userOverrides.value.clear();
+	if (action === "allow" || action === "deny") {
+		allPermissions.value.forEach((p) => {
+			userOverrides.value.set(p.code, action);
+		});
+	}
+}
+
+onMounted(async () => {
+	await loadUsers();
+	await loadAllPermissions();
+	document.addEventListener("mousedown", handleClickOutside);
+
+	const targetUserQuery = route.query.user as string;
+	if (targetUserQuery && users.value.length > 0) {
+		const target = users.value.find(
+			(u) =>
+				u.guid === targetUserQuery ||
+				u.code === targetUserQuery ||
+				u.code.toLowerCase() === targetUserQuery.toLowerCase() ||
+				u.email.toLowerCase() === targetUserQuery.toLowerCase(),
+		);
+		if (target) {
+			handleUserSelection(target);
+		}
+	}
+});
+
+const filteredGroupedPermissions = computed(() => {
+	const result: Record<string, PermissionModel[]> = {};
+	if (!allPermissions.value) return result;
+
+	allPermissions.value
+		.filter((x) => !x.inverted)
+		.forEach((x) => {
+			const query = searchQuery.value.toLowerCase();
+			const matches =
+				!searchQuery.value ||
+				x.subject.toLowerCase().includes(query) ||
+				x.action.toLowerCase().includes(query) ||
+				x.code.toLowerCase().includes(query);
+
+			if (matches) {
+				if (!result[x.subject]) result[x.subject] = [];
+				result[x.subject].push(x);
+			}
+		});
+	return result;
+});
+
+function getOverrideValue(code: string): "inherited" | "allow" | "deny" {
+	return userOverrides.value.get(code) || "inherited";
+}
+
+function setOverrideValue(code: string, value: "inherited" | "allow" | "deny") {
+	if (value === "inherited") userOverrides.value.delete(code);
+	else userOverrides.value.set(code, value);
+}
+
+function getInheritedStatusText(code: string): string {
+	return inheritedPermissions.value.has(code) ? "Group Policy: ALLOWED" : "Group Policy: DENIED";
+}
+
+function getRowClass(code: string): string {
+	const val = userOverrides.value.get(code);
+	if (val === "allow") return "override-box--allow";
+	if (val === "deny") return "override-box--deny";
+	return "";
+}
+
+async function saveOverrides() {
+	if (!selectedUser.value?.guid) return;
+	isSaving.value = true;
+
+	try {
+		const selectedAbilities: Array<{
+			action: string;
+			subject: string;
+			inverted: boolean;
+			modifiedBy?: string;
+		}> = [];
+		userOverrides.value.forEach((overrideType, code) => {
+			const perm = allPermissions.value.find((p) => p.code === code);
+			if (perm) {
+				selectedAbilities.push({
+					action: perm.action,
+					subject: perm.subject,
+					inverted: overrideType === "deny",
+					modifiedBy: selectedUser.value?.code,
+				});
+			}
+		});
+
+		await http.put(`/abilities/users/${selectedUser.value.guid}`, {
+			abilities: selectedAbilities,
+		});
+		alert(`Authorization overrides for ${selectedUser.value.name} successfully deployed!`);
+	} catch (e) {
+		console.error("Failed to save user overrides", e);
+		alert("Deployment failed: An error occurred.");
+	} finally {
+		isSaving.value = false;
+	}
+}
+</script>
+
 <template>
 	<div class="maintenance-view">
 		<div class="maintenance-view__header">
@@ -78,8 +332,8 @@
 					<p>Resolving policy matrix for {{ selectedUser.name }}...</p>
 				</div>
 
-				<div v-else class="matrix-grid-area">
-					<div class="filter-panel mb-md">
+				<div v-else-if="showPermissionMatrix" class="matrix-grid-area">
+					<div class="filter-panel mb-md" style="display: flex; gap: 10px">
 						<Textbox
 							v-model="searchQuery"
 							placeholder="Search overridden capabilities..."
@@ -92,6 +346,12 @@
 								></i>
 							</template>
 						</Textbox>
+						<button class="btn btn--outline" @click="selectAllPermissions('allow')">
+							Allow All
+						</button>
+						<button class="btn btn--outline" @click="selectAllPermissions('deny')">
+							Deny All
+						</button>
 					</div>
 
 					<div
@@ -166,241 +426,6 @@
 		</div>
 	</div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
-import Textbox from "@/components/Textbox.vue";
-import http from "@/utils/http";
-
-const route = useRoute();
-
-interface UserModel {
-	guid?: string;
-	code: string;
-	name: string;
-	email: string;
-}
-
-interface PermissionModel {
-	guid?: string;
-	code: string;
-	action: string;
-	subject: string;
-	inverted: boolean;
-}
-
-const searchQuery = ref("");
-const isLoadingPermissions = ref(false);
-const isSaving = ref(false);
-
-const selectedUserCode = ref("");
-const selectedUser = ref<UserModel | null>(null);
-
-const userSearchQuery = ref("");
-const showUserList = ref(false);
-const autocompleteRef = ref<HTMLElement | null>(null);
-
-const filteredAutocompleteUsers = computed(() => {
-	if (!userSearchQuery.value) return users.value;
-	const q = userSearchQuery.value.toLowerCase();
-	return users.value.filter(
-		(u) =>
-			u.name.toLowerCase().includes(q) ||
-			u.email.toLowerCase().includes(q) ||
-			u.code.toLowerCase().includes(q),
-	);
-});
-
-const users = ref<UserModel[]>([]);
-const allPermissions = ref<PermissionModel[]>([]);
-
-const inheritedPermissions = ref<Set<string>>(new Set());
-const userOverrides = ref<Map<string, "allow" | "deny">>(new Map());
-
-// 1. Load users
-async function loadUsers() {
-	try {
-		const res = await http.get("/user", { params: { pageSize: 100 } });
-		const data = res.data?.data || res.data || [];
-		if (Array.isArray(data)) {
-			users.value = data.map((u: any) => ({
-				guid: u.guid,
-				code: u.code || u.guid.substring(0, 8).toUpperCase(),
-				name: u.name || u.displayName || u.profile?.displayName || "Unknown User",
-				email: u.email || "",
-			}));
-		}
-	} catch (e) {
-		console.error("Failed to load users", e);
-		users.value = [];
-	}
-}
-
-// 2. Load abilities
-async function loadAllPermissions() {
-	try {
-		const res = await http.get("/abilities");
-		const data = res.data?.data || res.data || [];
-		if (Array.isArray(data)) {
-			allPermissions.value = data.map((p: any) => ({
-				guid: p.guid,
-				code: p.code || `${p.action}_${p.subject}`,
-				action: p.action,
-				subject: p.subject,
-				inverted: p.inverted ?? false,
-			}));
-		}
-	} catch (e) {
-		console.error("Failed to load abilities", e);
-	}
-}
-
-async function handleUserSelection(user: UserModel) {
-	userSearchQuery.value = `${user.name} (${user.email})`;
-	showUserList.value = false;
-
-	selectedUserCode.value = user.code;
-	selectedUser.value = user;
-	isLoadingPermissions.value = true;
-
-	inheritedPermissions.value.clear();
-	userOverrides.value.clear();
-
-	try {
-		if (user.guid) {
-			const [inheritedRes, overridesRes] = await Promise.all([
-				http.get(`/abilities/users/${user.guid}/inherited`),
-				http.get(`/abilities/users/${user.guid}/overrides`),
-			]);
-			const inheritedList: PermissionModel[] = inheritedRes.data?.data || inheritedRes.data || [];
-			const overridesList: PermissionModel[] = overridesRes.data?.data || overridesRes.data || [];
-
-			if (Array.isArray(inheritedList)) {
-				inheritedList.forEach((p) => {
-					const code = p.code || `${p.action}_${p.subject}`;
-					inheritedPermissions.value.add(code);
-				});
-			}
-
-			if (Array.isArray(overridesList)) {
-				overridesList.forEach((p) => {
-					const code = p.code || `${p.action}_${p.subject}`;
-					userOverrides.value.set(code, p.inverted ? "deny" : "allow");
-				});
-			}
-		}
-	} catch (e) {
-		console.error("Failed to load user abilities", e);
-	} finally {
-		isLoadingPermissions.value = false;
-	}
-}
-
-function handleClickOutside(e: MouseEvent) {
-	if (autocompleteRef.value && !autocompleteRef.value.contains(e.target as Node)) {
-		showUserList.value = false;
-		if (
-			selectedUser.value &&
-			userSearchQuery.value !== `${selectedUser.value.name} (${selectedUser.value.email})`
-		) {
-			userSearchQuery.value = `${selectedUser.value.name} (${selectedUser.value.email})`;
-		}
-	}
-}
-
-onMounted(async () => {
-	await loadUsers();
-	await loadAllPermissions();
-	document.addEventListener("mousedown", handleClickOutside);
-
-	const targetUserQuery = route.query.user as string;
-	if (targetUserQuery && users.value.length > 0) {
-		const target = users.value.find(
-			(u) =>
-				u.guid === targetUserQuery ||
-				u.code === targetUserQuery ||
-				u.code.toLowerCase() === targetUserQuery.toLowerCase() ||
-				u.email.toLowerCase() === targetUserQuery.toLowerCase()
-		);
-		if (target) {
-			handleUserSelection(target);
-		}
-	}
-});
-
-const filteredGroupedPermissions = computed(() => {
-	const result: Record<string, PermissionModel[]> = {};
-	if (!allPermissions.value) return result;
-
-	allPermissions.value
-		.filter((x) => !x.inverted)
-		.forEach((x) => {
-			const query = searchQuery.value.toLowerCase();
-			const matches =
-				!searchQuery.value ||
-				x.subject.toLowerCase().includes(query) ||
-				x.action.toLowerCase().includes(query) ||
-				x.code.toLowerCase().includes(query);
-
-			if (matches) {
-				if (!result[x.subject]) result[x.subject] = [];
-				result[x.subject].push(x);
-			}
-		});
-	return result;
-});
-
-function getOverrideValue(code: string): "inherited" | "allow" | "deny" {
-	return userOverrides.value.get(code) || "inherited";
-}
-
-function setOverrideValue(code: string, value: "inherited" | "allow" | "deny") {
-	if (value === "inherited") userOverrides.value.delete(code);
-	else userOverrides.value.set(code, value);
-}
-
-function getInheritedStatusText(code: string): string {
-	return inheritedPermissions.value.has(code) ? "Group Policy: ALLOWED" : "Group Policy: DENIED";
-}
-
-function getRowClass(code: string): string {
-	const val = userOverrides.value.get(code);
-	if (val === "allow") return "override-box--allow";
-	if (val === "deny") return "override-box--deny";
-	return "";
-}
-
-async function saveOverrides() {
-	if (!selectedUser.value?.guid) return;
-	isSaving.value = true;
-
-	try {
-		const selectedAbilities: Array<{ action: string; subject: string; inverted: boolean; modifiedBy?: string }> = [];
-		userOverrides.value.forEach((overrideType, code) => {
-			const perm = allPermissions.value.find((p) => p.code === code);
-			if (perm) {
-				selectedAbilities.push({
-					action: perm.action,
-					subject: perm.subject,
-					inverted: overrideType === "deny",
-					modifiedBy: selectedUser.value?.code,
-				});
-			}
-		});
-
-		await http.put(`/abilities/users/${selectedUser.value.guid}`, {
-			abilities: selectedAbilities,
-		});
-		alert(`Authorization overrides for ${selectedUser.value.name} successfully deployed!`);
-	} catch (e) {
-		console.error("Failed to save user overrides", e);
-		alert("Deployment failed: An error occurred.");
-	} finally {
-		isSaving.value = false;
-	}
-}
-</script>
 
 <style lang="scss" scoped>
 @mixin flex-row($align: stretch, $gap: 0) {

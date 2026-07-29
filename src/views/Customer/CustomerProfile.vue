@@ -252,7 +252,7 @@ function formatDate(iso: string) {
 							}}
 						</Badge>
 						<Badge :type="customer.isActive ? 'success' : 'error'">
-							{{ customer.isActive ? "Active Account" : "Disabled" }}
+							{{ customer.isActive ? "Active" : "Inactive" }}
 						</Badge>
 					</div>
 
@@ -469,9 +469,6 @@ function formatDate(iso: string) {
 								<i class="mdi mdi-map-marker-outline u-text-primary"></i> Primary
 								Registered Address
 							</h2>
-							<Chip type="info" v-if="customer.addressCode">
-								Linked: {{ customer.addressCode }}
-							</Chip>
 						</div>
 						<div class="readonly-grid" v-if="customer.address || customer.addressCode">
 							<div
@@ -506,14 +503,6 @@ function formatDate(iso: string) {
 								<span class="readonly-item__value">{{
 									customer.address.country
 								}}</span>
-							</div>
-							<div class="readonly-item">
-								<span class="readonly-item__label"
-									>Linked Address Code (addressCode)</span
-								>
-								<span class="readonly-item__value u-font-mono u-text-primary">
-									{{ customer.addressCode || "No Link Code" }}
-								</span>
 							</div>
 						</div>
 						<div v-else class="u-text-muted" style="font-size: 13px">

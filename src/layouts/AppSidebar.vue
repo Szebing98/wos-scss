@@ -273,14 +273,14 @@ watch(
 							><span>Service Provided</span></router-link
 						>
 					</li> -->
-					<!-- <li>
+					<li>
 						<router-link
 							to="/maintenance/doc-no-format"
 							class="nav__child"
 							active-class="nav__child-active"
 							><span>Doc No Format</span></router-link
 						>
-					</li> -->
+					</li>
 					<li>
 						<router-link
 							to="/maintenance/role-permission"

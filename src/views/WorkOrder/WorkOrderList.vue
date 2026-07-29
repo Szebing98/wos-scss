@@ -217,10 +217,10 @@ async function fetchWorkOrders() {
 			query.workType = appliedWorkTypeFilter.value;
 		}
 		if (appliedDateFrom.value) {
-			query.startDate = new Date(appliedDateFrom.value).toISOString();
+			query.startDate = appliedDateFrom.value;
 		}
 		if (appliedDateTo.value) {
-			query.endDate = new Date(appliedDateTo.value).toISOString();
+			query.endDate = appliedDateTo.value;
 		}
 
 		const { data } = await workOrderApi.getWorkOrders(query);

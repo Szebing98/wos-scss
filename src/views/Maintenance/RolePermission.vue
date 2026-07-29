@@ -19,9 +19,12 @@ interface PermissionModel {
 	inverted?: boolean;
 }
 
+const isAllGrantedGroup = ref(false);
+
 const isLoadingGroups = ref(false);
 const isLoadingPermissions = ref(false);
 const isSaving = ref(false);
+const showPermissionMatrix = ref(false);
 
 const selectedGroup = ref<UserGroupModel | null>(null);
 const searchQuery = ref("");
@@ -101,6 +104,47 @@ async function loadGroups() {
 	}
 }
 
+async function handleGroupChange(group: UserGroupModel) {
+	selectedGroup.value = group;
+	// Load group permissions
+	isLoadingPermissions.value = true;
+	selectedPermissionCodes.value.clear();
+
+	try {
+		const res = await http.get(`/abilities/groups/${group.code}`);
+		const groupPermissions: any[] = res.data?.data || res.data || [];
+		// Detect MANAGE_ALL permission indicating full access
+		const hasManageAll = groupPermissions.some((p) => {
+			const code = p.code || `${p.action}:${p.subject}`;
+			return code === "MANAGE_ALL";
+		});
+		if (hasManageAll) {
+			// Grant all permissions without further processing
+			selectedPermissionCodes.value = new Set(allPermissions.value.map((p) => p.code));
+			isAllGrantedGroup.value = true;
+			showPermissionMatrix.value = false;
+			isLoadingPermissions.value = false;
+			return; // skip loading matrix
+		} else {
+			isAllGrantedGroup.value = false;
+		}
+
+		if (Array.isArray(groupPermissions) && groupPermissions.length > 0) {
+			groupPermissions.forEach((p) => {
+				const code = p.code || `${p.action}:${p.subject}`;
+				selectedPermissionCodes.value.add(code);
+			});
+		} else {
+			allPermissions.value.forEach((p) => selectedPermissionCodes.value.add(p.code));
+		}
+		showPermissionMatrix.value = true;
+	} catch (e) {
+		console.error("Failed to load group abilities", e);
+	} finally {
+		isLoadingPermissions.value = false;
+	}
+}
+
 async function loadAllPermissions() {
 	try {
 		const res = await http.get("/abilities");
@@ -119,27 +163,6 @@ async function loadAllPermissions() {
 	} catch (e) {
 		console.error("Failed to load abilities", e);
 		allPermissions.value = defaultSystemPermissions;
-	}
-}
-
-async function handleGroupChange(group: UserGroupModel) {
-	selectedGroup.value = group;
-	isLoadingPermissions.value = true;
-	selectedPermissionCodes.value.clear();
-
-	try {
-		const res = await http.get(`/abilities/groups/${group.code}`);
-		const groupPermissions: any[] = res.data?.data || res.data || [];
-		if (Array.isArray(groupPermissions)) {
-			groupPermissions.forEach((p) => {
-				const code = p.code || `${p.action}:${p.subject}`;
-				selectedPermissionCodes.value.add(code);
-			});
-		}
-	} catch (e) {
-		console.error("Failed to load group abilities", e);
-	} finally {
-		isLoadingPermissions.value = false;
 	}
 }
 
@@ -212,7 +235,6 @@ onMounted(() => {
 });
 </script>
 
-
 <template>
 	<div class="maintenance-view">
 		<div class="maintenance-view__header">
@@ -271,12 +293,20 @@ onMounted(() => {
 					</span>
 				</div>
 
+				<div v-else-if="isAllGrantedGroup" class="empty-state border-dashed">
+					<i class="mdi mdi-shield-check-outline empty-state__icon u-text-primary"></i>
+					<p>All Permissions Granted</p>
+					<span class="empty-state__sub"
+						>This role has full system access via the MANAGE_ALL policy.</span
+					>
+				</div>
+
 				<div v-else-if="isLoadingPermissions" class="empty-state">
 					<i class="mdi mdi-loading mdi-spin empty-state__icon u-text-primary"></i>
 					<p>Fetching Authorized Policies...</p>
 				</div>
 
-				<div v-else class="matrix-container">
+				<div v-else-if="showPermissionMatrix" class="matrix-container">
 					<div class="filter-panel mb-md">
 						<Textbox
 							v-model="searchQuery"
@@ -536,7 +566,6 @@ onMounted(() => {
 	text-transform: uppercase;
 }
 
-// 基础脚手架公用样式
 .panel-card {
 	background: var(--colors-surface-card);
 	border: 1px solid var(--colors-surface-border);

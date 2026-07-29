@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted } from "vue";
+import { ref, onMounted, watch, onUnmounted, markRaw } from "vue";
 import { loadGoogleMapsScript } from "@/utils/googleMaps";
 
 const props = withDefaults(
@@ -34,6 +34,7 @@ const emit = defineEmits<{
 
 const mapContainer = ref<HTMLDivElement | null>(null);
 const searchInput = ref<HTMLInputElement | null>(null);
+const searchWrapper = ref<HTMLDivElement | null>(null);
 
 const addressText = ref(props.location || "");
 const latVal = ref<number>(props.latitude || 0);
@@ -43,10 +44,19 @@ const isLoading = ref(true);
 const mapError = ref("");
 const isLocating = ref(false);
 
+// Autocomplete (Data API) state
+const suggestions = ref<any[]>([]);
+const showSuggestions = ref(false);
+const activeSuggestionIndex = ref(-1);
+
 let mapInstance: any = null;
-let markerInstance: any = null;
-let autocompleteInstance: any = null;
+let markerInstance: any = null; // AdvancedMarkerElement
 let geocoderInstance: any = null;
+
+let AutocompleteSuggestionLib: any = null;
+let AutocompleteSessionTokenLib: any = null;
+let sessionToken: any = null;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Default center: Kuching, Sarawak if none provided
 const DEFAULT_CENTER = { lat: 1.5533, lng: 110.3592 };
@@ -111,23 +121,35 @@ async function initMap() {
 
 		const zoomLevel = latVal.value && lngVal.value ? 15 : 12;
 
-		mapInstance = new google.maps.Map(mapContainer.value, {
+		// Explicitly import the "maps" and "geocoding" libraries instead of reading
+		// google.maps.Map / google.maps.Geocoder directly. window.google.maps can exist as a
+		// namespace stub slightly before the actual classes finish attaching to it, which is
+		// what causes "google.maps.Map is not a constructor". importLibrary() awaits the real
+		// thing and is a safe no-op if the library is already loaded.
+		const { Map } = await google.maps.importLibrary("maps");
+		const { Geocoder } = await google.maps.importLibrary("geocoding");
+
+		mapInstance = new Map(mapContainer.value, {
 			center: initialCenter,
 			zoom: zoomLevel,
+			// mapId is REQUIRED to use AdvancedMarkerElement. Set VITE_GOOGLE_MAPS_MAP_ID in your .env
+			// (create one in Google Cloud Console > Maps > Map Management). DEMO_MAP_ID works for testing.
+			mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || "DEMO_MAP_ID",
 			mapTypeControl: true,
 			streetViewControl: false,
 			fullscreenControl: true,
 			zoomControl: true,
 		});
 
-		geocoderInstance = new google.maps.Geocoder();
+		geocoderInstance = new Geocoder();
 
-		// Add Marker
-		markerInstance = new google.maps.Marker({
-			position: initialCenter,
+		// Advanced Marker (replaces deprecated google.maps.Marker)
+		const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+
+		markerInstance = new AdvancedMarkerElement({
 			map: mapInstance,
-			draggable: !props.readonly,
-			animation: google.maps.Animation.DROP,
+			position: initialCenter,
+			gmpDraggable: !props.readonly,
 			title: "Selected Location",
 		});
 
@@ -140,34 +162,20 @@ async function initMap() {
 			});
 
 			// Drag marker to update
-			markerInstance.addListener("dragend", (e: any) => {
-				const dragLat = e.latLng.lat();
-				const dragLng = e.latLng.lng();
+			markerInstance.addListener("dragend", () => {
+				const pos = markerInstance.position;
+				const dragLat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
+				const dragLng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
 				setMarkerPosition(dragLat, dragLng, true);
 			});
 
-			// Setup Places Autocomplete if search input exists
-			if (searchInput.value && google.maps.places) {
-				autocompleteInstance = new google.maps.places.Autocomplete(searchInput.value, {
-					fields: ["formatted_address", "geometry", "name"],
-				});
-
-				autocompleteInstance.addListener("place_changed", () => {
-					const place = autocompleteInstance.getPlace();
-					if (place && place.geometry && place.geometry.location) {
-						const lat = place.geometry.location.lat();
-						const lng = place.geometry.location.lng();
-						const formattedAddress =
-							place.formatted_address || place.name || addressText.value;
-
-						mapInstance.setCenter({ lat, lng });
-						mapInstance.setZoom(16);
-						markerInstance.setPosition({ lat, lng });
-
-						emitChanges(formattedAddress, lat, lng);
-					}
-				});
-			}
+			// Autocomplete Data API (replaces deprecated google.maps.places.Autocomplete)
+			// This is the "headless" API -> no widget, no shadow DOM, full control over markup/CSS.
+			const { AutocompleteSuggestion, AutocompleteSessionToken } =
+				await google.maps.importLibrary("places");
+			AutocompleteSuggestionLib = AutocompleteSuggestion;
+			AutocompleteSessionTokenLib = AutocompleteSessionToken;
+			sessionToken = new AutocompleteSessionToken();
 		}
 
 		isLoading.value = false;
@@ -182,7 +190,7 @@ function setMarkerPosition(lat: number, lng: number, reverseGeocode = false) {
 	if (!markerInstance || !mapInstance) return;
 
 	const pos = { lat, lng };
-	markerInstance.setPosition(pos);
+	markerInstance.position = pos; // AdvancedMarkerElement: no more setPosition()
 	mapInstance.panTo(pos);
 
 	if (reverseGeocode && geocoderInstance) {
@@ -201,14 +209,16 @@ function setMarkerPosition(lat: number, lng: number, reverseGeocode = false) {
 function updateMapFromCoordinates() {
 	if (mapInstance && markerInstance && latVal.value && lngVal.value) {
 		const pos = { lat: Number(latVal.value), lng: Number(lngVal.value) };
-		markerInstance.setPosition(pos);
+		markerInstance.position = pos;
 		mapInstance.panTo(pos);
 	}
 }
 
 function searchAddressManual() {
+	// Fallback: user typed a full address and hit Enter without picking a suggestion
 	if (props.readonly || !geocoderInstance || !addressText.value.trim()) return;
 
+	closeSuggestions();
 	geocoderInstance.geocode({ address: addressText.value }, (results: any[], status: string) => {
 		if (status === "OK" && results[0] && results[0].geometry) {
 			const loc = results[0].geometry.location;
@@ -217,7 +227,7 @@ function searchAddressManual() {
 
 			mapInstance.setCenter({ lat, lng });
 			mapInstance.setZoom(16);
-			markerInstance.setPosition({ lat, lng });
+			markerInstance.position = { lat, lng };
 
 			emitChanges(results[0].formatted_address, lat, lng);
 		}
@@ -247,6 +257,91 @@ function onAddressInput(e: Event) {
 	const target = e.target as HTMLInputElement;
 	addressText.value = target.value;
 	emit("update:location", target.value);
+	activeSuggestionIndex.value = -1;
+
+	if (debounceTimer) clearTimeout(debounceTimer);
+
+	const query = target.value.trim();
+	if (!query || !AutocompleteSuggestionLib) {
+		suggestions.value = [];
+		showSuggestions.value = false;
+		return;
+	}
+
+	debounceTimer = setTimeout(async () => {
+		try {
+			const { suggestions: results } =
+				await AutocompleteSuggestionLib.fetchAutocompleteSuggestions({
+					input: query,
+					sessionToken,
+				});
+			// markRaw: these are live Google SDK instances, not plain data. Letting Vue wrap them
+			// in a reactive Proxy causes their placePrediction getter to behave inconsistently
+			// (works once, then reads back as null) -> "Cannot read properties of null (reading 'placeId')".
+			suggestions.value = results
+				.filter((s: any) => s.placePrediction)
+				.map((s: any) => markRaw(s));
+			showSuggestions.value = suggestions.value.length > 0;
+		} catch (err) {
+			console.error("Autocomplete suggestion error:", err);
+			suggestions.value = [];
+			showSuggestions.value = false;
+		}
+	}, 300);
+}
+
+async function selectSuggestion(suggestion: any) {
+	if (!suggestion?.placePrediction) return;
+
+	try {
+		const place = suggestion.placePrediction.toPlace();
+		await place.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
+
+		const lat = place.location.lat();
+		const lng = place.location.lng();
+		const formattedAddress = place.formattedAddress || place.displayName || addressText.value;
+
+		mapInstance.setCenter({ lat, lng });
+		mapInstance.setZoom(16);
+		markerInstance.position = { lat, lng };
+
+		emitChanges(formattedAddress, lat, lng);
+	} finally {
+		closeSuggestions();
+		// Start a fresh session now that this search+select cycle is done (billing best practice)
+		if (AutocompleteSessionTokenLib) {
+			sessionToken = new AutocompleteSessionTokenLib();
+		}
+	}
+}
+
+function closeSuggestions() {
+	suggestions.value = [];
+	showSuggestions.value = false;
+	activeSuggestionIndex.value = -1;
+}
+
+function onSearchKeydown(e: KeyboardEvent) {
+	if (!showSuggestions.value || suggestions.value.length === 0) return;
+
+	if (e.key === "ArrowDown") {
+		e.preventDefault();
+		activeSuggestionIndex.value = (activeSuggestionIndex.value + 1) % suggestions.value.length;
+	} else if (e.key === "ArrowUp") {
+		e.preventDefault();
+		activeSuggestionIndex.value =
+			(activeSuggestionIndex.value - 1 + suggestions.value.length) % suggestions.value.length;
+	} else if (e.key === "Escape") {
+		closeSuggestions();
+	}
+}
+
+function onEnterPress() {
+	if (showSuggestions.value && activeSuggestionIndex.value >= 0) {
+		selectSuggestion(suggestions.value[activeSuggestionIndex.value]);
+	} else {
+		searchAddressManual();
+	}
 }
 
 function onCoordInput() {
@@ -254,14 +349,20 @@ function onCoordInput() {
 	updateMapFromCoordinates();
 }
 
+function onClickOutside(e: MouseEvent) {
+	if (searchWrapper.value && !searchWrapper.value.contains(e.target as Node)) {
+		closeSuggestions();
+	}
+}
+
 onMounted(() => {
 	initMap();
+	document.addEventListener("click", onClickOutside);
 });
 
 onUnmounted(() => {
-	if (autocompleteInstance && window.google?.maps?.event) {
-		window.google.maps.event.clearInstanceListeners(autocompleteInstance);
-	}
+	document.removeEventListener("click", onClickOutside);
+	if (debounceTimer) clearTimeout(debounceTimer);
 });
 </script>
 
@@ -270,7 +371,7 @@ onUnmounted(() => {
 		<!-- Search & Controls (Editable Mode) -->
 		<div v-if="!readonly" class="map-controls">
 			<div class="search-bar-row">
-				<div class="search-input-wrapper">
+				<div ref="searchWrapper" class="search-input-wrapper">
 					<i class="mdi mdi-map-marker-outline search-icon"></i>
 					<input
 						ref="searchInput"
@@ -278,18 +379,39 @@ onUnmounted(() => {
 						class="search-input"
 						:value="addressText"
 						:placeholder="placeholder"
+						autocomplete="off"
 						@input="onAddressInput"
-						@keydown.enter.prevent="searchAddressManual"
+						@keydown="onSearchKeydown"
+						@keydown.enter.prevent="onEnterPress"
+						@focus="() => (showSuggestions = suggestions.length > 0)"
 					/>
 					<button
 						v-if="addressText"
 						type="button"
 						class="clear-btn"
 						title="Clear input"
-						@click="emitChanges('', 0, 0)"
+						@click="
+							emitChanges('', 0, 0);
+							closeSuggestions();
+						"
 					>
 						<i class="mdi mdi-close"></i>
 					</button>
+
+					<!-- Custom-styled suggestion dropdown (Autocomplete Data API, no Google widget/shadow DOM) -->
+					<ul v-if="showSuggestions" class="suggestion-list">
+						<li
+							v-for="(s, idx) in suggestions"
+							:key="s.placePrediction.placeId"
+							class="suggestion-item"
+							:class="{ 'suggestion-item--active': idx === activeSuggestionIndex }"
+							@mousedown.prevent="selectSuggestion(s)"
+							@mouseenter="activeSuggestionIndex = idx"
+						>
+							<i class="mdi mdi-map-marker-outline"></i>
+							<span>{{ s.placePrediction.text.text }}</span>
+						</li>
+					</ul>
 				</div>
 				<button
 					type="button"
@@ -443,6 +565,45 @@ onUnmounted(() => {
 
 			&:hover {
 				color: var(--colors-text-primary, #0f172a);
+			}
+		}
+
+		.suggestion-list {
+			position: absolute;
+			top: calc(100% + 4px);
+			left: 0;
+			right: 0;
+			z-index: 20;
+			margin: 0;
+			padding: 6px;
+			list-style: none;
+			background: var(--colors-surface-card, #ffffff);
+			border: 1px solid var(--colors-surface-border, #cbd5e1);
+			border-radius: 8px;
+			box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+			max-height: 260px;
+			overflow-y: auto;
+
+			.suggestion-item {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				padding: 8px 10px;
+				border-radius: 6px;
+				font-size: 13px;
+				color: var(--colors-text-primary, #0f172a);
+				cursor: pointer;
+
+				i {
+					font-size: 16px;
+					color: var(--colors-text-muted, #94a3b8);
+					flex-shrink: 0;
+				}
+
+				&:hover,
+				&--active {
+					background: var(--colors-surface-background, #f1f5f9);
+				}
 			}
 		}
 	}

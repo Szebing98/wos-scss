@@ -365,7 +365,7 @@ function countryFormatAccount(acc: string) {
 								: 'mdi-minus-circle-outline'
 						"
 					>
-						{{ customer.requestEinvoice ? "Required" : "Not required" }}
+						{{ customer.requestEinvoice ? "Requested" : "Not requested" }}
 					</Badge>
 				</template>
 

@@ -51,6 +51,11 @@
 		background: var(--colors-state-info);
 		color: var(--colors-text-inverse);
 	}
+
+	&--warning {
+		background: var(--colors-state-warning);
+		color: #1a1a1a;
+	}
 }
 
 @keyframes slideIn {

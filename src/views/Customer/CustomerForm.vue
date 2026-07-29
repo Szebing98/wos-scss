@@ -1,524 +1,3 @@
-<template>
-	<div class="maintenance-view">
-		<!-- Header -->
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
-				<h1>
-					{{ isNewMode ? "Register New Customer Account" : "Edit Customer Account" }}
-				</h1>
-			</div>
-			<button class="btn btn--primary" :disabled="loading" @click="handleSubmitForm">
-				<i v-if="!loading" class="mdi mdi-content-save-check-outline"></i>
-				<i v-else class="mdi mdi-loading mdi-spin"></i>
-				{{ loading ? "Saving..." : isNewMode ? "Register Customer" : "Commit Changes" }}
-			</button>
-		</div>
-
-		<div class="form-scroll-layout">
-			<!-- Core Primary Block -->
-			<div class="panel-card mb-lg">
-				<h2 class="panel-card__title mb-md">
-					<i class="mdi mdi-card-account-details-outline"></i>
-					Core Account & Identity
-				</h2>
-				<div class="form-grid">
-					<div class="form-group form-group--full">
-						<label class="form-group__label">
-							Customer Name <span class="u-required">*</span>
-						</label>
-						<Textbox
-							v-model="form.name"
-							placeholder="Legal full name or company title"
-							:error="formErrors.name"
-						/>
-					</div>
-
-					<div class="form-group">
-						<label class="form-group__label">
-							Classification / Customer Type <span class="u-required">*</span>
-						</label>
-						<Select v-model="customerCategory">
-							<option value="INDIVIDUAL">INDIVIDUAL (0 - Personal Account)</option>
-							<option value="COMPANY">BUSINESS (1 - Corporate Entity)</option>
-							<option value="GOVERNMENT">GOVERNMENT (2 - Gov Agency)</option>
-						</Select>
-					</div>
-
-					<div class="form-group">
-						<label class="form-group__label">AutoCount Debtor Code (AccountNo)</label>
-						<Textbox v-model="form.accountNo" placeholder="e.g. 300-A0001" />
-					</div>
-
-					<div class="form-group">
-						<label class="form-group__label">Linked Accounting Control Account</label>
-						<Textbox v-model="form.metadata.controlAccount" placeholder="e.g. 300-0000" />
-					</div>
-
-					<div class="form-group">
-						<label class="form-group__label">License / Operating Permit No</label>
-						<Textbox
-							v-model="form.licenseNo"
-							placeholder="Business license reference (optional)"
-						/>
-					</div>
-
-					<div class="form-group mt-sm">
-						<label class="switch-toggle">
-							<input type="checkbox" v-model="form.isActive" />
-							<span class="switch-toggle__slider"></span>
-							<span class="switch-toggle__label">Account Active Status</span>
-						</label>
-					</div>
-
-					<div class="form-group mt-sm">
-						<label class="switch-toggle">
-							<input type="checkbox" v-model="form.requestEinvoice" />
-							<span class="switch-toggle__slider"></span>
-							<span class="switch-toggle__label"
-								>Enable LHDN e-Invoice Validation Engine</span
-							>
-						</label>
-					</div>
-				</div>
-			</div>
-
-			<!-- Customer Address Block -->
-			<div class="panel-card mb-lg">
-				<div class="panel-card__header">
-					<h2>
-						<i class="mdi mdi-map-marker-outline u-text-primary"></i>
-						Customer Address
-					</h2>
-					<Chip v-if="customerCategory === 'COMPANY'" :type="isLocalCompany ? 'success' : 'info'">
-						{{ isLocalCompany ? 'Local Company (Malaysia)' : 'Foreign Company (Other Country)' }}
-					</Chip>
-				</div>
-
-				<div class="form-grid">
-					<div class="form-group form-group--full">
-						<label class="form-group__label">Address Line 1 <span class="u-required">*</span></label>
-						<Textbox
-							v-model="form.address.address1"
-							placeholder="Street address, building name, floor/unit no."
-							:error="formErrors.address1"
-						/>
-					</div>
-					<div class="form-group form-group--full">
-						<label class="form-group__label">Address Line 2</label>
-						<Textbox
-							v-model="form.address.address2"
-							placeholder="Industrial park, section, landmark (optional)"
-						/>
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Country <span class="u-required">*</span></label>
-						<Autocomplete
-							v-model="form.address.country"
-							:options="countryOptions"
-							placeholder="Search or select country..."
-							:error="formErrors.country"
-						/>
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">State <span class="u-required">*</span></label>
-						<Autocomplete
-							v-model="form.address.state"
-							:options="stateOptions"
-							placeholder="Search or select state..."
-							:error="formErrors.state"
-						/>
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">City / Town <span class="u-required">*</span></label>
-						<Textbox
-							v-model="form.address.city"
-							placeholder="e.g. Petaling Jaya / Puchong"
-							:error="formErrors.city"
-						/>
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Postcode <span class="u-required">*</span></label>
-						<Textbox
-							v-model="form.address.postcode"
-							placeholder="e.g. 47100"
-							:error="formErrors.postcode"
-						/>
-					</div>
-				</div>
-			</div>
-
-			<!-- Customer Contracts Block (Shown in Edit Mode) -->
-			<div v-if="!isNewMode" class="panel-card mb-lg">
-				<div class="panel-card__header">
-					<h2>
-						<i class="mdi mdi-file-document-multiple-outline u-text-primary"></i>
-						Customer Contracts
-					</h2>
-					<button
-						class="btn btn--sm btn--primary"
-						type="button"
-						@click="openAddContractModal"
-					>
-						<i class="mdi mdi-plus"></i> Add Contract
-					</button>
-				</div>
-
-				<div v-if="contracts.length > 0" class="contracts-list">
-					<div
-						v-for="c in contracts"
-						:key="c.guid || c.contractNo"
-						class="contract-item-card"
-						:class="{
-							'contract-item-card--expiring': c.status === 'ExpiringSoon',
-							'contract-item-card--expired': c.status === 'Expired',
-						}"
-					>
-						<div class="contract-item-card__main">
-							<div class="contract-item-card__header">
-								<span class="contract-item-card__no u-font-mono">
-									<i class="mdi mdi-file-document-outline"></i> {{ c.contractNo }}
-								</span>
-								<span class="contract-item-card__title">{{ c.contractName }}</span>
-
-								<Badge
-									v-if="c.status === 'Active'"
-									type="success"
-									icon="mdi-check-circle"
-								>
-									Active
-								</Badge>
-								<Badge
-									v-else-if="c.status === 'ExpiringSoon'"
-									type="warning"
-									icon="mdi-clock-alert-outline"
-								>
-									Expiring Soon (In 1 Mo)
-								</Badge>
-								<Badge v-else type="error" icon="mdi-alert-circle-outline">
-									Expired
-								</Badge>
-							</div>
-
-							<div class="contract-item-card__dates mt-xs">
-								<span
-									>Start: <strong>{{ formatDate(c.startDate) }}</strong></span
-								>
-								<span class="mx-xs">•</span>
-								<span
-									>Expiry: <strong>{{ formatDate(c.endDate) }}</strong></span
-								>
-							</div>
-
-							<p v-if="c.description" class="contract-item-card__desc mt-xs">
-								{{ c.description }}
-							</p>
-
-							<!-- Expiry Alert Banners -->
-							<div
-								v-if="c.status === 'ExpiringSoon'"
-								class="contract-alert contract-alert--warning mt-xs"
-							>
-								<i class="mdi mdi-alert-circle"></i> Notice: Contract will expire
-								within 1 month. Click Renew to extend validity.
-							</div>
-							<div
-								v-else-if="c.status === 'Expired'"
-								class="contract-alert contract-alert--danger mt-xs"
-							>
-								<i class="mdi mdi-close-circle"></i> Warning: Contract has expired
-								and is disabled for selection in Work Orders.
-							</div>
-						</div>
-
-						<!-- Uniform size action buttons -->
-						<div class="contract-item-card__actions">
-							<button
-								class="btn btn--sm btn--secondary"
-								type="button"
-								title="Edit Contract Details"
-								@click="openEditContractModal(c)"
-							>
-								<i class="mdi mdi-pencil-outline"></i> Edit
-							</button>
-
-							<button
-								v-if="c.status === 'ExpiringSoon' || c.status === 'Expired'"
-								class="btn btn--sm btn--warning"
-								type="button"
-								@click="openRenewModal(c)"
-							>
-								<i class="mdi mdi-autorenew"></i> Renew
-							</button>
-							<button
-								v-else
-								class="btn btn--sm btn--secondary"
-								type="button"
-								@click="openRenewModal(c)"
-							>
-								<i class="mdi mdi-calendar-plus"></i> Extend
-							</button>
-						</div>
-					</div>
-				</div>
-				<div v-else class="empty-contracts">
-					<i class="mdi mdi-file-hidden-outline"></i>
-					<p>
-						No contracts added yet. Click Add Contract to create a new contract
-						schedule.
-					</p>
-				</div>
-			</div>
-
-			<!-- Debtor Profile Block -->
-			<div class="panel-card mb-lg">
-				<div class="panel-card__header">
-					<h2>
-						<i class="mdi mdi-badge-account-horizontal-outline"></i> Debtor Profile & Tax Identity
-					</h2>
-				</div>
-
-				<div class="form-grid">
-					<div class="form-group">
-						<label class="form-group__label">
-							Email <span class="u-required">*</span>
-						</label>
-						<Textbox
-							v-model="form.profile.email"
-							type="email"
-							placeholder="e.g. customer@example.com"
-							:error="formErrors.email"
-						/>
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Contact Phone <span class="u-required">*</span></label>
-						<Textbox
-							v-model="form.profile.phone"
-							placeholder="+60123456789"
-							:error="formErrors.phone"
-						/>
-					</div>
-
-					<!-- Individual Category Details -->
-					<template v-if="customerCategory === 'INDIVIDUAL'">
-						<div class="form-group">
-							<label class="form-group__label">Identity Document Type <span class="u-required">*</span></label>
-							<Select v-model="selectedIdentityType">
-								<option value="MyKAD">MyKAD (Malaysian Citizen)</option>
-								<option value="MyPR">MyPR (Permanent Resident)</option>
-								<option value="MyKAS">MyKAS (Temporary Resident)</option>
-								<option value="PASSPORT">PASSPORT (Foreigner / Expat)</option>
-								<option value="ARMY">ARMY (Military Personnel)</option>
-							</Select>
-						</div>
-
-						<div class="form-group">
-							<label class="form-group__label">
-								{{ selectedIdentityType || "Identity" }} Number
-							</label>
-							<Textbox
-								v-model="form.profile.identityNo"
-								:placeholder="`Enter ${selectedIdentityType || 'Identity'} Number`"
-								:error="formErrors.identityNo"
-							/>
-						</div>
-
-						<div class="form-group">
-							<label class="form-group__label">
-								Tax Identity No (TIN)
-								<span style="font-size: 11px; color: var(--colors-text-muted)">(Default: EI00000000010)</span>
-							</label>
-							<Textbox
-								v-model="form.profile.tin"
-								placeholder="EI00000000010 (Leave blank for default)"
-								:error="formErrors.tin"
-							/>
-						</div>
-					</template>
-
-					<!-- Business Category Details -->
-					<template v-else-if="customerCategory === 'COMPANY'">
-						<div class="form-group">
-							<label class="form-group__label">
-								Business Registration No (BRN)
-								<span v-if="isLocalCompany" class="u-required">*</span>
-							</label>
-							<Textbox
-								v-model="form.profile.brn"
-								placeholder="202601000123 (123456-X)"
-								:error="formErrors.brn"
-							/>
-						</div>
-
-						<div class="form-group">
-							<label class="form-group__label">
-								Tax Identity No (TIN)
-								<span v-if="isLocalCompany" class="u-required">*</span>
-							</label>
-							<Textbox
-								v-model="form.profile.tin"
-								placeholder="C2580000000"
-								:error="formErrors.tin"
-							/>
-						</div>
-
-						<div class="form-group">
-							<label class="form-group__label">SST Registration Number</label>
-							<Textbox v-model="form.metadata.sstRegNo" placeholder="W10-1808-32000001" />
-						</div>
-
-						<div class="form-group">
-							<label class="form-group__label">MSIC Code</label>
-							<Textbox v-model="form.profile.msicCode" placeholder="00000" />
-						</div>
-
-						<div class="form-group form-group--full">
-							<label class="form-group__label">Business Activity Description</label>
-							<Textbox v-model="form.profile.msicDesc" placeholder="NOT APPLICABLE" />
-						</div>
-					</template>
-
-					<!-- Government Category Details -->
-					<template v-else-if="customerCategory === 'GOVERNMENT'">
-						<div class="form-group">
-							<label class="form-group__label">Tax Identity No (TIN)</label>
-							<Textbox v-model="form.profile.tin" placeholder="Government Tax Ref (optional)" />
-						</div>
-
-						<div class="form-group">
-							<label class="form-group__label">SST Registration Number</label>
-							<Textbox v-model="form.metadata.sstRegNo" placeholder="SST Registration No (optional)" />
-						</div>
-
-						<div class="form-group">
-							<label class="form-group__label">MSIC Code</label>
-							<Textbox v-model="form.profile.msicCode" placeholder="00000" />
-						</div>
-
-						<div class="form-group form-group--full">
-							<label class="form-group__label">Business Activity Description</label>
-							<Textbox v-model="form.profile.msicDesc" placeholder="NOT APPLICABLE" />
-						</div>
-					</template>
-				</div>
-			</div>
-		</div>
-
-		<!-- Dialog: Add / Edit Contract -->
-		<Dialog
-			v-model="showContractDialog"
-			:title="isEditingContract ? 'Edit Customer Contract' : 'Add New Customer Contract'"
-			:confirmText="isEditingContract ? 'Save Edit' : 'Create Contract'"
-			cancelText="Cancel"
-			:loading="submittingContract"
-			overflowVisible
-			@confirm="handleSaveContract"
-		>
-			<div class="dialog-form">
-				<div class="form-group mb-md">
-					<label class="form-group__label"
-						>Contract No <span class="u-required">*</span></label
-					>
-					<Textbox v-model="contractForm.contractNo" placeholder="e.g. CTR-2026-001" />
-				</div>
-				<div class="form-group mb-md">
-					<label class="form-group__label"
-						>Contract Title / Name <span class="u-required">*</span></label
-					>
-					<Textbox
-						v-model="contractForm.contractName"
-						placeholder="e.g. Annual Equipment Maintenance"
-					/>
-				</div>
-				<div class="form-grid-2 mb-md">
-					<div class="form-group">
-						<label class="form-group__label"
-							>Start Date <span class="u-required">*</span></label
-						>
-						<DatePicker v-model="contractForm.startDate" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label"
-							>End Date (Expiry) <span class="u-required">*</span></label
-						>
-						<DatePicker v-model="contractForm.endDate" />
-					</div>
-				</div>
-				<div class="form-group">
-					<label class="form-group__label">Description / Remarks</label>
-					<Textbox
-						v-model="contractForm.description"
-						placeholder="Optional contract terms or notes..."
-					/>
-				</div>
-			</div>
-		</Dialog>
-
-		<!-- Dialog: Renew Contract -->
-		<Dialog
-			v-model="showRenewDialog"
-			title="Renew Contract"
-			confirmText="Confirm Renewal"
-			cancelText="Cancel"
-			:loading="submittingContract"
-			overflowVisible
-			@confirm="handleRenewContractSubmit"
-		>
-			<div class="dialog-form" v-if="selectedContractForRenew">
-				<p class="mb-md" style="font-size: 13px; color: var(--colors-text-muted)">
-					Renewing contract
-					<strong class="u-font-mono u-text-primary">{{
-						selectedContractForRenew.contractNo
-					}}</strong>
-					({{ selectedContractForRenew.contractName }})
-				</p>
-				<div class="form-group mb-md">
-					<label class="form-group__label"
-						>New Expiration Date <span class="u-required">*</span></label
-					>
-					<DatePicker v-model="renewForm.newEndDate" />
-				</div>
-				<div class="form-group">
-					<label class="form-group__label">Renewal Remarks / Notes</label>
-					<Textbox
-						v-model="renewForm.remarks"
-						placeholder="Reason for extension / renewal terms..."
-					/>
-				</div>
-			</div>
-		</Dialog>
-
-		<!-- Dialog: Post-Registration Contract Prompt -->
-		<Dialog
-			v-model="showPostRegisterDialog"
-			title="Customer Registered Successfully"
-			confirmText="Add Contract Now"
-			cancelText="Done"
-			@confirm="handlePostRegisterAddContract"
-			@cancel="handlePostRegisterSkip"
-		>
-			<div class="u-text-center py-md" style="text-align: center; padding: 16px 0">
-				<i
-					class="mdi mdi-check-circle-outline u-text-primary mb-sm"
-					style="font-size: 48px; color: var(--colors-brand-primary)"
-				></i>
-				<h3
-					style="
-						font-size: 16px;
-						font-weight: 700;
-						margin: 8px 0 6px 0;
-						color: var(--colors-text-primary);
-					"
-				>
-					{{ createdCustomerName }} has been created!
-				</h3>
-				<p style="font-size: 13px; color: var(--colors-text-secondary); margin: 0">
-					Would you like to set up a contract for this customer now?
-				</p>
-			</div>
-		</Dialog>
-	</div>
-</template>
-
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -836,11 +315,16 @@ onMounted(async () => {
 				} else {
 					customerCategory.value = "INDIVIDUAL";
 					const upper = String(rawIndType).toUpperCase();
-					if (upper === "MYKAD" || rawIndType === "MyKAD") selectedIdentityType.value = "MyKAD";
-					else if (upper === "MYPR" || rawIndType === "MyPR") selectedIdentityType.value = "MyPR";
-					else if (upper === "MYKAS" || rawIndType === "MyKAS") selectedIdentityType.value = "MyKAS";
-					else if (upper === "ARMY" || rawIndType === "ARMY") selectedIdentityType.value = "ARMY";
-					else if (upper === "PASSPORT" || rawIndType === "Passport") selectedIdentityType.value = "PASSPORT";
+					if (upper === "MYKAD" || rawIndType === "MyKAD")
+						selectedIdentityType.value = "MyKAD";
+					else if (upper === "MYPR" || rawIndType === "MyPR")
+						selectedIdentityType.value = "MyPR";
+					else if (upper === "MYKAS" || rawIndType === "MyKAS")
+						selectedIdentityType.value = "MyKAS";
+					else if (upper === "ARMY" || rawIndType === "ARMY")
+						selectedIdentityType.value = "ARMY";
+					else if (upper === "PASSPORT" || rawIndType === "Passport")
+						selectedIdentityType.value = "PASSPORT";
 					else selectedIdentityType.value = rawIndType;
 				}
 			} else if (error) {
@@ -1098,7 +582,8 @@ function validateSchemaLogic(): boolean {
 	} else if (customerCategory.value === "COMPANY") {
 		if (isLocalCompany.value) {
 			if (!form.value.profile?.brn?.trim()) {
-				formErrors.value.brn = "Business Registration Number (BRN) is required for Local Company";
+				formErrors.value.brn =
+					"Business Registration Number (BRN) is required for Local Company";
 				isValid = false;
 			}
 			if (!form.value.profile?.tin?.trim()) {
@@ -1134,9 +619,16 @@ async function handleSubmitForm() {
 		const profileEmail = form.value.profile?.email?.trim();
 		const profilePhone = form.value.profile?.phone?.trim();
 		let profileTin = form.value.profile?.tin?.trim();
-		const profileBrn = customerCategory.value !== "INDIVIDUAL" ? form.value.profile?.brn?.trim() : undefined;
-		const profileIndType = customerCategory.value === "INDIVIDUAL" ? (selectedIdentityType.value || "MyKAD") : customerCategory.value;
-		const profileIdentityNo = customerCategory.value === "INDIVIDUAL" ? form.value.profile?.identityNo?.trim() : undefined;
+		const profileBrn =
+			customerCategory.value !== "INDIVIDUAL" ? form.value.profile?.brn?.trim() : undefined;
+		const profileIndType =
+			customerCategory.value === "INDIVIDUAL"
+				? selectedIdentityType.value || "MyKAD"
+				: customerCategory.value;
+		const profileIdentityNo =
+			customerCategory.value === "INDIVIDUAL"
+				? form.value.profile?.identityNo?.trim()
+				: undefined;
 
 		// Default TIN for Individual if empty
 		if (customerCategory.value === "INDIVIDUAL" && !profileTin) {
@@ -1144,8 +636,14 @@ async function handleSubmitForm() {
 		}
 
 		// Defaults for MSIC Code & Desc
-		const msicCode = customerCategory.value !== "INDIVIDUAL" ? (form.value.profile?.msicCode?.trim() || "00000") : "00000";
-		const msicDesc = customerCategory.value !== "INDIVIDUAL" ? (form.value.profile?.msicDesc?.trim() || "NOT APPLICABLE") : "NOT APPLICABLE";
+		const msicCode =
+			customerCategory.value !== "INDIVIDUAL"
+				? form.value.profile?.msicCode?.trim() || "00000"
+				: "00000";
+		const msicDesc =
+			customerCategory.value !== "INDIVIDUAL"
+				? form.value.profile?.msicDesc?.trim() || "NOT APPLICABLE"
+				: "NOT APPLICABLE";
 
 		const profilePayload = {
 			email: profileEmail,
@@ -1196,6 +694,563 @@ async function handleSubmitForm() {
 	}
 }
 </script>
+
+<template>
+	<div class="maintenance-view">
+		<!-- Header -->
+		<div class="maintenance-view__header">
+			<div class="maintenance-view__title-area">
+				<h1>
+					{{ isNewMode ? "Register New Customer Account" : "Edit Customer Account" }}
+				</h1>
+			</div>
+			<button class="btn btn--primary" :disabled="loading" @click="handleSubmitForm">
+				<i v-if="!loading" class="mdi mdi-content-save-check-outline"></i>
+				<i v-else class="mdi mdi-loading mdi-spin"></i>
+				{{ loading ? "Saving..." : isNewMode ? "Register Customer" : "Commit Changes" }}
+			</button>
+		</div>
+
+		<div class="form-scroll-layout">
+			<!-- Core Primary Block -->
+			<div class="panel-card mb-lg">
+				<h2 class="panel-card__title mb-md">
+					<i class="mdi mdi-card-account-details-outline"></i>
+					Core Account & Identity
+				</h2>
+				<div class="form-grid">
+					<div class="form-group form-group--full">
+						<label class="form-group__label">
+							Customer Name <span class="u-required">*</span>
+						</label>
+						<Textbox
+							v-model="form.name"
+							placeholder="Legal full name or company title"
+							:error="formErrors.name"
+						/>
+					</div>
+
+					<div class="form-group">
+						<label class="form-group__label">
+							Classification / Customer Type <span class="u-required">*</span>
+						</label>
+						<Select v-model="customerCategory">
+							<option value="INDIVIDUAL">INDIVIDUAL (0 - Personal Account)</option>
+							<option value="COMPANY">BUSINESS (1 - Corporate Entity)</option>
+							<option value="GOVERNMENT">GOVERNMENT (2 - Gov Agency)</option>
+						</Select>
+					</div>
+
+					<div class="form-group">
+						<label class="form-group__label">AutoCount Debtor Code (AccountNo)</label>
+						<Textbox v-model="form.accountNo" placeholder="e.g. 300-A0001" />
+					</div>
+
+					<div class="form-group">
+						<label class="form-group__label">Linked Accounting Control Account</label>
+						<Textbox
+							v-model="form.metadata.controlAccount"
+							placeholder="e.g. 300-0000"
+						/>
+					</div>
+
+					<div class="form-group">
+						<label class="form-group__label">License / Operating Permit No</label>
+						<Textbox
+							v-model="form.licenseNo"
+							placeholder="Business license reference (optional)"
+						/>
+					</div>
+
+					<div class="form-group mt-sm">
+						<label class="switch-toggle">
+							<input type="checkbox" v-model="form.isActive" />
+							<span class="switch-toggle__slider"></span>
+							<span class="switch-toggle__label">Account Active Status</span>
+						</label>
+					</div>
+
+					<div class="form-group mt-sm">
+						<label class="switch-toggle">
+							<input type="checkbox" v-model="form.requestEinvoice" />
+							<span class="switch-toggle__slider"></span>
+							<span class="switch-toggle__label"
+								>Enable LHDN e-Invoice Validation Engine</span
+							>
+						</label>
+					</div>
+				</div>
+			</div>
+
+			<!-- Customer Address Block -->
+			<div class="panel-card mb-lg">
+				<div class="panel-card__header">
+					<h2>
+						<i class="mdi mdi-map-marker-outline u-text-primary"></i>
+						Customer Address
+					</h2>
+					<Chip
+						v-if="customerCategory === 'COMPANY'"
+						:type="isLocalCompany ? 'success' : 'info'"
+					>
+						{{
+							isLocalCompany
+								? "Local Company (Malaysia)"
+								: "Foreign Company (Other Country)"
+						}}
+					</Chip>
+				</div>
+
+				<div class="form-grid">
+					<div class="form-group form-group--full">
+						<label class="form-group__label"
+							>Address Line 1 <span class="u-required">*</span></label
+						>
+						<Textbox
+							v-model="form.address.address1"
+							placeholder="Street address, building name, floor/unit no."
+							:error="formErrors.address1"
+						/>
+					</div>
+					<div class="form-group form-group--full">
+						<label class="form-group__label">Address Line 2</label>
+						<Textbox
+							v-model="form.address.address2"
+							placeholder="Industrial park, section, landmark (optional)"
+						/>
+					</div>
+					<div class="form-group">
+						<label class="form-group__label"
+							>Country <span class="u-required">*</span></label
+						>
+						<Autocomplete
+							v-model="form.address.country"
+							:options="countryOptions"
+							placeholder="Search or select country..."
+							:error="formErrors.country"
+						/>
+					</div>
+					<div class="form-group">
+						<label class="form-group__label"
+							>State <span class="u-required">*</span></label
+						>
+						<Autocomplete
+							v-model="form.address.state"
+							:options="stateOptions"
+							placeholder="Search or select state..."
+							:error="formErrors.state"
+						/>
+					</div>
+					<div class="form-group">
+						<label class="form-group__label"
+							>City / Town <span class="u-required">*</span></label
+						>
+						<Textbox
+							v-model="form.address.city"
+							placeholder="e.g. Petaling Jaya / Puchong"
+							:error="formErrors.city"
+						/>
+					</div>
+					<div class="form-group">
+						<label class="form-group__label"
+							>Postcode <span class="u-required">*</span></label
+						>
+						<Textbox
+							v-model="form.address.postcode"
+							placeholder="e.g. 47100"
+							:error="formErrors.postcode"
+						/>
+					</div>
+				</div>
+			</div>
+
+			<!-- Customer Contracts Block (Shown in Edit Mode) -->
+			<div v-if="!isNewMode" class="panel-card mb-lg">
+				<div class="panel-card__header">
+					<h2>
+						<i class="mdi mdi-file-document-multiple-outline u-text-primary"></i>
+						Customer Contracts
+					</h2>
+					<button
+						class="btn btn--sm btn--primary"
+						type="button"
+						@click="openAddContractModal"
+					>
+						<i class="mdi mdi-plus"></i> Add Contract
+					</button>
+				</div>
+
+				<div v-if="contracts.length > 0" class="contracts-list">
+					<div
+						v-for="c in contracts"
+						:key="c.guid || c.contractNo"
+						class="contract-item-card"
+						:class="{
+							'contract-item-card--expiring': c.status === 'ExpiringSoon',
+							'contract-item-card--expired': c.status === 'Expired',
+						}"
+					>
+						<div class="contract-item-card__main">
+							<div class="contract-item-card__header">
+								<span class="contract-item-card__no u-font-mono">
+									<i class="mdi mdi-file-document-outline"></i> {{ c.contractNo }}
+								</span>
+								<span class="contract-item-card__title">{{ c.contractName }}</span>
+
+								<Badge
+									v-if="c.status === 'Active'"
+									type="success"
+									icon="mdi-check-circle"
+								>
+									Active
+								</Badge>
+								<Badge
+									v-else-if="c.status === 'ExpiringSoon'"
+									type="warning"
+									icon="mdi-clock-alert-outline"
+								>
+									Expiring Soon (In 1 Mo)
+								</Badge>
+								<Badge v-else type="error" icon="mdi-alert-circle-outline">
+									Expired
+								</Badge>
+							</div>
+
+							<div class="contract-item-card__dates mt-xs">
+								<span
+									>Start: <strong>{{ formatDate(c.startDate) }}</strong></span
+								>
+								<span class="mx-xs">•</span>
+								<span
+									>Expiry: <strong>{{ formatDate(c.endDate) }}</strong></span
+								>
+							</div>
+
+							<p v-if="c.description" class="contract-item-card__desc mt-xs">
+								{{ c.description }}
+							</p>
+
+							<!-- Expiry Alert Banners -->
+							<div
+								v-if="c.status === 'ExpiringSoon'"
+								class="contract-alert contract-alert--warning mt-xs"
+							>
+								<i class="mdi mdi-alert-circle"></i> Notice: Contract will expire
+								within 1 month. Click Renew to extend validity.
+							</div>
+							<div
+								v-else-if="c.status === 'Expired'"
+								class="contract-alert contract-alert--danger mt-xs"
+							>
+								<i class="mdi mdi-close-circle"></i> Warning: Contract has expired
+								and is disabled for selection in Work Orders.
+							</div>
+						</div>
+
+						<!-- Uniform size action buttons -->
+						<div class="contract-item-card__actions">
+							<button
+								class="btn btn--sm btn--secondary"
+								type="button"
+								title="Edit Contract Details"
+								@click="openEditContractModal(c)"
+							>
+								<i class="mdi mdi-pencil-outline"></i> Edit
+							</button>
+
+							<button
+								v-if="c.status === 'ExpiringSoon' || c.status === 'Expired'"
+								class="btn btn--sm btn--warning"
+								type="button"
+								@click="openRenewModal(c)"
+							>
+								<i class="mdi mdi-autorenew"></i> Renew
+							</button>
+							<button
+								v-else
+								class="btn btn--sm btn--secondary"
+								type="button"
+								@click="openRenewModal(c)"
+							>
+								<i class="mdi mdi-calendar-plus"></i> Extend
+							</button>
+						</div>
+					</div>
+				</div>
+				<div v-else class="empty-contracts">
+					<i class="mdi mdi-file-hidden-outline"></i>
+					<p>
+						No contracts added yet. Click Add Contract to create a new contract
+						schedule.
+					</p>
+				</div>
+			</div>
+
+			<!-- Debtor Profile Block -->
+			<div class="panel-card mb-lg">
+				<div class="panel-card__header">
+					<h2>
+						<i class="mdi mdi-badge-account-horizontal-outline" />
+						Customer Profile & Tax Identity
+					</h2>
+				</div>
+
+				<div class="form-grid">
+					<div class="form-group">
+						<label class="form-group__label">
+							Email <span class="u-required">*</span>
+						</label>
+						<Textbox
+							v-model="form.profile.email"
+							type="email"
+							placeholder="e.g. customer@example.com"
+							:error="formErrors.email"
+						/>
+					</div>
+					<div class="form-group">
+						<label class="form-group__label"
+							>Contact Phone <span class="u-required">*</span></label
+						>
+						<Textbox
+							v-model="form.profile.phone"
+							placeholder="+60123456789"
+							:error="formErrors.phone"
+						/>
+					</div>
+
+					<!-- Individual Category Details -->
+					<template v-if="customerCategory === 'INDIVIDUAL'">
+						<div class="form-group">
+							<label class="form-group__label"
+								>Identity Document Type <span class="u-required">*</span></label
+							>
+							<Select v-model="selectedIdentityType">
+								<option value="MyKAD">MyKAD (Malaysian Citizen)</option>
+								<option value="MyPR">MyPR (Permanent Resident)</option>
+								<option value="MyKAS">MyKAS (Temporary Resident)</option>
+								<option value="PASSPORT">PASSPORT (Foreigner / Expat)</option>
+								<option value="ARMY">ARMY (Military Personnel)</option>
+							</Select>
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">
+								{{ selectedIdentityType || "Identity" }} Number
+							</label>
+							<Textbox
+								v-model="form.profile.identityNo"
+								:placeholder="`Enter ${selectedIdentityType || 'Identity'} Number`"
+								:error="formErrors.identityNo"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">
+								Tax Identity No (TIN)
+								<span style="font-size: 11px; color: var(--colors-text-muted)"
+									>(Default: EI00000000010)</span
+								>
+							</label>
+							<Textbox
+								v-model="form.profile.tin"
+								placeholder="EI00000000010 (Leave blank for default)"
+								:error="formErrors.tin"
+							/>
+						</div>
+					</template>
+
+					<!-- Business Category Details -->
+					<template v-else-if="customerCategory === 'COMPANY'">
+						<div class="form-group">
+							<label class="form-group__label">
+								Business Registration No (BRN)
+								<span v-if="isLocalCompany" class="u-required">*</span>
+							</label>
+							<Textbox
+								v-model="form.profile.brn"
+								placeholder="202601000123 (123456-X)"
+								:error="formErrors.brn"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">
+								Tax Identity No (TIN)
+								<span v-if="isLocalCompany" class="u-required">*</span>
+							</label>
+							<Textbox
+								v-model="form.profile.tin"
+								placeholder="C2580000000"
+								:error="formErrors.tin"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">SST Registration Number</label>
+							<Textbox
+								v-model="form.metadata.sstRegNo"
+								placeholder="W10-1808-32000001"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">MSIC Code</label>
+							<Textbox v-model="form.profile.msicCode" placeholder="00000" />
+						</div>
+
+						<div class="form-group form-group--full">
+							<label class="form-group__label">Business Activity Description</label>
+							<Textbox v-model="form.profile.msicDesc" placeholder="NOT APPLICABLE" />
+						</div>
+					</template>
+
+					<!-- Government Category Details -->
+					<template v-else-if="customerCategory === 'GOVERNMENT'">
+						<div class="form-group">
+							<label class="form-group__label">Tax Identity No (TIN)</label>
+							<Textbox
+								v-model="form.profile.tin"
+								placeholder="Government Tax Ref (optional)"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">SST Registration Number</label>
+							<Textbox
+								v-model="form.metadata.sstRegNo"
+								placeholder="SST Registration No (optional)"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">MSIC Code</label>
+							<Textbox v-model="form.profile.msicCode" placeholder="00000" />
+						</div>
+
+						<div class="form-group form-group--full">
+							<label class="form-group__label">Business Activity Description</label>
+							<Textbox v-model="form.profile.msicDesc" placeholder="NOT APPLICABLE" />
+						</div>
+					</template>
+				</div>
+			</div>
+		</div>
+
+		<!-- Dialog: Add / Edit Contract -->
+		<Dialog
+			v-model="showContractDialog"
+			:title="isEditingContract ? 'Edit Customer Contract' : 'Add New Customer Contract'"
+			:confirmText="isEditingContract ? 'Save Edit' : 'Create Contract'"
+			cancelText="Cancel"
+			:loading="submittingContract"
+			overflowVisible
+			@confirm="handleSaveContract"
+		>
+			<div class="dialog-form">
+				<div class="form-group mb-md">
+					<label class="form-group__label"
+						>Contract No <span class="u-required">*</span></label
+					>
+					<Textbox v-model="contractForm.contractNo" placeholder="e.g. CTR-2026-001" />
+				</div>
+				<div class="form-group mb-md">
+					<label class="form-group__label"
+						>Contract Title / Name <span class="u-required">*</span></label
+					>
+					<Textbox
+						v-model="contractForm.contractName"
+						placeholder="e.g. Annual Equipment Maintenance"
+					/>
+				</div>
+				<div class="form-grid-2 mb-md">
+					<div class="form-group">
+						<label class="form-group__label"
+							>Start Date <span class="u-required">*</span></label
+						>
+						<DatePicker v-model="contractForm.startDate" />
+					</div>
+					<div class="form-group">
+						<label class="form-group__label"
+							>End Date (Expiry) <span class="u-required">*</span></label
+						>
+						<DatePicker v-model="contractForm.endDate" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="form-group__label">Description / Remarks</label>
+					<Textbox
+						v-model="contractForm.description"
+						placeholder="Optional contract terms or notes..."
+					/>
+				</div>
+			</div>
+		</Dialog>
+
+		<!-- Dialog: Renew Contract -->
+		<Dialog
+			v-model="showRenewDialog"
+			title="Renew Contract"
+			confirmText="Confirm Renewal"
+			cancelText="Cancel"
+			:loading="submittingContract"
+			overflowVisible
+			@confirm="handleRenewContractSubmit"
+		>
+			<div class="dialog-form" v-if="selectedContractForRenew">
+				<p class="mb-md" style="font-size: 13px; color: var(--colors-text-muted)">
+					Renewing contract
+					<strong class="u-font-mono u-text-primary">{{
+						selectedContractForRenew.contractNo
+					}}</strong>
+					({{ selectedContractForRenew.contractName }})
+				</p>
+				<div class="form-group mb-md">
+					<label class="form-group__label"
+						>New Expiration Date <span class="u-required">*</span></label
+					>
+					<DatePicker v-model="renewForm.newEndDate" />
+				</div>
+				<div class="form-group">
+					<label class="form-group__label">Renewal Remarks / Notes</label>
+					<Textbox
+						v-model="renewForm.remarks"
+						placeholder="Reason for extension / renewal terms..."
+					/>
+				</div>
+			</div>
+		</Dialog>
+
+		<!-- Dialog: Post-Registration Contract Prompt -->
+		<Dialog
+			v-model="showPostRegisterDialog"
+			title="Customer Registered Successfully"
+			confirmText="Add Contract Now"
+			cancelText="Done"
+			@confirm="handlePostRegisterAddContract"
+			@cancel="handlePostRegisterSkip"
+		>
+			<div class="u-text-center py-md" style="text-align: center; padding: 16px 0">
+				<i
+					class="mdi mdi-check-circle-outline u-text-primary mb-sm"
+					style="font-size: 48px; color: var(--colors-brand-primary)"
+				></i>
+				<h3
+					style="
+						font-size: 16px;
+						font-weight: 700;
+						margin: 8px 0 6px 0;
+						color: var(--colors-text-primary);
+					"
+				>
+					{{ createdCustomerName }} has been created!
+				</h3>
+				<p style="font-size: 13px; color: var(--colors-text-secondary); margin: 0">
+					Would you like to set up a contract for this customer now?
+				</p>
+			</div>
+		</Dialog>
+	</div>
+</template>
 
 <style lang="scss" scoped>
 @mixin flex-row($align: stretch, $gap: 0) {
