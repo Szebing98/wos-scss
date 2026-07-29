@@ -192,6 +192,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/user/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Proxy Profile Image
+         * @description Stream a profile image from R2 by object key.
+         */
+        get: operations["getApiUserAvatar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/user/{guid}": {
         parameters: {
             query?: never;
@@ -432,6 +452,70 @@ export interface paths {
         patch: operations["patchApiCustomersDeactivateByGuid"];
         trace?: never;
     };
+    "/api/customers/{guid}/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Customer Contracts
+         * @description Get all contracts for a specific customer with calculated expiration status.
+         */
+        get: operations["getApiCustomersByGuidContracts"];
+        put?: never;
+        /**
+         * Create Customer Contract
+         * @description Create a new contract with start and end dates for a customer.
+         */
+        post: operations["postApiCustomersByGuidContracts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/customers/contracts/{contractGuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Customer Contract
+         * @description Update contract fields by GUID.
+         */
+        put: operations["putApiCustomersContractsByContractGuid"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/customers/contracts/{contractGuid}/renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Renew Customer Contract
+         * @description Extend contract end date with optional renewal notes.
+         */
+        post: operations["postApiCustomersContractsByContractGuidRenew"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/doc-no-format": {
         parameters: {
             query?: never;
@@ -482,190 +566,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/part-replaced": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Part Replaced List
-         * @description Get a paginated list of parts replaced. Filter by isActive status.
-         */
-        get: operations["getApiPart-replaced"];
-        put?: never;
-        /**
-         * Create Part Replaced
-         * @description Create a new part replaced master data record.
-         */
-        post: operations["postApiPart-replaced"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/part-replaced/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Part Replaced Details
-         * @description Get full details of a part replaced record by its GUID.
-         */
-        get: operations["getApiPart-replacedByGuid"];
-        /**
-         * Update Part Replaced
-         * @description Update an existing part replaced record by its GUID.
-         */
-        put: operations["putApiPart-replacedByGuid"];
-        post?: never;
-        /**
-         * Delete Part Replaced (Soft Delete)
-         * @description Soft-delete a part replaced record by its GUID.
-         */
-        delete: operations["deleteApiPart-replacedByGuid"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/part-replaced/activate/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Activate Part Replaced
-         * @description Activate a part replaced record by its GUID.
-         */
-        patch: operations["patchApiPart-replacedActivateByGuid"];
-        trace?: never;
-    };
-    "/api/part-replaced/deactivate/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Deactivate Part Replaced
-         * @description Deactivate a part replaced record by its GUID.
-         */
-        patch: operations["patchApiPart-replacedDeactivateByGuid"];
-        trace?: never;
-    };
-    "/api/services-provided": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Service Provided List
-         * @description Get a paginated list of services provided. Filter by isActive status.
-         */
-        get: operations["getApiServices-provided"];
-        put?: never;
-        /**
-         * Create Service Provided
-         * @description Create a new service provided master data record.
-         */
-        post: operations["postApiServices-provided"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/services-provided/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Service Provided Details
-         * @description Get full details of a service provided record by its GUID.
-         */
-        get: operations["getApiServices-providedByGuid"];
-        /**
-         * Update Service Provided
-         * @description Update an existing service provided record by its GUID.
-         */
-        put: operations["putApiServices-providedByGuid"];
-        post?: never;
-        /**
-         * Delete Service Provided (Soft Delete)
-         * @description Soft-delete a service provided record by its GUID.
-         */
-        delete: operations["deleteApiServices-providedByGuid"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/services-provided/activate/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Activate Service Provided
-         * @description Activate a service provided record by its GUID.
-         */
-        patch: operations["patchApiServices-providedActivateByGuid"];
-        trace?: never;
-    };
-    "/api/services-provided/deactivate/{guid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Deactivate Service Provided
-         * @description Deactivate a service provided record by its GUID.
-         */
-        patch: operations["patchApiServices-providedDeactivateByGuid"];
         trace?: never;
     };
     "/api/work-type": {
@@ -866,6 +766,58 @@ export interface paths {
          * @description Deactivate a work type item by its GUID.
          */
         patch: operations["patchApiWork-type-itemDeactivateByGuid"];
+        trace?: never;
+    };
+    "/api/site": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Site List
+         * @description Get a paginated list of maintenance sites. Filter by isActive status.
+         */
+        get: operations["getApiSite"];
+        put?: never;
+        /**
+         * Create Site
+         * @description Create a new maintenance site master record.
+         */
+        post: operations["postApiSite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/site/{guid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Site Details
+         * @description Get full details of a site record by its GUID.
+         */
+        get: operations["getApiSiteByGuid"];
+        /**
+         * Update Site
+         * @description Update details of an existing maintenance site master record.
+         */
+        put: operations["putApiSiteByGuid"];
+        post?: never;
+        /**
+         * Delete Site
+         * @description Soft delete a maintenance site record.
+         */
+        delete: operations["deleteApiSiteByGuid"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/locations/sync": {
@@ -1613,6 +1565,66 @@ export interface paths {
         get?: never;
         put: operations["putApiWork-orderByGuidClaim"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/extend-end-date": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extend Estimated End Date
+         * @description Extend estimated end date of a work order and track extension count.
+         */
+        post: operations["postApiWork-orderByGuidExtend-end-date"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/repeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Repeat Work Order
+         * @description Repeat/extend work order into a sub-order (e.g. WO-0001-01).
+         */
+        post: operations["postApiWork-orderByGuidRepeat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer Work Order
+         * @description Transfer work order into a new independent sequential work order (e.g. WO-0002).
+         */
+        post: operations["postApiWork-orderByGuidTransfer"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2600,7 +2612,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
                 isActive?: "true" | "false";
                 userGroupCode?: string;
             };
@@ -3020,6 +3032,16 @@ export interface operations {
                 };
             };
         };
+    };
+    getApiUserAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
     };
     getApiUserByGuid: {
         parameters: {
@@ -4106,7 +4128,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
                 isActive?: boolean;
                 individualType?: string;
             };
@@ -4207,6 +4229,16 @@ export interface operations {
                         individualType?: string;
                         /** @description Customer identity no */
                         identityNo?: string;
+                        /** @description Customer Person In Charge name */
+                        picName?: string;
+                        /** @description Customer Person In Charge phone */
+                        picPhone?: string;
+                        /** @description Customer contract no */
+                        contractNo?: string;
+                        /** @description Contract start date */
+                        contractStartDate?: string | null;
+                        /** @description Contract end date */
+                        contractEndDate?: string | null;
                     };
                     /** @description Customer e-invoice information */
                     metadata?: {
@@ -4280,6 +4312,16 @@ export interface operations {
                         individualType?: string;
                         /** @description Customer identity no */
                         identityNo?: string;
+                        /** @description Customer Person In Charge name */
+                        picName?: string;
+                        /** @description Customer Person In Charge phone */
+                        picPhone?: string;
+                        /** @description Customer contract no */
+                        contractNo?: string;
+                        /** @description Contract start date */
+                        contractStartDate?: string | null;
+                        /** @description Contract end date */
+                        contractEndDate?: string | null;
                     };
                     /** @description Customer e-invoice information */
                     metadata?: {
@@ -4353,6 +4395,16 @@ export interface operations {
                         individualType?: string;
                         /** @description Customer identity no */
                         identityNo?: string;
+                        /** @description Customer Person In Charge name */
+                        picName?: string;
+                        /** @description Customer Person In Charge phone */
+                        picPhone?: string;
+                        /** @description Customer contract no */
+                        contractNo?: string;
+                        /** @description Contract start date */
+                        contractStartDate?: string | null;
+                        /** @description Contract end date */
+                        contractEndDate?: string | null;
                     };
                     /** @description Customer e-invoice information */
                     metadata?: {
@@ -4545,6 +4597,16 @@ export interface operations {
                             individualType: string;
                             /** @description Customer identity no */
                             identityNo: string | null;
+                            /** @description Customer Person In Charge name */
+                            picName: string | null;
+                            /** @description Customer Person In Charge phone */
+                            picPhone: string | null;
+                            /** @description Customer contract no */
+                            contractNo: string | null;
+                            /** @description Contract start date */
+                            contractStartDate: string | null;
+                            /** @description Contract end date */
+                            contractEndDate: string | null;
                             /**
                              * @description MSIC Code
                              * @default 00000
@@ -4704,6 +4766,16 @@ export interface operations {
                         individualType?: string;
                         /** @description Customer identity no */
                         identityNo?: string;
+                        /** @description Customer Person In Charge name */
+                        picName?: string;
+                        /** @description Customer Person In Charge phone */
+                        picPhone?: string;
+                        /** @description Customer contract no */
+                        contractNo?: string;
+                        /** @description Contract start date */
+                        contractStartDate?: string | null;
+                        /** @description Contract end date */
+                        contractEndDate?: string | null;
                     };
                     /** @description Customer e-invoice information */
                     metadata?: {
@@ -4777,6 +4849,16 @@ export interface operations {
                         individualType?: string;
                         /** @description Customer identity no */
                         identityNo?: string;
+                        /** @description Customer Person In Charge name */
+                        picName?: string;
+                        /** @description Customer Person In Charge phone */
+                        picPhone?: string;
+                        /** @description Customer contract no */
+                        contractNo?: string;
+                        /** @description Contract start date */
+                        contractStartDate?: string | null;
+                        /** @description Contract end date */
+                        contractEndDate?: string | null;
                     };
                     /** @description Customer e-invoice information */
                     metadata?: {
@@ -4850,6 +4932,16 @@ export interface operations {
                         individualType?: string;
                         /** @description Customer identity no */
                         identityNo?: string;
+                        /** @description Customer Person In Charge name */
+                        picName?: string;
+                        /** @description Customer Person In Charge phone */
+                        picPhone?: string;
+                        /** @description Customer contract no */
+                        contractNo?: string;
+                        /** @description Contract start date */
+                        contractStartDate?: string | null;
+                        /** @description Contract end date */
+                        contractEndDate?: string | null;
                     };
                     /** @description Customer e-invoice information */
                     metadata?: {
@@ -5184,6 +5276,171 @@ export interface operations {
             };
         };
     };
+    getApiCustomersByGuidContracts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    postApiCustomersByGuidContracts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Contract Reference Number */
+                    contractNo: string;
+                    /** @description Contract Name / Title */
+                    contractName: string;
+                    /** @description Contract Start Date (ISO string or YYYY-MM-DD) */
+                    startDate: string;
+                    /** @description Contract End Date (ISO string or YYYY-MM-DD) */
+                    endDate: string;
+                    /** @description Optional Contract Notes */
+                    description?: string | null;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Contract Reference Number */
+                    contractNo: string;
+                    /** @description Contract Name / Title */
+                    contractName: string;
+                    /** @description Contract Start Date (ISO string or YYYY-MM-DD) */
+                    startDate: string;
+                    /** @description Contract End Date (ISO string or YYYY-MM-DD) */
+                    endDate: string;
+                    /** @description Optional Contract Notes */
+                    description?: string | null;
+                };
+                "multipart/form-data": {
+                    /** @description Contract Reference Number */
+                    contractNo: string;
+                    /** @description Contract Name / Title */
+                    contractName: string;
+                    /** @description Contract Start Date (ISO string or YYYY-MM-DD) */
+                    startDate: string;
+                    /** @description Contract End Date (ISO string or YYYY-MM-DD) */
+                    endDate: string;
+                    /** @description Optional Contract Notes */
+                    description?: string | null;
+                };
+            };
+        };
+        responses: never;
+    };
+    putApiCustomersContractsByContractGuid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contractGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Contract Reference Number */
+                    contractNo?: string;
+                    /** @description Contract Name / Title */
+                    contractName?: string;
+                    /** @description Contract Start Date (ISO string or YYYY-MM-DD) */
+                    startDate?: string;
+                    /** @description Contract End Date (ISO string or YYYY-MM-DD) */
+                    endDate?: string;
+                    /** @description Optional Contract Notes */
+                    description?: string | null;
+                    /** @description Contract Active Status */
+                    isActive?: boolean;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Contract Reference Number */
+                    contractNo?: string;
+                    /** @description Contract Name / Title */
+                    contractName?: string;
+                    /** @description Contract Start Date (ISO string or YYYY-MM-DD) */
+                    startDate?: string;
+                    /** @description Contract End Date (ISO string or YYYY-MM-DD) */
+                    endDate?: string;
+                    /** @description Optional Contract Notes */
+                    description?: string | null;
+                    /** @description Contract Active Status */
+                    isActive?: boolean;
+                };
+                "multipart/form-data": {
+                    /** @description Contract Reference Number */
+                    contractNo?: string;
+                    /** @description Contract Name / Title */
+                    contractName?: string;
+                    /** @description Contract Start Date (ISO string or YYYY-MM-DD) */
+                    startDate?: string;
+                    /** @description Contract End Date (ISO string or YYYY-MM-DD) */
+                    endDate?: string;
+                    /** @description Optional Contract Notes */
+                    description?: string | null;
+                    /** @description Contract Active Status */
+                    isActive?: boolean;
+                };
+            };
+        };
+        responses: never;
+    };
+    postApiCustomersContractsByContractGuidRenew: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contractGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description New Contract Expiry Date */
+                    newEndDate: string;
+                    /** @description Optional New Contract No if creating renewed version */
+                    newContractNo?: string;
+                    /** @description Optional New Contract Title */
+                    newContractName?: string;
+                    /** @description Renewal notes */
+                    remarks?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description New Contract Expiry Date */
+                    newEndDate: string;
+                    /** @description Optional New Contract No if creating renewed version */
+                    newContractNo?: string;
+                    /** @description Optional New Contract Title */
+                    newContractName?: string;
+                    /** @description Renewal notes */
+                    remarks?: string;
+                };
+                "multipart/form-data": {
+                    /** @description New Contract Expiry Date */
+                    newEndDate: string;
+                    /** @description Optional New Contract No if creating renewed version */
+                    newContractNo?: string;
+                    /** @description Optional New Contract Title */
+                    newContractName?: string;
+                    /** @description Renewal notes */
+                    remarks?: string;
+                };
+            };
+        };
+        responses: never;
+    };
     "getApiDoc-no-format": {
         parameters: {
             query: {
@@ -5191,7 +5448,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
             };
             header?: never;
             path?: never;
@@ -5885,1580 +6142,6 @@ export interface operations {
             };
         };
     };
-    "getApiPart-replaced": {
-        parameters: {
-            query: {
-                pageIndex: number;
-                pageSize: number;
-                sort?: string;
-                q?: string;
-                timezone: "UTC" | string;
-                isActive?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "postApiPart-replaced": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Unique part replaced code */
-                    code: string;
-                    /** @description Part replaced name */
-                    name: string;
-                    /** @description Unit selling price of part replaced */
-                    unitPrice: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original part replaced number (OEM reference) */
-                    partNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive: boolean;
-                };
-                "application/x-www-form-urlencoded": {
-                    /** @description Unique part replaced code */
-                    code: string;
-                    /** @description Part replaced name */
-                    name: string;
-                    /** @description Unit selling price of part replaced */
-                    unitPrice: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original part replaced number (OEM reference) */
-                    partNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive: boolean;
-                };
-                "multipart/form-data": {
-                    /** @description Unique part replaced code */
-                    code: string;
-                    /** @description Part replaced name */
-                    name: string;
-                    /** @description Unit selling price of part replaced */
-                    unitPrice: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original part replaced number (OEM reference) */
-                    partNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description Part replaced record created successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Unique part replaced code */
-                        code: string;
-                        /** @description Part replaced name / description */
-                        name: string;
-                        /** @description Unit selling price of part replaced */
-                        unitPrice: number;
-                        /** @description Unit of measurement */
-                        uom: string | null;
-                        /** @description Markup rate applied */
-                        rate: number | null;
-                        /** @description Additional notes */
-                        description: string | null;
-                        /** @description Original manufacturer part number (OEM reference) */
-                        partNo: string | null;
-                        /** @description Active status for selection */
-                        isActive: boolean;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Record last update timestamp
-                         */
-                        modifiedAt: string;
-                        /** @description Soft delete timestamp (if any) */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        modifiedBy: string | null;
-                        /** @description User who deleted this record */
-                        deletedBy: string | null;
-                    };
-                };
-            };
-            /** @description Validation error. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "getApiPart-replacedByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Full part replaced details. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Unique part replaced code */
-                        code: string;
-                        /** @description Part replaced name / description */
-                        name: string;
-                        /** @description Unit selling price of part replaced */
-                        unitPrice: number;
-                        /** @description Unit of measurement */
-                        uom: string | null;
-                        /** @description Markup rate applied */
-                        rate: number | null;
-                        /** @description Additional notes */
-                        description: string | null;
-                        /** @description Original manufacturer part number (OEM reference) */
-                        partNo: string | null;
-                        /** @description Active status for selection */
-                        isActive: boolean;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Record last update timestamp
-                         */
-                        modifiedAt: string;
-                        /** @description Soft delete timestamp (if any) */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        modifiedBy: string | null;
-                        /** @description User who deleted this record */
-                        deletedBy: string | null;
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Part replaced not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "putApiPart-replacedByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Unique part replaced code */
-                    code?: string;
-                    /** @description Part replaced name */
-                    name?: string;
-                    /** @description Unit selling price of part replaced */
-                    unitPrice?: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original part replaced number (OEM reference) */
-                    partNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive?: boolean;
-                };
-                "application/x-www-form-urlencoded": {
-                    /** @description Unique part replaced code */
-                    code?: string;
-                    /** @description Part replaced name */
-                    name?: string;
-                    /** @description Unit selling price of part replaced */
-                    unitPrice?: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original part replaced number (OEM reference) */
-                    partNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive?: boolean;
-                };
-                "multipart/form-data": {
-                    /** @description Unique part replaced code */
-                    code?: string;
-                    /** @description Part replaced name */
-                    name?: string;
-                    /** @description Unit selling price of part replaced */
-                    unitPrice?: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original part replaced number (OEM reference) */
-                    partNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive?: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description Part replaced updated successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Unique part replaced code */
-                        code: string;
-                        /** @description Part replaced name / description */
-                        name: string;
-                        /** @description Unit selling price of part replaced */
-                        unitPrice: number;
-                        /** @description Unit of measurement */
-                        uom: string | null;
-                        /** @description Markup rate applied */
-                        rate: number | null;
-                        /** @description Additional notes */
-                        description: string | null;
-                        /** @description Original manufacturer part number (OEM reference) */
-                        partNo: string | null;
-                        /** @description Active status for selection */
-                        isActive: boolean;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Record last update timestamp
-                         */
-                        modifiedAt: string;
-                        /** @description Soft delete timestamp (if any) */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        modifiedBy: string | null;
-                        /** @description User who deleted this record */
-                        deletedBy: string | null;
-                    };
-                };
-            };
-            /** @description Validation error. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Part replaced not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "deleteApiPart-replacedByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Part replaced deleted successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success: boolean;
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "patchApiPart-replacedActivateByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Part replaced activated successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success: boolean;
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "patchApiPart-replacedDeactivateByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Part replaced deactivated successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success: boolean;
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "getApiServices-provided": {
-        parameters: {
-            query: {
-                pageIndex: number;
-                pageSize: number;
-                sort?: string;
-                q?: string;
-                timezone: "UTC" | string;
-                isActive?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "postApiServices-provided": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Unique service provided code */
-                    code: string;
-                    /** @description Service provided name */
-                    name: string;
-                    /** @description Unit selling price of service provided */
-                    unitPrice: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original service provided number (OEM reference) */
-                    serviceNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive: boolean;
-                };
-                "application/x-www-form-urlencoded": {
-                    /** @description Unique service provided code */
-                    code: string;
-                    /** @description Service provided name */
-                    name: string;
-                    /** @description Unit selling price of service provided */
-                    unitPrice: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original service provided number (OEM reference) */
-                    serviceNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive: boolean;
-                };
-                "multipart/form-data": {
-                    /** @description Unique service provided code */
-                    code: string;
-                    /** @description Service provided name */
-                    name: string;
-                    /** @description Unit selling price of service provided */
-                    unitPrice: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original service provided number (OEM reference) */
-                    serviceNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description Service provided record created successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Unique service provided code */
-                        code: string;
-                        /** @description Service provided name */
-                        name: string;
-                        /** @description Unit selling price of service provided */
-                        unitPrice: number;
-                        /** @description Unit of measurement */
-                        uom: string | null;
-                        /** @description Markup rate applied */
-                        rate: number | null;
-                        /** @description Additional notes */
-                        description: string | null;
-                        /** @description Original service provided number (OEM reference) */
-                        serviceNo: string | null;
-                        /** @description Active status for selection */
-                        isActive: boolean;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Record last update timestamp
-                         */
-                        modifiedAt: string;
-                        /** @description Soft delete timestamp (if any) */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        modifiedBy: string | null;
-                        /** @description User who deleted this record */
-                        deletedBy: string | null;
-                    };
-                };
-            };
-            /** @description Validation error. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "getApiServices-providedByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Full service provided details. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Unique service provided code */
-                        code: string;
-                        /** @description Service provided name */
-                        name: string;
-                        /** @description Unit selling price of service provided */
-                        unitPrice: number;
-                        /** @description Unit of measurement */
-                        uom: string | null;
-                        /** @description Markup rate applied */
-                        rate: number | null;
-                        /** @description Additional notes */
-                        description: string | null;
-                        /** @description Original service provided number (OEM reference) */
-                        serviceNo: string | null;
-                        /** @description Active status for selection */
-                        isActive: boolean;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Record last update timestamp
-                         */
-                        modifiedAt: string;
-                        /** @description Soft delete timestamp (if any) */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        modifiedBy: string | null;
-                        /** @description User who deleted this record */
-                        deletedBy: string | null;
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Service provided not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "putApiServices-providedByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Unique service provided code */
-                    code?: string;
-                    /** @description Service provided name */
-                    name?: string;
-                    /** @description Unit selling price of service provided */
-                    unitPrice?: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original service provided number (OEM reference) */
-                    serviceNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive?: boolean;
-                };
-                "application/x-www-form-urlencoded": {
-                    /** @description Unique service provided code */
-                    code?: string;
-                    /** @description Service provided name */
-                    name?: string;
-                    /** @description Unit selling price of service provided */
-                    unitPrice?: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original service provided number (OEM reference) */
-                    serviceNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive?: boolean;
-                };
-                "multipart/form-data": {
-                    /** @description Unique service provided code */
-                    code?: string;
-                    /** @description Service provided name */
-                    name?: string;
-                    /** @description Unit selling price of service provided */
-                    unitPrice?: number;
-                    /** @description Unit of measurement */
-                    uom?: string;
-                    /** @description Markup rate applied */
-                    rate?: number;
-                    /** @description Additional notes */
-                    description?: string;
-                    /** @description Original service provided number (OEM reference) */
-                    serviceNo?: string;
-                    /**
-                     * @description Active status for selection
-                     * @default true
-                     */
-                    isActive?: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description Service provided updated successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @description Unique service provided code */
-                        code: string;
-                        /** @description Service provided name */
-                        name: string;
-                        /** @description Unit selling price of service provided */
-                        unitPrice: number;
-                        /** @description Unit of measurement */
-                        uom: string | null;
-                        /** @description Markup rate applied */
-                        rate: number | null;
-                        /** @description Additional notes */
-                        description: string | null;
-                        /** @description Original service provided number (OEM reference) */
-                        serviceNo: string | null;
-                        /** @description Active status for selection */
-                        isActive: boolean;
-                        /**
-                         * Format: date-time
-                         * @description Record creation timestamp
-                         */
-                        createdAt: string;
-                        /**
-                         * Format: date-time
-                         * @description Record last update timestamp
-                         */
-                        modifiedAt: string;
-                        /** @description Soft delete timestamp (if any) */
-                        deletedAt: string | null;
-                        /** @description User who created this record */
-                        createdBy: string | null;
-                        /** @description User who last updated this record */
-                        modifiedBy: string | null;
-                        /** @description User who deleted this record */
-                        deletedBy: string | null;
-                    };
-                };
-            };
-            /** @description Validation error. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Service provided not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "deleteApiServices-providedByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Service provided deleted successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success: boolean;
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "patchApiServices-providedActivateByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Service provided activated successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success: boolean;
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-    "patchApiServices-providedDeactivateByGuid": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                guid: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Service provided deactivated successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success: boolean;
-                    };
-                };
-            };
-            /** @description Not authenticated. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Insufficient permissions. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        success: false;
-                        error: {
-                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
-                            code: string;
-                            /** @description Human-readable error description */
-                            message: string;
-                            /** @description Field-level validation errors (key = field path, value = message) */
-                            fields?: {
-                                [key: string]: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
     "getApiWork-type": {
         parameters: {
             query: {
@@ -7466,7 +6149,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
                 isActive?: "true" | "false";
                 withEquipmentForm?: "true" | "false";
             };
@@ -9081,6 +7764,639 @@ export interface operations {
             };
         };
     };
+    getApiSite: {
+        parameters: {
+            query: {
+                pageIndex: number;
+                pageSize: number;
+                sort?: string;
+                q?: string;
+                timezone: string;
+                isActive?: "true" | "false";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not authenticated. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Insufficient permissions. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    postApiSite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Unique site code */
+                    code: string;
+                    /** @description Site name */
+                    name: string;
+                    /** @description Additional notes */
+                    description?: string;
+                    /**
+                     * @description Active status for selection
+                     * @default true
+                     */
+                    isActive: boolean;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Unique site code */
+                    code: string;
+                    /** @description Site name */
+                    name: string;
+                    /** @description Additional notes */
+                    description?: string;
+                    /**
+                     * @description Active status for selection
+                     * @default true
+                     */
+                    isActive: boolean;
+                };
+                "multipart/form-data": {
+                    /** @description Unique site code */
+                    code: string;
+                    /** @description Site name */
+                    name: string;
+                    /** @description Additional notes */
+                    description?: string;
+                    /**
+                     * @description Active status for selection
+                     * @default true
+                     */
+                    isActive: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Site successfully created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Site's unique guid
+                         */
+                        guid: string;
+                        /** @description Unique site code */
+                        code: string;
+                        /** @description Site name */
+                        name: string;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Insufficient permissions. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Site code already exists. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getApiSiteByGuid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full site details. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Site's unique guid
+                         */
+                        guid: string;
+                        /** @description Unique site code */
+                        code: string;
+                        /** @description Site name */
+                        name: string;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Not authenticated. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Insufficient permissions. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Site not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    putApiSiteByGuid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Site name */
+                    name?: string;
+                    /** @description Additional notes */
+                    description?: string;
+                    /**
+                     * @description Active status for selection
+                     * @default true
+                     */
+                    isActive?: boolean;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** @description Site name */
+                    name?: string;
+                    /** @description Additional notes */
+                    description?: string;
+                    /**
+                     * @description Active status for selection
+                     * @default true
+                     */
+                    isActive?: boolean;
+                };
+                "multipart/form-data": {
+                    /** @description Site name */
+                    name?: string;
+                    /** @description Additional notes */
+                    description?: string;
+                    /**
+                     * @description Active status for selection
+                     * @default true
+                     */
+                    isActive?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Site successfully updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Site's unique guid
+                         */
+                        guid: string;
+                        /** @description Unique site code */
+                        code: string;
+                        /** @description Site name */
+                        name: string;
+                        /** @description Additional notes */
+                        description: string | null;
+                        /** @description Active status for selection */
+                        isActive: boolean;
+                        /**
+                         * Format: date-time
+                         * @description Record creation timestamp
+                         */
+                        createdAt: string;
+                        /**
+                         * Format: date-time
+                         * @description Record last update timestamp
+                         */
+                        modifiedAt: string;
+                        /** @description Soft delete timestamp (if any) */
+                        deletedAt: string | null;
+                        /** @description User who created this record */
+                        createdBy: string | null;
+                        /** @description User who last updated this record */
+                        modifiedBy: string | null;
+                        /** @description User who deleted this record */
+                        deletedBy: string | null;
+                    };
+                };
+            };
+            /** @description Validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Insufficient permissions. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Site not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    deleteApiSiteByGuid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Response for status 200 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Not authenticated. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Insufficient permissions. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description Site not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: {
+                            /** @description Machine-readable error code (e.g. VALIDATION_ERROR) */
+                            code: string;
+                            /** @description Human-readable error description */
+                            message: string;
+                            /** @description Field-level validation errors (key = field path, value = message) */
+                            fields?: {
+                                [key: string]: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
     postApiLocationsSync: {
         parameters: {
             query?: never;
@@ -9180,7 +8496,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
                 isActive?: boolean;
             };
             header?: never;
@@ -9325,7 +8641,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
                 countryCode?: string;
                 isActive?: boolean;
             };
@@ -9471,7 +8787,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
                 stateCode?: string;
             };
             header?: never;
@@ -9975,7 +9291,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
                 module?: string;
                 auditType?: "create" | "update" | "delete";
                 userCode?: string;
@@ -10222,7 +9538,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
                 module?: string;
                 auditType?: "create" | "update" | "delete";
                 userCode?: string;
@@ -10290,7 +9606,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
             };
             header?: never;
             path?: never;
@@ -10358,7 +9674,7 @@ export interface operations {
                 pageSize: number;
                 sort?: string;
                 q?: string;
-                timezone: "UTC" | string;
+                timezone: string;
             };
             header?: never;
             path?: never;
@@ -11747,17 +11063,30 @@ export interface operations {
                 "application/json": {
                     title: string;
                     description: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string;
                     customerCode: string;
                     contractNo?: string | null;
-                    location?: string | null;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
                     leadEngineerCode?: string | null;
-                    salesAgentCode?: string | null;
+                    salesAgentCode?: string;
                     personInChargeCode?: string | null;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     startDate?: string | null;
                     estimatedEndDate?: string | null;
@@ -11795,21 +11124,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "application/x-www-form-urlencoded": {
                     title: string;
                     description: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string;
                     customerCode: string;
                     contractNo?: string | null;
-                    location?: string | null;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
                     leadEngineerCode?: string | null;
-                    salesAgentCode?: string | null;
+                    salesAgentCode?: string;
                     personInChargeCode?: string | null;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     startDate?: string | null;
                     estimatedEndDate?: string | null;
@@ -11847,21 +11270,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "multipart/form-data": {
                     title: string;
                     description: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string;
                     customerCode: string;
                     contractNo?: string | null;
-                    location?: string | null;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
                     leadEngineerCode?: string | null;
-                    salesAgentCode?: string | null;
+                    salesAgentCode?: string;
                     personInChargeCode?: string | null;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     startDate?: string | null;
                     estimatedEndDate?: string | null;
@@ -11899,6 +11416,87 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
             };
         };
@@ -11916,17 +11514,30 @@ export interface operations {
                 "application/json": {
                     title: string;
                     description: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string;
                     customerCode: string;
                     contractNo: string;
-                    location: string;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
-                    leadEngineerCode: string;
-                    salesAgentCode?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode: string;
                     personInChargeCode: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     /** Format: date-time */
                     startDate: string;
@@ -11966,21 +11577,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "application/x-www-form-urlencoded": {
                     title: string;
                     description: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string;
                     customerCode: string;
                     contractNo: string;
-                    location: string;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
-                    leadEngineerCode: string;
-                    salesAgentCode?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode: string;
                     personInChargeCode: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     /** Format: date-time */
                     startDate: string;
@@ -12020,21 +11725,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "multipart/form-data": {
                     title: string;
                     description: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string;
                     customerCode: string;
                     contractNo: string;
-                    location: string;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
-                    leadEngineerCode: string;
-                    salesAgentCode?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode: string;
                     personInChargeCode: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     /** Format: date-time */
                     startDate: string;
@@ -12074,6 +11873,87 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
             };
         };
@@ -12091,17 +11971,30 @@ export interface operations {
                 "application/json": {
                     title: string;
                     description: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string;
                     customerCode: string;
                     contractNo: string;
-                    location: string;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
-                    leadEngineerCode: string;
-                    salesAgentCode?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode: string;
                     personInChargeCode: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     /** Format: date-time */
                     startDate: string;
@@ -12141,21 +12034,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "application/x-www-form-urlencoded": {
                     title: string;
                     description: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string;
                     customerCode: string;
                     contractNo: string;
-                    location: string;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
-                    leadEngineerCode: string;
-                    salesAgentCode?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode: string;
                     personInChargeCode: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     /** Format: date-time */
                     startDate: string;
@@ -12195,21 +12182,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "multipart/form-data": {
                     title: string;
                     description: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string;
                     customerCode: string;
                     contractNo: string;
-                    location: string;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
-                    leadEngineerCode: string;
-                    salesAgentCode?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
+                    leadEngineerCode?: string | null;
+                    salesAgentCode: string;
                     personInChargeCode: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     /** Format: date-time */
                     startDate: string;
@@ -12249,6 +12330,87 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
             };
         };
@@ -12268,17 +12430,30 @@ export interface operations {
                 "application/json": {
                     title?: string;
                     description?: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType?: string;
                     workTypeItem?: string | null;
                     customerCode?: string;
                     contractNo?: string | null;
-                    location?: string | null;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
                     leadEngineerCode?: string | null;
-                    salesAgentCode?: string | null;
+                    salesAgentCode?: string;
                     personInChargeCode?: string | null;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     startDate?: string | null;
                     estimatedEndDate?: string | null;
@@ -12316,21 +12491,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "application/x-www-form-urlencoded": {
                     title?: string;
                     description?: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType?: string;
                     workTypeItem?: string | null;
                     customerCode?: string;
                     contractNo?: string | null;
-                    location?: string | null;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
                     leadEngineerCode?: string | null;
-                    salesAgentCode?: string | null;
+                    salesAgentCode?: string;
                     personInChargeCode?: string | null;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     startDate?: string | null;
                     estimatedEndDate?: string | null;
@@ -12368,21 +12637,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "multipart/form-data": {
                     title?: string;
                     description?: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType?: string;
                     workTypeItem?: string | null;
                     customerCode?: string;
                     contractNo?: string | null;
-                    location?: string | null;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
                     leadEngineerCode?: string | null;
-                    salesAgentCode?: string | null;
+                    salesAgentCode?: string;
                     personInChargeCode?: string | null;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     startDate?: string | null;
                     estimatedEndDate?: string | null;
@@ -12420,6 +12783,87 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
             };
         };
@@ -12439,17 +12883,30 @@ export interface operations {
                 "application/json": {
                     title?: string;
                     description?: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string | null;
                     customerCode: string;
                     contractNo?: string | null;
-                    location?: string | null;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
                     leadEngineerCode?: string | null;
-                    salesAgentCode?: string | null;
+                    salesAgentCode?: string;
                     personInChargeCode?: string | null;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     startDate?: string | null;
                     /** Format: date-time */
@@ -12488,21 +12945,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "application/x-www-form-urlencoded": {
                     title?: string;
                     description?: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string | null;
                     customerCode: string;
                     contractNo?: string | null;
-                    location?: string | null;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
                     leadEngineerCode?: string | null;
-                    salesAgentCode?: string | null;
+                    salesAgentCode?: string;
                     personInChargeCode?: string | null;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     startDate?: string | null;
                     /** Format: date-time */
@@ -12541,21 +13092,115 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "multipart/form-data": {
                     title?: string;
                     description?: string;
+                    /**
+                     * @default Low
+                     * @enum {string}
+                     */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
                     workType: string;
                     workTypeItem: string | null;
                     customerCode: string;
                     contractNo?: string | null;
-                    location?: string | null;
-                    latitude?: number | null;
-                    longitude?: number | null;
+                    contractStartDate?: string | null;
+                    contractEndDate?: string | null;
+                    customerPic?: string | null;
+                    customerPicPhone?: string | null;
                     extraFields?: string | null;
+                    leaderCode?: string | null;
+                    leaderIICode?: string | null;
                     leadEngineerCode?: string | null;
-                    salesAgentCode?: string | null;
+                    salesAgentCode?: string;
                     personInChargeCode?: string | null;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                     startDate?: string | null;
                     /** Format: date-time */
@@ -12594,6 +13239,87 @@ export interface operations {
                         /** @description Rated power output (kW / HP) */
                         ratedPower?: string;
                     };
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
             };
         };
@@ -12614,21 +13340,30 @@ export interface operations {
                     /** Format: date-time */
                     estimatedEndDate: string;
                     description?: string;
+                    leaderCode?: string;
+                    leaderIICode?: string;
                     leadEngineerCode?: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                 };
                 "application/x-www-form-urlencoded": {
                     /** Format: date-time */
                     estimatedEndDate: string;
                     description?: string;
+                    leaderCode?: string;
+                    leaderIICode?: string;
                     leadEngineerCode?: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                 };
                 "multipart/form-data": {
                     /** Format: date-time */
                     estimatedEndDate: string;
                     description?: string;
+                    leaderCode?: string;
+                    leaderIICode?: string;
                     leadEngineerCode?: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
                 };
             };
@@ -12648,36 +13383,210 @@ export interface operations {
             content: {
                 "application/json": {
                     description?: string;
+                    siteCode?: string;
                     location?: string;
                     latitude?: number;
                     longitude?: number;
                     personInChargeCode?: string;
+                    leaderCode?: string;
+                    leaderIICode?: string;
                     leadEngineerCode?: string;
                     /** Format: date-time */
                     estimatedEndDate: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "application/x-www-form-urlencoded": {
                     description?: string;
+                    siteCode?: string;
                     location?: string;
                     latitude?: number;
                     longitude?: number;
                     personInChargeCode?: string;
+                    leaderCode?: string;
+                    leaderIICode?: string;
                     leadEngineerCode?: string;
                     /** Format: date-time */
                     estimatedEndDate: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "multipart/form-data": {
                     description?: string;
+                    siteCode?: string;
                     location?: string;
                     latitude?: number;
                     longitude?: number;
                     personInChargeCode?: string;
+                    leaderCode?: string;
+                    leaderIICode?: string;
                     leadEngineerCode?: string;
                     /** Format: date-time */
                     estimatedEndDate: string;
+                    technicianCodes?: string[];
                     assistantEngineerCodes?: string[];
+                    partInfoFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
+                    supplierInvoiceFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
             };
         };
@@ -12697,14 +13606,95 @@ export interface operations {
                 "application/json": {
                     /** Format: date-time */
                     estimatedEndDate: string;
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "application/x-www-form-urlencoded": {
                     /** Format: date-time */
                     estimatedEndDate: string;
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
                 "multipart/form-data": {
                     /** Format: date-time */
                     estimatedEndDate: string;
+                    siteInstructionsFiles?: {
+                        /** @description File category (e.g. invoice, receipt, image, quotation) */
+                        category: string;
+                        /** @description Image category */
+                        subcategory?: string;
+                        /** @description File name */
+                        fileName: string;
+                        /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
+                        mimeType?: string;
+                        /** @description Internal storage path or object key */
+                        storagePath: string;
+                        /** @description Public or signed URL for accessing uploaded file */
+                        storageUrl?: string | null;
+                        /** @description Uploaded file size in bytes */
+                        fileSize?: number;
+                        /** @description Additional remarks or notes related to uploaded file */
+                        notes?: string;
+                        /** @description Document number extracted from uploaded file */
+                        docNo?: string;
+                        /**
+                         * Format: date-time
+                         * @description Document date extracted from uploaded file
+                         */
+                        docDate?: string;
+                        /** @description Document amount extracted or linked from uploaded file */
+                        docAmount?: number;
+                    }[];
                 };
             };
         };
@@ -12792,6 +13782,114 @@ export interface operations {
                 };
                 "multipart/form-data": {
                     invoiceAmount: number;
+                };
+            };
+        };
+        responses: never;
+    };
+    "postApiWork-orderByGuidExtend-end-date": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date-time */
+                    newEstimatedEndDate: string;
+                    extensionReason?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    /** Format: date-time */
+                    newEstimatedEndDate: string;
+                    extensionReason?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: date-time */
+                    newEstimatedEndDate: string;
+                    extensionReason?: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "postApiWork-orderByGuidRepeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    description?: string;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    estimatedEndDate?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    title?: string;
+                    description?: string;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    estimatedEndDate?: string;
+                };
+                "multipart/form-data": {
+                    title?: string;
+                    description?: string;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    estimatedEndDate?: string;
+                };
+            };
+        };
+        responses: never;
+    };
+    "postApiWork-orderByGuidTransfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    description?: string;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    estimatedEndDate?: string;
+                };
+                "application/x-www-form-urlencoded": {
+                    title?: string;
+                    description?: string;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    estimatedEndDate?: string;
+                };
+                "multipart/form-data": {
+                    title?: string;
+                    description?: string;
+                    /** Format: date-time */
+                    startDate?: string;
+                    /** Format: date-time */
+                    estimatedEndDate?: string;
                 };
             };
         };

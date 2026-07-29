@@ -193,147 +193,6 @@ function resetFilters() {
 	applyFilters();
 }
 
-const sampleMockWorkOrders: any[] = [
-	{
-		guid: "WO-00032",
-		woNumber: "WO-00032",
-		title: "Air Handling Unit 04 Overhaul & Filter Replacement",
-		personInCharge: "Tommie Parker",
-		customer: {
-			name: "Petronas Carigali Sdn Bhd",
-			email: "procurement@petronas.com.my",
-			phone: "+603-23315000",
-		},
-		workType: "Maintenance",
-		status: "InProgress",
-		jobPriority: "High",
-		siteCode: "HQ-KL",
-		createdAt: "2026-05-01T08:30:00Z",
-		startDate: "2026-05-06T00:00:00Z",
-		estimatedEndDate: "2026-05-13T00:00:00Z",
-		leadEngineer: "Ahmad Faizi",
-		assistantEngineers: ["Lim Wei Chen", "Siti Fatimah"],
-		description:
-			"Complete overhaul of AHU-04 unit including belt replacement, bearing lubrication, and HEPA filter change.",
-		location: "Level 4 Plant Room, Tower 1, Petronas Twin Towers, KLCC",
-	},
-	{
-		guid: "WO-00033",
-		woNumber: "WO-00033",
-		title: "Cooling Tower Piping Assembly & Leak Test",
-		personInCharge: "Alice Admin",
-		customer: {
-			name: "YTL Power Services Sdn Bhd",
-			email: "ops@ytlpower.com",
-			phone: "+603-21170088",
-		},
-		workType: "Piping",
-		status: "New",
-		jobPriority: "Medium",
-		siteCode: "FAC-PG",
-		createdAt: "2026-05-02T09:15:00Z",
-		startDate: "2026-05-10T00:00:00Z",
-		estimatedEndDate: "2026-05-17T00:00:00Z",
-		leadEngineer: "Nurul Ain",
-		assistantEngineers: ["Siti Fatimah"],
-		description:
-			"Install 6-inch stainless steel header pipe connecting Cooling Tower 2 to Chiller Water Line B.",
-		location: "Penang Regional Facility, Bayan Lepas Industrial Zone",
-	},
-	{
-		guid: "WO-00034",
-		woNumber: "WO-00034",
-		title: "High Voltage Switchgear Annual Maintenance",
-		personInCharge: "Bob Sales",
-		customer: {
-			name: "TNB Engineering Corporation",
-			email: "service@tnbec.com.my",
-			phone: "+603-79679000",
-		},
-		workType: "Electrical",
-		status: "PendingApproval",
-		jobPriority: "High",
-		siteCode: "HQ-KL",
-		createdAt: "2026-05-03T10:00:00Z",
-		startDate: "2026-05-12T00:00:00Z",
-		estimatedEndDate: "2026-05-19T00:00:00Z",
-		leadEngineer: "Lim Wei Chen",
-		assistantEngineers: ["Ahmad Faizi"],
-		description:
-			"11kV VCB switchgear trip testing, contact resistance measurement, and insulation resistance test.",
-		location: "Substation 3B, TNB Complex, Jalan Bangsar, Kuala Lumpur",
-	},
-	{
-		guid: "WO-00035",
-		woNumber: "WO-00035",
-		title: "Emergency Water Pump Motor Replacement",
-		personInCharge: "Tommie Parker",
-		customer: {
-			name: "Petronas Carigali Sdn Bhd",
-			email: "procurement@petronas.com.my",
-			phone: "+603-23315000",
-		},
-		workType: "Maintenance",
-		status: "Claimed",
-		jobPriority: "Low",
-		siteCode: "WH-PJ",
-		createdAt: "2026-04-20T08:00:00Z",
-		startDate: "2026-04-22T00:00:00Z",
-		estimatedEndDate: "2026-04-28T00:00:00Z",
-		leadEngineer: "Ahmad Faizi",
-		assistantEngineers: ["Lim Wei Chen"],
-		description:
-			"Replaced burnt 45kW 3-phase induction motor driving emergency fire fighting pump #2.",
-		location: "Petaling Jaya Central Warehouse, Section 51A",
-	},
-	{
-		guid: "WO-00036",
-		woNumber: "WO-00036",
-		title: "Main Substation Relay Calibration & Inspection",
-		personInCharge: "Diana Technician",
-		customer: {
-			name: "TNB Engineering Corporation",
-			email: "service@tnbec.com.my",
-			phone: "+603-79679000",
-		},
-		workType: "Electrical",
-		status: "Done",
-		jobPriority: "Medium",
-		siteCode: "FAC-PG",
-		createdAt: "2026-04-25T11:20:00Z",
-		startDate: "2026-04-27T00:00:00Z",
-		estimatedEndDate: "2026-05-02T00:00:00Z",
-		leadEngineer: "Siti Fatimah",
-		assistantEngineers: ["Nurul Ain"],
-		description:
-			"Calibrated numerical protection relays (overcurrent and earth fault) according to TNB grid code.",
-		location: "Penang Regional Substation B, Seberang Perai",
-	},
-	{
-		guid: "WO-00037",
-		woNumber: "WO-00037",
-		title: "Boiler Pressure Relief Valve Certification & Testing",
-		personInCharge: "Ramasamy Kumar",
-		customer: {
-			name: "YTL Power Services Sdn Bhd",
-			email: "ops@ytlpower.com",
-			phone: "+603-21170088",
-		},
-		workType: "Maintenance",
-		status: "Completed",
-		jobPriority: "High",
-		siteCode: "HQ-KL",
-		createdAt: "2026-04-28T14:00:00Z",
-		startDate: "2026-04-30T00:00:00Z",
-		estimatedEndDate: "2026-05-05T00:00:00Z",
-		leadEngineer: "Ahmad Faizi",
-		assistantEngineers: ["Lim Wei Chen"],
-		description:
-			"DOSH/JKKP certified pop test and set pressure calibration for Boiler #1 safety valves.",
-		location: "Kuala Lumpur Headquarters Power Station",
-	},
-];
-
 const workOrders = ref<any[]>([]);
 const loading = ref(false);
 
@@ -365,12 +224,12 @@ async function fetchWorkOrders() {
 		}
 
 		const { data } = await workOrderApi.getWorkOrders(query);
-		if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
+		if (data && data.data && Array.isArray(data.data)) {
 			workOrders.value = data.data.map((w: any) => ({
 				guid: w.guid,
 				woNumber: w.docNo || w.code || w.guid.substring(0, 8).toUpperCase(),
 				title: w.title,
-				personInCharge: w.personInChargeCode || w.projectPicName || "Unassigned",
+				personInCharge: w.projectPicName || w.personInChargeCode || "Unassigned",
 				customer: {
 					name: w.customerName || "Unknown",
 					email: w.customerEmail || "",
@@ -385,15 +244,15 @@ async function fetchWorkOrders() {
 				description: w.description || "",
 				location: w.location || w.locationName || "",
 				estimatedEndDate: w.estimatedEndDate || "",
-				leadEngineer: w.leaderCode || w.leadEngineerName || "",
+				leadEngineer: w.leadEngineerName || w.leaderCode || "",
 				assistantEngineers: w.technicianCodes || w.assistantEngineers || [],
 			}));
 		} else {
-			workOrders.value = sampleMockWorkOrders;
+			workOrders.value = [];
 		}
 	} catch (e) {
-		console.warn("Using sample mock work orders fallback:", e);
-		workOrders.value = sampleMockWorkOrders;
+		console.error("Failed to fetch work orders:", e);
+		workOrders.value = [];
 	} finally {
 		loading.value = false;
 	}

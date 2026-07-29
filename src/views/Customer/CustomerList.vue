@@ -244,9 +244,14 @@ function countryFormatAccount(acc: string) {
 				<FilterPanel show-reset align="right" @reset="resetFilters">
 					<Select v-model="identityFilter" label="Identity Type">
 						<option value="all">All Types</option>
-						<option value="COMPANY">Corporate / BRN</option>
+						<option value="COMPANY">COMPANY (Corporate / BRN)</option>
+						<option value="INDIVIDUAL">INDIVIDUAL (All Personal)</option>
 						<option value="MyKAD">MyKAD (Citizen)</option>
-						<option value="PASSPORT">Passport (Foreigner)</option>
+						<option value="MyPR">MyPR (Permanent Resident)</option>
+						<option value="MyKAS">MyKAS (Temporary Resident)</option>
+						<option value="ARMY">ARMY (Military Personnel)</option>
+						<option value="PASSPORT">PASSPORT (Foreigner)</option>
+						<option value="GOVERNMENT">GOVERNMENT (Agency)</option>
 					</Select>
 
 					<Select v-model="filterStatus" label="Status">

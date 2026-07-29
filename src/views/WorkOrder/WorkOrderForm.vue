@@ -140,7 +140,7 @@ async function fetchWorkTypeItems(workTypeGuid: string) {
 		const res = await workTypeApi.getWorkTypeItems(workTypeGuid, {
 			pageIndex: 0,
 			pageSize: 100,
-			timezone: "UTC",
+			timezone: "Asia/Kuala_Lumpur",
 		} as any);
 		if (res.data && res.data.data) {
 			workTypeItems.value = res.data.data.map((item: any) => ({
@@ -194,7 +194,7 @@ async function loadOptions() {
 		const custRes = await customerApi.getCustomers({
 			pageIndex: 0,
 			pageSize: 100,
-			timezone: "UTC",
+			timezone: "Asia/Kuala_Lumpur",
 		});
 		if (custRes.data && custRes.data.data) {
 			customers.value = custRes.data.data.map((c: any) => ({
@@ -218,7 +218,7 @@ async function loadOptions() {
 		}
 
 		// Fetch Users
-		const userRes = await userApi.getUsers({ pageIndex: 0, pageSize: 100, timezone: "UTC" });
+		const userRes = await userApi.getUsers({ pageIndex: 0, pageSize: 100, timezone: "Asia/Kuala_Lumpur" });
 		if (userRes.data && userRes.data.data) {
 			users.value = userRes.data.data.map((u: any) => ({
 				code: u.displayCode || u.guid.substring(0, 8).toUpperCase(),
@@ -231,7 +231,7 @@ async function loadOptions() {
 		const wtRes = await workTypeApi.getWorkTypes({
 			pageIndex: 0,
 			pageSize: 100,
-			timezone: "UTC",
+			timezone: "Asia/Kuala_Lumpur",
 		});
 		if (wtRes.data && wtRes.data.data) {
 			workTypeList.value = wtRes.data.data.map((wt: any) => ({
@@ -649,7 +649,7 @@ function redirectToCustomerRenew(contract: any) {
 	const targetContractNo = contract?.contractNo || formData.value.contractNo;
 
 	router.push({
-		path: "/customers/form",
+		path: "/customer/form",
 		query: {
 			code: custGuid,
 			action: "renew",
@@ -673,7 +673,7 @@ const isMechanical = computed(() => {
 
 const formErrors = ref<Record<string, string>>({});
 
-function validateForm() {
+function validateDraftForm(): boolean {
 	formErrors.value = {};
 	let isValid = true;
 
@@ -681,23 +681,11 @@ function validateForm() {
 		formErrors.value.orderTypeItemCode = "Work Type Item is required";
 		isValid = false;
 	}
-	if (!formData.value.title) {
+	if (!formData.value.title?.trim()) {
 		formErrors.value.title = "Title is required";
 		isValid = false;
 	}
-	if (!formData.value.salesAgentCode) {
-		formErrors.value.salesAgentCode = "Sales Agent is required";
-		isValid = false;
-	}
-	if (!formData.value.startDate) {
-		formErrors.value.startDate = "Start Date is required";
-		isValid = false;
-	}
-	if (!formData.value.estimatedEndDate) {
-		formErrors.value.estimatedEndDate = "Estimated Date of Completion is required";
-		isValid = false;
-	}
-	if (!formData.value.description) {
+	if (!formData.value.description?.trim()) {
 		formErrors.value.description = "Work Description is required";
 		isValid = false;
 	}
@@ -705,15 +693,59 @@ function validateForm() {
 		formErrors.value.customerCode = "Customer is required";
 		isValid = false;
 	}
+
+	return isValid;
+}
+
+function validateForm(): boolean {
+	formErrors.value = {};
+	let isValid = true;
+
+	if (!formData.value.orderTypeItemCode) {
+		formErrors.value.orderTypeItemCode = "Work Type Item is required";
+		isValid = false;
+	}
+	if (!formData.value.title?.trim()) {
+		formErrors.value.title = "Title is required";
+		isValid = false;
+	}
+	if (!formData.value.description?.trim()) {
+		formErrors.value.description = "Work Description is required";
+		isValid = false;
+	}
+	if (!formData.value.customerCode) {
+		formErrors.value.customerCode = "Customer is required";
+		isValid = false;
+	}
+	if (!formData.value.contractNo?.trim()) {
+		formErrors.value.contractNo = "Contract No is required";
+		isValid = false;
+	}
+	if (!formData.value.salesAgentCode) {
+		formErrors.value.salesAgentCode = "Sales Agent is required";
+		isValid = false;
+	}
+	if (!formData.value.personInChargeCode) {
+		formErrors.value.personInChargeCode = "Person in Charge (PIC) is required";
+		isValid = false;
+	}
 	if (!formData.value.siteCode) {
 		formErrors.value.siteCode = "Site is required";
+		isValid = false;
+	}
+	if (!formData.value.startDate) {
+		formErrors.value.startDate = "Start Date is required";
+		isValid = false;
+	}
+	if (!formData.value.estimatedEndDate) {
+		formErrors.value.estimatedEndDate = "Estimated Completion Date is required";
 		isValid = false;
 	}
 
 	// End date must be after start date
 	if (formData.value.startDate && formData.value.estimatedEndDate) {
 		if (new Date(formData.value.estimatedEndDate) <= new Date(formData.value.startDate)) {
-			formErrors.value.estimatedEndDate = "End date must be after the start date";
+			formErrors.value.estimatedEndDate = "End date must be after start date";
 			isValid = false;
 		}
 	}
@@ -782,7 +814,10 @@ function buildBody(): Record<string, any> {
 }
 
 async function submitDraft() {
-	formErrors.value = {};
+	if (!validateDraftForm()) {
+		console.error("Draft validation failed", formErrors.value);
+		return;
+	}
 	try {
 		loading.value = true;
 		const id = route.params.id;

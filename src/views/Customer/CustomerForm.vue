@@ -32,19 +32,36 @@
 							:error="formErrors.name"
 						/>
 					</div>
+
+					<div class="form-group">
+						<label class="form-group__label">
+							Classification / Customer Type <span class="u-required">*</span>
+						</label>
+						<Select v-model="customerCategory">
+							<option value="INDIVIDUAL">INDIVIDUAL (0 - Personal Account)</option>
+							<option value="COMPANY">BUSINESS (1 - Corporate Entity)</option>
+							<option value="GOVERNMENT">GOVERNMENT (2 - Gov Agency)</option>
+						</Select>
+					</div>
+
 					<div class="form-group">
 						<label class="form-group__label">AutoCount Debtor Code (AccountNo)</label>
 						<Textbox v-model="form.accountNo" placeholder="e.g. 300-A0001" />
 					</div>
+
+					<div class="form-group">
+						<label class="form-group__label">Linked Accounting Control Account</label>
+						<Textbox v-model="form.metadata.controlAccount" placeholder="e.g. 300-0000" />
+					</div>
+
 					<div class="form-group">
 						<label class="form-group__label">License / Operating Permit No</label>
 						<Textbox
 							v-model="form.licenseNo"
-							placeholder="Business license reference"
+							placeholder="Business license reference (optional)"
 						/>
 					</div>
 
-					<!-- Side-by-side switches in the exact same row -->
 					<div class="form-group mt-sm">
 						<label class="switch-toggle">
 							<input type="checkbox" v-model="form.isActive" />
@@ -72,14 +89,18 @@
 						<i class="mdi mdi-map-marker-outline u-text-primary"></i>
 						Customer Address
 					</h2>
+					<Chip v-if="customerCategory === 'COMPANY'" :type="isLocalCompany ? 'success' : 'info'">
+						{{ isLocalCompany ? 'Local Company (Malaysia)' : 'Foreign Company (Other Country)' }}
+					</Chip>
 				</div>
 
 				<div class="form-grid">
 					<div class="form-group form-group--full">
-						<label class="form-group__label">Address Line 1</label>
+						<label class="form-group__label">Address Line 1 <span class="u-required">*</span></label>
 						<Textbox
 							v-model="form.address.address1"
 							placeholder="Street address, building name, floor/unit no."
+							:error="formErrors.address1"
 						/>
 					</div>
 					<div class="form-group form-group--full">
@@ -90,31 +111,38 @@
 						/>
 					</div>
 					<div class="form-group">
-						<label class="form-group__label">Country</label>
+						<label class="form-group__label">Country <span class="u-required">*</span></label>
 						<Autocomplete
 							v-model="form.address.country"
 							:options="countryOptions"
 							placeholder="Search or select country..."
+							:error="formErrors.country"
 						/>
 					</div>
 					<div class="form-group">
-						<label class="form-group__label">State</label>
+						<label class="form-group__label">State <span class="u-required">*</span></label>
 						<Autocomplete
 							v-model="form.address.state"
 							:options="stateOptions"
 							placeholder="Search or select state..."
+							:error="formErrors.state"
 						/>
 					</div>
 					<div class="form-group">
-						<label class="form-group__label">City / Town</label>
+						<label class="form-group__label">City / Town <span class="u-required">*</span></label>
 						<Textbox
 							v-model="form.address.city"
 							placeholder="e.g. Petaling Jaya / Puchong"
+							:error="formErrors.city"
 						/>
 					</div>
 					<div class="form-group">
-						<label class="form-group__label">Postcode</label>
-						<Textbox v-model="form.address.postcode" placeholder="e.g. 47100" />
+						<label class="form-group__label">Postcode <span class="u-required">*</span></label>
+						<Textbox
+							v-model="form.address.postcode"
+							placeholder="e.g. 47100"
+							:error="formErrors.postcode"
+						/>
 					</div>
 				</div>
 			</div>
@@ -242,133 +270,135 @@
 			</div>
 
 			<!-- Debtor Profile Block -->
-			<div
-				class="panel-card mb-lg"
-				:class="{ 'panel-card--disabled-mask': form.accountNo && !form.profile }"
-			>
+			<div class="panel-card mb-lg">
 				<div class="panel-card__header">
 					<h2>
-						<i class="mdi mdi-badge-account-horizontal-outline"></i> Tax Profile &
-						Contacts
+						<i class="mdi mdi-badge-account-horizontal-outline"></i> Debtor Profile & Tax Identity
 					</h2>
-					<Chip v-if="form.accountNo" type="warning">
-						Mandatory (Has AutoCount AccountNo)
-					</Chip>
 				</div>
 
 				<div class="form-grid">
 					<div class="form-group">
 						<label class="form-group__label">
-							Email
-							<span v-if="form.accountNo" class="u-required">*</span>
+							Email <span class="u-required">*</span>
 						</label>
 						<Textbox
 							v-model="form.profile.email"
 							type="email"
-							placeholder="finance@company.com"
+							placeholder="e.g. customer@example.com"
 							:error="formErrors.email"
 						/>
 					</div>
 					<div class="form-group">
-						<label class="form-group__label">Contact Phone</label>
-						<Textbox v-model="form.profile.phone" placeholder="+60123456789" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Tax Identity No (TIN)</label>
-						<Textbox v-model="form.profile.tin" placeholder="C2580000000" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Customer Type Selection</label>
-						<Select v-model="customerCategory">
-							<option value="COMPANY">COMPANY (Corporate Entity)</option>
-							<option value="INDIVIDUAL">INDIVIDUAL (Personal Account)</option>
-							<option value="GOVERNMENT">GOVERNMENT (Gov Agency)</option>
-						</Select>
+						<label class="form-group__label">Contact Phone <span class="u-required">*</span></label>
+						<Textbox
+							v-model="form.profile.phone"
+							placeholder="+60123456789"
+							:error="formErrors.phone"
+						/>
 					</div>
 
-					<!-- Individual Identity Details -->
+					<!-- Individual Category Details -->
 					<template v-if="customerCategory === 'INDIVIDUAL'">
 						<div class="form-group">
-							<label class="form-group__label">Identity Document Type</label>
+							<label class="form-group__label">Identity Document Type <span class="u-required">*</span></label>
 							<Select v-model="selectedIdentityType">
 								<option value="MyKAD">MyKAD (Malaysian Citizen)</option>
 								<option value="MyPR">MyPR (Permanent Resident)</option>
 								<option value="MyKAS">MyKAS (Temporary Resident)</option>
-								<option value="ARMY">ARMY (Military Personnel)</option>
 								<option value="PASSPORT">PASSPORT (Foreigner / Expat)</option>
+								<option value="ARMY">ARMY (Military Personnel)</option>
 							</Select>
 						</div>
+
 						<div class="form-group">
-							<label class="form-group__label"
-								>{{ selectedIdentityType || "Identity" }} Number</label
-							>
+							<label class="form-group__label">
+								{{ selectedIdentityType || "Identity" }} Number
+							</label>
 							<Textbox
 								v-model="form.profile.identityNo"
 								:placeholder="`Enter ${selectedIdentityType || 'Identity'} Number`"
+								:error="formErrors.identityNo"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">
+								Tax Identity No (TIN)
+								<span style="font-size: 11px; color: var(--colors-text-muted)">(Default: EI00000000010)</span>
+							</label>
+							<Textbox
+								v-model="form.profile.tin"
+								placeholder="EI00000000010 (Leave blank for default)"
+								:error="formErrors.tin"
 							/>
 						</div>
 					</template>
 
-					<!-- Corporate / Government Business Reg No -->
-					<template v-else>
+					<!-- Business Category Details -->
+					<template v-else-if="customerCategory === 'COMPANY'">
 						<div class="form-group">
-							<label class="form-group__label">Business Reg No (BRN)</label>
+							<label class="form-group__label">
+								Business Registration No (BRN)
+								<span v-if="isLocalCompany" class="u-required">*</span>
+							</label>
 							<Textbox
 								v-model="form.profile.brn"
 								placeholder="202601000123 (123456-X)"
+								:error="formErrors.brn"
 							/>
 						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">
+								Tax Identity No (TIN)
+								<span v-if="isLocalCompany" class="u-required">*</span>
+							</label>
+							<Textbox
+								v-model="form.profile.tin"
+								placeholder="C2580000000"
+								:error="formErrors.tin"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">SST Registration Number</label>
+							<Textbox v-model="form.metadata.sstRegNo" placeholder="W10-1808-32000001" />
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">MSIC Code</label>
+							<Textbox v-model="form.profile.msicCode" placeholder="00000" />
+						</div>
+
+						<div class="form-group form-group--full">
+							<label class="form-group__label">Business Activity Description</label>
+							<Textbox v-model="form.profile.msicDesc" placeholder="NOT APPLICABLE" />
+						</div>
 					</template>
-				</div>
-			</div>
 
-			<!-- Credit & Tax Metadata Block -->
-			<div
-				class="panel-card"
-				:class="{ 'panel-card--disabled-mask': form.requestEinvoice && !form.metadata }"
-			>
-				<div class="panel-card__header">
-					<h2><i class="mdi mdi-file-document-edit-outline"></i> Credit & Tax</h2>
-					<Chip v-if="form.requestEinvoice" type="error">
-						Required for e-Invoice Integration
-					</Chip>
-				</div>
+					<!-- Government Category Details -->
+					<template v-else-if="customerCategory === 'GOVERNMENT'">
+						<div class="form-group">
+							<label class="form-group__label">Tax Identity No (TIN)</label>
+							<Textbox v-model="form.profile.tin" placeholder="Government Tax Ref (optional)" />
+						</div>
 
-				<div class="form-grid">
-					<div class="form-group">
-						<label class="form-group__label">
-							Default Transaction Currency
-							<span v-if="form.requestEinvoice" class="u-required">*</span>
-						</label>
-						<Textbox
-							v-model="form.metadata.currencyCode"
-							placeholder="MYR"
-							:error="formErrors.currencyCode"
-						/>
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Credit Limit Amount</label>
-						<Textbox v-model="form.metadata.creditLimit" placeholder="50000.00" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Overdue Limit Amount</label>
-						<Textbox v-model="form.metadata.overdueLimit" placeholder="10000.00" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Linked Accounting Control Account</label>
-						<Textbox v-model="form.metadata.controlAccount" placeholder="300-0000" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Tax Exemption Reference Number</label>
-						<Textbox v-model="form.metadata.taxExemptNo" placeholder="EXEMPT-2026-9" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label">Exemption Expiry Date (YYYY-MM-DD)</label>
-						<Textbox
-							v-model="form.metadata.exemptExpiryDate"
-							placeholder="2026-12-31"
-						/>
-					</div>
+						<div class="form-group">
+							<label class="form-group__label">SST Registration Number</label>
+							<Textbox v-model="form.metadata.sstRegNo" placeholder="SST Registration No (optional)" />
+						</div>
+
+						<div class="form-group">
+							<label class="form-group__label">MSIC Code</label>
+							<Textbox v-model="form.profile.msicCode" placeholder="00000" />
+						</div>
+
+						<div class="form-group form-group--full">
+							<label class="form-group__label">Business Activity Description</label>
+							<Textbox v-model="form.profile.msicDesc" placeholder="NOT APPLICABLE" />
+						</div>
+					</template>
 				</div>
 			</div>
 		</div>
@@ -490,7 +520,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { computed, ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Chip from "@/components/Chip.vue";
 import Badge from "@/components/Badge.vue";
@@ -632,8 +662,10 @@ const selectedIdentityType = ref<string>("MyKAD");
 watch(customerCategory, (newCat) => {
 	if (newCat === "INDIVIDUAL") {
 		form.value.profile.individualType = selectedIdentityType.value || "MyKAD";
+		form.value.profile.brn = "";
 	} else {
 		form.value.profile.individualType = newCat;
+		form.value.profile.identityNo = "";
 	}
 });
 
@@ -795,12 +827,21 @@ onMounted(async () => {
 				};
 
 				const rawIndType = c.profile?.individualType || "COMPANY";
-				if (rawIndType === "COMPANY" || rawIndType === "GOVERNMENT") {
-					customerCategory.value = rawIndType as any;
+				if (rawIndType === "COMPANY" || rawIndType === "business") {
+					customerCategory.value = "COMPANY";
+					selectedIdentityType.value = "MyKAD";
+				} else if (rawIndType === "GOVERNMENT" || rawIndType === "government") {
+					customerCategory.value = "GOVERNMENT";
 					selectedIdentityType.value = "MyKAD";
 				} else {
 					customerCategory.value = "INDIVIDUAL";
-					selectedIdentityType.value = rawIndType;
+					const upper = String(rawIndType).toUpperCase();
+					if (upper === "MYKAD" || rawIndType === "MyKAD") selectedIdentityType.value = "MyKAD";
+					else if (upper === "MYPR" || rawIndType === "MyPR") selectedIdentityType.value = "MyPR";
+					else if (upper === "MYKAS" || rawIndType === "MyKAS") selectedIdentityType.value = "MyKAS";
+					else if (upper === "ARMY" || rawIndType === "ARMY") selectedIdentityType.value = "ARMY";
+					else if (upper === "PASSPORT" || rawIndType === "Passport") selectedIdentityType.value = "PASSPORT";
+					else selectedIdentityType.value = rawIndType;
 				}
 			} else if (error) {
 				snackbar.error("Failed to load customer details.");
@@ -987,20 +1028,84 @@ async function handleRenewContractSubmit() {
 	}
 }
 
+const isLocalCompany = computed(() => {
+	const c = (form.value.address?.country || "").trim().toLowerCase();
+	return c === "malaysia" || c === "mys" || c === "my";
+});
+
 function validateSchemaLogic(): boolean {
 	formErrors.value = {};
 	let isValid = true;
 
+	// Compulsory for ALL
 	if (!form.value.name?.trim()) {
-		formErrors.value.name = "Customer Name is strictly required";
-		snackbar.warning("Customer Name is strictly mandatory.");
+		formErrors.value.name = "Customer Name is required";
 		isValid = false;
 	}
 
-	if (form.value.accountNo && (!form.value.profile || !form.value.profile.email?.trim())) {
-		formErrors.value.email = "Email is required when AutoCount AccountNo is set";
-		snackbar.warning("Profile email is required when AutoCount AccountNo is provided.");
+	const emailVal = form.value.profile?.email?.trim();
+	if (!emailVal) {
+		formErrors.value.email = "Email is required";
 		isValid = false;
+	} else {
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(emailVal)) {
+			formErrors.value.email = "Please enter a valid email address";
+			isValid = false;
+		}
+	}
+
+	if (!form.value.profile?.phone?.trim()) {
+		formErrors.value.phone = "Contact Phone is required";
+		isValid = false;
+	}
+
+	if (!form.value.address?.address1?.trim()) {
+		formErrors.value.address1 = "Address Line 1 is required";
+		isValid = false;
+	}
+
+	if (!form.value.address?.country?.trim()) {
+		formErrors.value.country = "Country is required";
+		isValid = false;
+	}
+
+	if (!form.value.address?.state?.trim()) {
+		formErrors.value.state = "State is required";
+		isValid = false;
+	}
+
+	if (!form.value.address?.city?.trim()) {
+		formErrors.value.city = "City is required";
+		isValid = false;
+	}
+
+	if (!form.value.address?.postcode?.trim()) {
+		formErrors.value.postcode = "Postcode is required";
+		isValid = false;
+	}
+
+	// Category Specific Rules
+	if (customerCategory.value === "INDIVIDUAL") {
+		const hasIdentity = !!form.value.profile?.identityNo?.trim();
+		const hasTin = !!form.value.profile?.tin?.trim();
+		if (!hasIdentity && !hasTin) {
+			formErrors.value.identityNo = "Either Identity Number or TIN is required";
+			formErrors.value.tin = "Either Identity Number or TIN is required";
+			snackbar.warning("Either Identity Number or TIN is required for Individual Account.");
+			isValid = false;
+		}
+	} else if (customerCategory.value === "COMPANY") {
+		if (isLocalCompany.value) {
+			if (!form.value.profile?.brn?.trim()) {
+				formErrors.value.brn = "Business Registration Number (BRN) is required for Local Company";
+				isValid = false;
+			}
+			if (!form.value.profile?.tin?.trim()) {
+				formErrors.value.tin = "TIN is required for Local Company";
+				isValid = false;
+			}
+		}
 	}
 
 	if (
@@ -1013,6 +1118,10 @@ function validateSchemaLogic(): boolean {
 		isValid = false;
 	}
 
+	if (!isValid && !formErrors.value.identityNo && !formErrors.value.currencyCode) {
+		snackbar.warning("Please fill in all compulsory fields (*).");
+	}
+
 	return isValid;
 }
 
@@ -1021,8 +1130,37 @@ async function handleSubmitForm() {
 
 	try {
 		loading.value = true;
+
+		const profileEmail = form.value.profile?.email?.trim();
+		const profilePhone = form.value.profile?.phone?.trim();
+		let profileTin = form.value.profile?.tin?.trim();
+		const profileBrn = customerCategory.value !== "INDIVIDUAL" ? form.value.profile?.brn?.trim() : undefined;
+		const profileIndType = customerCategory.value === "INDIVIDUAL" ? (selectedIdentityType.value || "MyKAD") : customerCategory.value;
+		const profileIdentityNo = customerCategory.value === "INDIVIDUAL" ? form.value.profile?.identityNo?.trim() : undefined;
+
+		// Default TIN for Individual if empty
+		if (customerCategory.value === "INDIVIDUAL" && !profileTin) {
+			profileTin = "EI00000000010";
+		}
+
+		// Defaults for MSIC Code & Desc
+		const msicCode = customerCategory.value !== "INDIVIDUAL" ? (form.value.profile?.msicCode?.trim() || "00000") : "00000";
+		const msicDesc = customerCategory.value !== "INDIVIDUAL" ? (form.value.profile?.msicDesc?.trim() || "NOT APPLICABLE") : "NOT APPLICABLE";
+
+		const profilePayload = {
+			email: profileEmail,
+			phone: profilePhone,
+			tin: profileTin || undefined,
+			brn: profileBrn || undefined,
+			individualType: profileIndType,
+			identityNo: profileIdentityNo || undefined,
+			msicCode,
+			msicDesc,
+		};
+
 		const payload = {
 			...form.value,
+			profile: profilePayload,
 			contractNo: contracts.value[0]?.contractNo || "",
 			metadata: {
 				...form.value.metadata,

@@ -46,8 +46,14 @@ export const workOrderApi = {
 
 	getNotes: (guid: string) => client.GET("/api/work-order/{guid}/notes", { params: { path: { guid } } }) as any,
 
-	createNote: (guid: string, body: { note: string }) =>
+	createNote: (guid: string, body: { content: string; viewLevel?: string }) =>
 		client.POST("/api/work-order/{guid}/notes" as any, { params: { path: { guid } }, body }) as any,
+
+	updateNote: (noteGuid: string, body: { content?: string; viewLevel?: string }) =>
+		client.PUT("/api/work-order/notes/{noteGuid}" as any, { params: { path: { noteGuid } }, body }) as any,
+
+	deleteNote: (noteGuid: string) =>
+		client.DELETE("/api/work-order/notes/{noteGuid}" as any, { params: { path: { noteGuid } } }) as any,
 
 	// Parts & Services
 	getParts: (guid: string) => client.GET("/api/work-order/{guid}/parts", { params: { path: { guid } } }) as any,
@@ -70,6 +76,9 @@ export const workOrderApi = {
 	// Files
 	getFiles: (guid: string, query?: { category?: string }) =>
 		client.GET("/api/work-order/{guid}/files" as any, { params: { path: { guid }, query } }) as any,
+
+	updateFile: (fileGuid: string, body: any) =>
+		client.PUT("/api/work-order/files/{fileGuid}" as any, { params: { path: { fileGuid } }, body }) as any,
 
 	deleteFile: (fileGuid: string) =>
 		client.DELETE("/api/work-order/files/{fileGuid}" as any, { params: { path: { fileGuid } } }) as any,

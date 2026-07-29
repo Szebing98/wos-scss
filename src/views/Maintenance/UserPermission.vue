@@ -269,16 +269,24 @@ async function handleUserSelection(user: UserModel) {
 
 	try {
 		if (user.guid) {
-			const res = await http.get(`/abilities/users/${user.guid}`);
-			const userAbilities: PermissionModel[] = res.data?.data || res.data || [];
-			if (Array.isArray(userAbilities)) {
-				userAbilities.forEach((p) => {
+			const [inheritedRes, overridesRes] = await Promise.all([
+				http.get(`/abilities/users/${user.guid}/inherited`),
+				http.get(`/abilities/users/${user.guid}/overrides`),
+			]);
+			const inheritedList: PermissionModel[] = inheritedRes.data?.data || inheritedRes.data || [];
+			const overridesList: PermissionModel[] = overridesRes.data?.data || overridesRes.data || [];
+
+			if (Array.isArray(inheritedList)) {
+				inheritedList.forEach((p) => {
 					const code = p.code || `${p.action}_${p.subject}`;
-					if (p.inverted) {
-						userOverrides.value.set(code, "deny");
-					} else {
-						userOverrides.value.set(code, "allow");
-					}
+					inheritedPermissions.value.add(code);
+				});
+			}
+
+			if (Array.isArray(overridesList)) {
+				overridesList.forEach((p) => {
+					const code = p.code || `${p.action}_${p.subject}`;
+					userOverrides.value.set(code, p.inverted ? "deny" : "allow");
 				});
 			}
 		}
@@ -368,7 +376,7 @@ async function saveOverrides() {
 	isSaving.value = true;
 
 	try {
-		const selectedAbilities: Array<{ action: string; subject: string; inverted: boolean }> = [];
+		const selectedAbilities: Array<{ action: string; subject: string; inverted: boolean; modifiedBy?: string }> = [];
 		userOverrides.value.forEach((overrideType, code) => {
 			const perm = allPermissions.value.find((p) => p.code === code);
 			if (perm) {
@@ -376,6 +384,7 @@ async function saveOverrides() {
 					action: perm.action,
 					subject: perm.subject,
 					inverted: overrideType === "deny",
+					modifiedBy: selectedUser.value?.code,
 				});
 			}
 		});
