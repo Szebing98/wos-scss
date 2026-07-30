@@ -751,6 +751,7 @@ onMounted(() => {
 	grid-template-columns: 4fr 8fr;
 	gap: var(--spacing-lg);
 	align-items: start;
+	min-height: 0;
 
 	@media (max-width: 960px) {
 		grid-template-columns: 1fr;
@@ -761,24 +762,33 @@ onMounted(() => {
 		border: 1px solid var(--colors-surface-border);
 		border-radius: var(--radius-xxs, 12px);
 		padding: var(--spacing-md);
-		height: 650px;
+		height: min(650px, calc(100vh - var(--topbar-h) - 170px));
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-md);
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+		position: sticky;
+		top: var(--spacing-lg);
 
 		@media (max-width: 960px) {
+			position: static;
 			height: auto;
 			max-height: 400px;
 		}
 	}
 
 	&__right-panel {
-		min-height: 650px;
-		height: 100%;
+		height: calc(100vh - var(--topbar-h) - 170px);
+		min-height: 480px;
+		overflow-y: auto;
+		padding-right: 4px;
+		scrollbar-gutter: stable;
 
 		@media (max-width: 960px) {
+			height: auto;
 			min-height: auto;
+			overflow: visible;
+			padding-right: 0;
 		}
 	}
 }

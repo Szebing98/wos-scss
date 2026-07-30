@@ -7,9 +7,11 @@ import Textbox from "@/components/Textbox.vue";
 import DatePicker from "@/components/DatePicker.vue";
 import Dialog from "@/components/Dialog.vue";
 import Badge from "@/components/Badge.vue";
+import GoogleMapPicker from "@/components/GoogleMapPicker.vue";
 import { workOrderApi } from "@/api/work-order/work-order.api";
 import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 // Sub-tab Components
 import GeneralTab from "./tabs/GeneralTab.vue";
@@ -24,6 +26,7 @@ import ReportTab from "./tabs/ReportTab.vue";
 
 const route = useRoute();
 const router = useRouter();
+const dateFormatStore = useDateFormatStore();
 
 const woNumber = route.params.id as string;
 
@@ -42,11 +45,37 @@ if (fromStatus === "done") {
 
 const currentStepIndex = ref(initialStep);
 const isEditing = computed(() => currentStepIndex.value === 2);
+const normalizedWorkOrderStatus = computed(() =>
+	String(workOrder.value?.status || "")
+		.replace(/\s+/g, "")
+		.toLowerCase(),
+);
+const canEditGeneral = computed(() =>
+	["inprogress", "progress"].includes(normalizedWorkOrderStatus.value),
+);
+const isDraftOrNew = computed(() =>
+	["draft", "new"].includes(normalizedWorkOrderStatus.value),
+);
+const isPendingApproval = computed(() =>
+	["pendingapproval", "pending"].includes(normalizedWorkOrderStatus.value),
+);
+
+function normalizeWorkOrderStatusForUi(w: any) {
+	if (w?.isDraft) return "Draft";
+	const status = String(w?.orderStatus || w?.status || "InProgress").toLowerCase();
+	if (status === "new") return "New";
+	if (status === "pending") return "PendingApproval";
+	if (status === "progress") return "InProgress";
+	return w?.status || w?.orderStatus || "InProgress";
+}
 
 function updateStepFromStatus(statusStr: string) {
 	if (!statusStr) return;
 	const s = statusStr.toLowerCase();
-	if (s === "new") {
+	if (s === "draft") {
+		currentStepIndex.value = 0;
+		breadcrumbStatus.value = "Draft";
+	} else if (s === "new") {
 		currentStepIndex.value = 0;
 		breadcrumbStatus.value = "New Request";
 	} else if (s === "pendingapproval") {
@@ -73,6 +102,9 @@ function updateStepFromStatus(statusStr: string) {
 function getStatusChipType(status: string) {
 	if (!status) return "default";
 	switch (status) {
+		case "Draft":
+		case "draft":
+			return "warning";
 		case "New":
 		case "new":
 			return "new";
@@ -194,7 +226,9 @@ const workOrder = ref<any>({
 	workType: "Piping",
 	workTypeItem: "New Assembly",
 	salesAgent: "",
+	salesAgentDisplay: "",
 	projectPersonInCharge: "",
+	projectPersonInChargeDisplay: "",
 	startDate: "",
 	estimatedEndDate: "",
 	description: "",
@@ -202,9 +236,12 @@ const workOrder = ref<any>({
 	siteCode: "",
 	jobPriority: "Medium",
 	leaderCode: "",
+	leaderDisplay: "",
 	leaderIICode: "",
+	leaderIIDisplay: "",
 	technicianCodes: [] as string[],
 	leadEngineer: "",
+	leadEngineerDisplay: "",
 	assistantEngineers: [] as string[],
 	customer: { name: "", email: "", phone: "" },
 	customerPic: "",
@@ -239,6 +276,13 @@ const workOrder = ref<any>({
 
 const loading = ref(false);
 
+function formatUserDisplay(name?: string | null, code?: string | null) {
+	const cleanName = name?.trim();
+	const cleanCode = code?.trim();
+	if (cleanName && cleanCode && cleanName !== cleanCode) return `${cleanName} (${cleanCode})`;
+	return cleanName || cleanCode || "";
+}
+
 async function fetchWorkOrderDetails() {
 	if (!woNumber) return;
 	loading.value = true;
@@ -250,21 +294,52 @@ async function fetchWorkOrderDetails() {
 				guid: w.guid,
 				woNumber: w.docNo || w.code || w.guid.substring(0, 8).toUpperCase(),
 				title: w.title || "",
-				status: w.orderStatus || w.status || "InProgress",
+				status: normalizeWorkOrderStatusForUi(w),
 				workType: w.workType || "",
 				workTypeItem: w.workTypeItem || "",
 				salesAgent: w.salesAgentCode || "",
+				salesAgentDisplay: formatUserDisplay(
+					w.salesAgentName || w.salesAgentDisplayName || w.salesAgentProfileName,
+					w.salesAgentDisplayCode || w.salesAgentCode,
+				),
 				projectPersonInCharge: w.personInChargeCode || w.projectPicCode || "",
+				projectPersonInChargeDisplay: formatUserDisplay(
+					w.projectPicName || w.personInChargeName,
+					w.projectPicDisplayCode ||
+						w.personInChargeDisplayCode ||
+						w.personInChargeCode ||
+						w.projectPicCode,
+				),
 				startDate: w.startDate || "",
 				estimatedEndDate: w.estimatedEndDate || "",
 				description: w.description || "",
 				location: w.location || w.locationName || "",
+				latitude: w.latitude ?? null,
+				longitude: w.longitude ?? null,
 				siteCode: w.siteCode || "",
 				jobPriority: w.jobPriority || "Low",
 				leaderCode: w.leaderCode || w.leadEngineerCode || "",
-				leaderIICode: w.leaderIICode || "",
+				leaderDisplay: formatUserDisplay(
+					w.leaderName || w.leadEngineerName,
+					w.leaderDisplayCode ||
+						w.leadEngineerDisplayCode ||
+						w.leaderCode ||
+						w.leadEngineerCode,
+				),
+				leaderIICode: w.leaderIICode || w.leaderIiCode || "",
+				leaderIIDisplay: formatUserDisplay(
+					w.leaderIIName,
+					w.leaderIIDisplayCode || w.leaderIICode || w.leaderIiCode,
+				),
 				technicianCodes: w.technicianCodes || w.assistantEngineers || [],
 				leadEngineer: w.leaderCode || w.leadEngineerCode || "",
+				leadEngineerDisplay: formatUserDisplay(
+					w.leaderName || w.leadEngineerName,
+					w.leaderDisplayCode ||
+						w.leadEngineerDisplayCode ||
+						w.leaderCode ||
+						w.leadEngineerCode,
+				),
 				assistantEngineers: w.technicianCodes || w.assistantEngineers || [],
 				customerPic: w.customerPic || "",
 				customerPicPhone: w.customerPicPhone || "",
@@ -718,20 +793,13 @@ function printReport() {
 // New states and variables
 const activityLogs = ref<any[]>([]);
 const workNotes = ref<any[]>([]);
-const reportType = ref("general");
 const images = ref<any[]>([]);
 const partsReplaced = computed(() => workOrder.value?.partsReplaced || []);
 
 // Date format helper
 function formatDateString(dateStr: string | Date | null) {
 	if (!dateStr) return "";
-	const date = new Date(dateStr);
-	if (isNaN(date.getTime())) return "";
-	return date.toLocaleDateString("en-GB", {
-		day: "2-digit",
-		month: "short",
-		year: "numeric",
-	});
+	return dateFormatStore.formatDate(dateStr);
 }
 
 // computedSteps mapping based on real dates
@@ -890,15 +958,38 @@ async function saveGeneralFormChanges() {
 	if (!workOrder.value) return;
 	loading.value = true;
 	try {
+		const estimatedEndDate = workOrder.value.estimatedEndDate
+			? new Date(workOrder.value.estimatedEndDate).toISOString()
+			: undefined;
 		const payload = {
 			personInChargeCode: workOrder.value.projectPersonInCharge,
 			leaderCode: workOrder.value.leaderCode,
-			leaderIiCode: workOrder.value.leaderIICode,
+			leaderIICode: workOrder.value.leaderIICode,
 			technicianCodes: workOrder.value.technicianCodes,
+			jobPriority: workOrder.value.jobPriority,
+			estimatedEndDate,
+			siteCode: workOrder.value.siteCode,
 			location: workOrder.value.location,
+			latitude: workOrder.value.latitude,
+			longitude: workOrder.value.longitude,
 			description: workOrder.value.description,
 		};
-		const { error } = await workOrderApi.updateProgress(woNumber, payload);
+		let res;
+		switch (normalizedWorkOrderStatus.value) {
+			case "draft":
+				res = await workOrderApi.updateDraft(woNumber, payload);
+				break;
+			case "new":
+				res = await workOrderApi.updateNew(woNumber, payload);
+				break;
+			case "pending":
+			case "pendingapproval":
+				res = await workOrderApi.updatePending(woNumber, payload);
+				break;
+			default:
+				res = await workOrderApi.updateProgress(woNumber, payload);
+		}
+		const { error } = res;
 		if (error) {
 			alert(`Failed to save changes: ${error.error.message}`);
 		} else {
@@ -937,6 +1028,25 @@ async function approveDoneWorkOrder() {
 	}
 }
 
+async function approvePendingWorkOrder() {
+	if (!confirm("Are you sure you want to approve this work order?")) return;
+	loading.value = true;
+	try {
+		const { error } = await workOrderApi.approve(woNumber);
+		if (error) {
+			alert(`Failed to approve work order: ${error.error?.message || error.message}`);
+			return;
+		}
+		alert("Work order approved successfully!");
+		await fetchWorkOrderDetails();
+		await fetchActivityLogs();
+	} catch (e) {
+		console.error(e);
+	} finally {
+		loading.value = false;
+	}
+}
+
 // Reject dialog triggers & handlers
 const isRejectDialogOpen = ref(false);
 const rejectForm = ref({
@@ -962,7 +1072,11 @@ async function submitReject() {
 		if (error) {
 			alert(`Failed to reject work order: ${error.error.message}`);
 		} else {
-			alert("Work order rejected and sent back to In Progress!");
+			alert(
+				isPendingApproval.value
+					? "Work order rejected successfully!"
+					: "Work order rejected and sent back to In Progress!",
+			);
 			isRejectDialogOpen.value = false;
 			await fetchWorkOrderDetails();
 			await fetchActivityLogs();
@@ -1155,8 +1269,9 @@ onMounted(async () => {
 		});
 		if (userRes.data && userRes.data.data) {
 			users.value = userRes.data.data.map((u: any) => ({
-				code: u.displayCode || u.guid.substring(0, 8).toUpperCase(),
-				name: u.displayName || "Unknown",
+				code: u.code || u.guid,
+				displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
+				name: u.displayName || u.profile?.displayName || u.name || "Unknown",
 				role: (u.role || u.userGroup || u.description || "").toLowerCase(),
 			}));
 		}
@@ -1204,6 +1319,33 @@ onUnmounted(() => {
 				<Button variant="outlined" @click="router.push('/work-order')">
 					<i class="mdi mdi-chevron-left" style="margin-right: 4px"></i> Back
 				</Button>
+				<Button
+					v-if="isDraftOrNew"
+					variant="primary"
+					@click="
+						router.push({
+							name: 'Work Order Form',
+							params: { id: workOrder.guid || woNumber },
+						})
+					"
+				>
+					<i class="mdi mdi-note-edit-outline" style="margin-right: 4px"></i>
+					Edit
+				</Button>
+				<template v-if="isPendingApproval && isManager">
+					<Button variant="primary" @click="approvePendingWorkOrder">
+						<i class="mdi mdi-check-circle-outline" style="margin-right: 4px"></i>
+						Approve
+					</Button>
+					<Button
+						variant="outlined"
+						style="color: var(--colors-error); border-color: var(--colors-error)"
+						@click="openRejectDoneDialog"
+					>
+						<i class="mdi mdi-close-circle-outline" style="margin-right: 4px"></i>
+						Reject
+					</Button>
+				</template>
 				<!-- Save Changes for InProgress state -->
 				<Button
 					variant="outlined"
@@ -1350,7 +1492,7 @@ onUnmounted(() => {
 						:workOrder="workOrder"
 						:users="users"
 						:workTypes="workTypes"
-						:isEditing="isEditing"
+						:isEditing="canEditGeneral"
 						:contractStatus="contractStatus"
 						:siteInstructionsFiles="siteInstructionsFiles"
 						:phases="phases"
@@ -1449,10 +1591,8 @@ onUnmounted(() => {
 					<ReportTab
 						v-if="activeTab === 'report'"
 						:workOrder="workOrder"
-						:reportType="reportType"
 						:partsReplaced="partsReplaced"
 						:images="images"
-						@updateReportType="reportType = $event"
 						@print="printReport"
 					/>
 				</Card>
@@ -1621,6 +1761,30 @@ onUnmounted(() => {
 					:disabled="!rejectForm.rejectedReason"
 				>
 					Reject Work Order
+				</Button>
+			</template>
+		</Dialog>
+
+		<Dialog
+			v-model="isMapDialogOpen"
+			title="Work Order Location"
+			maxWidth="760px"
+		>
+			<GoogleMapPicker
+				v-model:location="workOrder.location"
+				v-model:latitude="workOrder.latitude"
+				v-model:longitude="workOrder.longitude"
+				:readonly="!canEditGeneral"
+				height="420px"
+			/>
+			<template #footer>
+				<Button variant="secondary" @click="isMapDialogOpen = false">Close</Button>
+				<Button
+					v-if="canEditGeneral"
+					variant="primary"
+					@click="isMapDialogOpen = false"
+				>
+					Done
 				</Button>
 			</template>
 		</Dialog>

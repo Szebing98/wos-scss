@@ -9,6 +9,7 @@ import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import MultiSelect from "@/components/MultiSelect.vue";
 import DatePicker from "@/components/DatePicker.vue";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 interface CustomerModel {
 	name: string;
@@ -65,6 +66,7 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
+const dateFormatStore = useDateFormatStore();
 
 const emit = defineEmits<{
 	(e: "update:modelValue", value: boolean): void;
@@ -191,9 +193,24 @@ function handleEdit() {
 	}
 }
 
+function opensInFormView(status?: string | null) {
+	const normalized = String(status || "")
+		.replace(/\s+/g, "")
+		.toLowerCase();
+	return ["draft", "new", "pending", "pendingapproval"].includes(normalized);
+}
+
 function viewFullDetails() {
 	if (props.workOrder) {
 		isOpen.value = false;
+		if (props.workOrder.isDraft || opensInFormView(props.workOrder.status)) {
+			router.push({
+				name: "Work Order Form",
+				params: { id: props.workOrder.guid || props.workOrder.woNumber },
+				query: { mode: "view" },
+			});
+			return;
+		}
 		router.push({
 			name: "Work Order Detail",
 			params: { id: props.workOrder.guid || props.workOrder.woNumber },
@@ -256,9 +273,7 @@ function saveProgress() {
 					</div>
 					<div class="detail-item">
 						<span class="detail-label">Created At</span>
-						<span class="detail-value">{{
-							new Date(workOrder.createdAt).toLocaleString()
-						}}</span>
+						<span class="detail-value">{{ dateFormatStore.formatDateTime(workOrder.createdAt) }}</span>
 					</div>
 				</div>
 			</div>
@@ -327,7 +342,7 @@ function saveProgress() {
 						<span class="detail-label">Est. Completion</span>
 						<span class="detail-value">{{
 							workOrder.estimatedEndDate
-								? new Date(workOrder.estimatedEndDate).toLocaleString()
+								? dateFormatStore.formatDateTime(workOrder.estimatedEndDate)
 								: "Not Set"
 						}}</span>
 					</div>

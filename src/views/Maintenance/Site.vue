@@ -8,12 +8,14 @@ import Dialog from "@/components/Dialog.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 import type { SiteModel } from "@/api/maintenance/site/site.types";
 
 const viewMode = ref<"card" | "table">("card");
 const searchString = ref("");
 const filterStatus = ref("all");
 const isLoading = ref(false);
+const dateFormatStore = useDateFormatStore();
 
 const isDialogOpen = ref(false);
 const isNewRecord = ref(false);
@@ -35,6 +37,7 @@ const tableHeaders: TableHeader[] = [
 	{ key: "code", label: "Site Code", width: "150px", minWidth: "130px" },
 	{ key: "name", label: "Site Name", width: "220px", minWidth: "170px" },
 	{ key: "description", label: "Description", width: "auto", minWidth: "200px" },
+	{ key: "createdAt", label: "Added", width: "140px", minWidth: "120px" },
 	{ key: "status", label: "Status", width: "130px", minWidth: "110px" },
 	{ key: "actions", label: "Actions", align: "right", width: "130px", minWidth: "110px" },
 ];
@@ -281,7 +284,7 @@ async function confirmToggleStatus() {
 
 				<div class="site-card__footer">
 					<span class="site-card__date" v-if="site.createdAt">
-						Added: {{ new Date(site.createdAt).toISOString().split('T')[0] }}
+						Added: {{ dateFormatStore.formatDate(site.createdAt) }}
 					</span>
 					<div class="site-card__actions">
 						<button class="btn btn--icon" @click="openEditModal(site)" title="Edit Site">
@@ -322,6 +325,9 @@ async function confirmToggleStatus() {
 					</template>
 					<template #item-description="{ item }">
 						<span class="u-text-muted">{{ item.description || "—" }}</span>
+					</template>
+					<template #item-createdAt="{ item }">
+						{{ dateFormatStore.formatDate(item.createdAt) }}
 					</template>
 					<template #item-status="{ item }">
 						<Badge :type="item.isActive ? 'success' : 'error'">

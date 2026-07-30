@@ -14,6 +14,55 @@ export const DEFAULT_ROLES: RoleModel[] = [
 	{ code: "Sales", name: "Sales", description: "Manage customer requests" },
 ];
 
+export const ROLE_LEVELS: Record<string, number> = {
+	SA: 3,
+	SUPERADMIN: 3,
+	ADM: 3,
+	ADMIN: 3,
+	ADMINISTRATOR: 3,
+	MGR: 2,
+	MANAGER: 2,
+	ENG: 1,
+	ENGINEER: 1,
+	SALES: 1,
+};
+
+function normalizeRoleKey(value?: string | null): string {
+	return String(value || "")
+		.trim()
+		.toUpperCase()
+		.replace(/\s+/g, "");
+}
+
+export function getRoleLevel(role?: Partial<RoleModel> | string | null): number {
+	if (!role) return 0;
+	const code = typeof role === "string" ? role : role.code;
+	const name = typeof role === "string" ? role : role.name;
+
+	return ROLE_LEVELS[normalizeRoleKey(code)] || ROLE_LEVELS[normalizeRoleKey(name)] || 0;
+}
+
+export function getHighestRoleLevel(roles: Array<Partial<RoleModel>> = []): number {
+	return roles.reduce((highest, role) => Math.max(highest, getRoleLevel(role)), 0);
+}
+
+export function hasRole(roles: Array<Partial<RoleModel>> = [], target?: Partial<RoleModel> | null) {
+	if (!target) return false;
+	const targetCode = normalizeRoleKey(target.code);
+	const targetName = normalizeRoleKey(target.name);
+
+	return roles.some((role) => {
+		const code = normalizeRoleKey(role.code);
+		const name = normalizeRoleKey(role.name);
+		return Boolean(
+			(targetCode && code === targetCode) ||
+			(targetName && name === targetName) ||
+			(targetCode && name === targetCode) ||
+			(targetName && code === targetName),
+		);
+	});
+}
+
 export async function fetchRoleList(): Promise<RoleModel[]> {
 	try {
 		const res = await http.get("/user-groups");

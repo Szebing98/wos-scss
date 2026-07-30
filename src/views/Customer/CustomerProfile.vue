@@ -8,10 +8,12 @@ import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { customerApi } from "@/api/customer/customer.api";
 import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 const route = useRoute();
 const router = useRouter();
 const snackbar = useSnackbarStore();
+const dateFormatStore = useDateFormatStore();
 
 const customer = ref<any>(null);
 const contracts = ref<any[]>([]);
@@ -208,8 +210,7 @@ function getAvatarStyle(name: string) {
 }
 
 function formatDate(iso: string) {
-	if (!iso) return "—";
-	return iso.slice(0, 10);
+	return dateFormatStore.formatDate(iso);
 }
 </script>
 

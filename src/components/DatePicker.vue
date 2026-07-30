@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 const props = defineProps<{
 	modelValue?: string | null;
@@ -25,18 +26,20 @@ const popoverRef = ref<HTMLElement | null>(null);
 const placement = ref<"bottom" | "top">("bottom");
 const inputValue = ref("");
 const popoverStyle = ref<Record<string, string>>({});
+const dateFormatStore = useDateFormatStore();
 
 const currentMonth = ref(new Date().getMonth());
 const currentYear = ref(new Date().getFullYear());
 const selectedTime = ref("00:00");
+const selectedDate = computed(() => dateFormatStore.parseDateValue(props.modelValue));
 
 // Init from modelValue
 watch(
 	() => props.modelValue,
 	(newVal) => {
 		if (newVal) {
-			const d = new Date(newVal);
-			if (!isNaN(d.getTime())) {
+			const d = dateFormatStore.parseDateValue(newVal);
+			if (d) {
 				currentMonth.value = d.getMonth();
 				currentYear.value = d.getFullYear();
 				const hh = String(d.getHours()).padStart(2, "0");
@@ -50,10 +53,10 @@ watch(
 
 const formattedValue = computed(() => {
 	if (!props.modelValue) return "";
-	const d = new Date(props.modelValue);
-	if (isNaN(d.getTime())) return props.modelValue;
+	const d = dateFormatStore.parseDateValue(props.modelValue);
+	if (!d) return props.modelValue;
 
-	let formatted = d.toISOString().split("T")[0];
+	let formatted = dateFormatStore.formatDate(d);
 	if (props.enableTime) {
 		const hh = String(d.getHours()).padStart(2, "0");
 		const mm = String(d.getMinutes()).padStart(2, "0");
@@ -88,9 +91,8 @@ const monthNames = [
 const weekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 const displayDateHeader = computed(() => {
-	if (!props.modelValue) return "Select Date";
-	const d = new Date(props.modelValue);
-	if (isNaN(d.getTime())) return "Select Date";
+	const d = selectedDate.value;
+	if (!d) return "Select Date";
 	const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 	const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 	return `${days[d.getDay()]}, ${month[d.getMonth()]} ${d.getDate()}`;
@@ -121,8 +123,10 @@ const daysInMonth = computed(() => {
 		if (props.max && dateStr > props.max) disabled = true;
 
 		let selected = false;
-		if (props.modelValue) {
-			const modelDateStr = props.modelValue.split("T")[0].split(" ")[0];
+		if (selectedDate.value) {
+			const modelMonth = String(selectedDate.value.getMonth() + 1).padStart(2, "0");
+			const modelDay = String(selectedDate.value.getDate()).padStart(2, "0");
+			const modelDateStr = `${selectedDate.value.getFullYear()}-${modelMonth}-${modelDay}`;
 			selected = modelDateStr === dateStr;
 		}
 
@@ -174,8 +178,11 @@ function selectDate(day: any) {
 }
 
 function handleTimeChange() {
-	if (!props.modelValue) return;
-	const dateStr = props.modelValue.split("T")[0].split(" ")[0];
+	if (!selectedDate.value) return;
+	const y = selectedDate.value.getFullYear();
+	const m = String(selectedDate.value.getMonth() + 1).padStart(2, "0");
+	const d = String(selectedDate.value.getDate()).padStart(2, "0");
+	const dateStr = `${y}-${m}-${d}`;
 	updateModelValue(dateStr);
 }
 
@@ -252,8 +259,8 @@ function onManualInput(e: Event) {
 		return;
 	}
 
-	const dateObj = new Date(val);
-	if (!isNaN(dateObj.getTime())) {
+	const dateObj = dateFormatStore.parseDateValue(val);
+	if (dateObj) {
 		const y = dateObj.getFullYear();
 		const m = dateObj.getMonth();
 		if (y >= 1900 && y <= 2100 && val.length >= 10) {
@@ -346,8 +353,8 @@ onUnmounted(() => {
 					v-if="isOpen"
 				>
 					<div class="datepicker-popover__header">
-						<div class="datepicker-popover__year" v-if="modelValue && !isNaN(new Date(modelValue).getTime())">
-							{{ new Date(modelValue).getFullYear() }}
+						<div class="datepicker-popover__year" v-if="selectedDate">
+							{{ selectedDate.getFullYear() }}
 						</div>
 						<div class="datepicker-popover__date">
 							{{ displayDateHeader }}

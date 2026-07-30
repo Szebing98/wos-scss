@@ -3,8 +3,24 @@ import type {
 	GetWorkOrdersQuery,
 	CreateWorkOrderDraftBody,
 	CreateWorkOrderNewBody,
+	CreateWorkOrderPendingBody,
 	RejectWorkOrderBody,
+	SubmitWorkOrderNewBody,
+	SubmitWorkOrderApprovalBody,
 } from "./work-order.types";
+
+function multipartRequest(path: string, body: FormData) {
+	const token = localStorage.getItem("authToken");
+	const headers = new Headers();
+	if (token) headers.set("Authorization", `Bearer ${token}`);
+
+	return fetch(path, {
+		method: "POST",
+		body,
+		headers,
+		credentials: "include",
+	});
+}
 
 export const workOrderApi = {
 	getWorkOrders: (query: GetWorkOrdersQuery) => client.GET("/api/work-order/", { params: { query } }) as any,
@@ -14,6 +30,8 @@ export const workOrderApi = {
 	createDraft: (body: CreateWorkOrderDraftBody) => client.POST("/api/work-order/draft", { body }) as any,
 
 	createNew: (body: CreateWorkOrderNewBody) => client.POST("/api/work-order/new", { body }) as any,
+
+	createPending: (body: CreateWorkOrderPendingBody) => client.POST("/api/work-order/pending", { body }) as any,
 
 	approve: (guid: string) => client.PUT("/api/work-order/{guid}/approve", { params: { path: { guid } } }) as any,
 
@@ -73,6 +91,12 @@ export const workOrderApi = {
 	updateProgress: (guid: string, body: any) =>
 		client.PUT("/api/work-order/{guid}/progress", { params: { path: { guid } }, body }) as any,
 
+	submitNew: (guid: string, body: SubmitWorkOrderNewBody) =>
+		client.PUT("/api/work-order/{guid}/submit-new", { params: { path: { guid } }, body }) as any,
+
+	submitApproval: (guid: string, body: SubmitWorkOrderApprovalBody) =>
+		client.PUT("/api/work-order/{guid}/submit-approval", { params: { path: { guid } }, body }) as any,
+
 	// Files
 	getFiles: (guid: string, query?: { category?: string }) =>
 		client.GET("/api/work-order/{guid}/files" as any, { params: { path: { guid }, query } }) as any,
@@ -84,8 +108,8 @@ export const workOrderApi = {
 		client.DELETE("/api/work-order/files/{fileGuid}" as any, { params: { path: { fileGuid } } }) as any,
 
 	uploadFile: (guid: string, body: FormData) =>
-		fetch(`/api/work-order/${guid}/files/upload`, { method: "POST", body }) as any,
+		multipartRequest(`/api/work-order/${guid}/files/upload`, body) as any,
 
 	uploadFiles: (guid: string, body: FormData) =>
-		fetch(`/api/work-order/${guid}/files/upload-bulk`, { method: "POST", body }) as any,
+		multipartRequest(`/api/work-order/${guid}/files/upload-bulk`, body) as any,
 };

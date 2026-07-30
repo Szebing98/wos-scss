@@ -10,6 +10,7 @@ import DatePicker from "@/components/DatePicker.vue";
 import Autocomplete from "@/components/Autocomplete.vue";
 import GoogleMapPicker from "@/components/GoogleMapPicker.vue";
 import { useRouter, useRoute } from "vue-router";
+import { useAuthStore } from "@/stores/auth.store";
 import { customerApi } from "@/api/customer/customer.api";
 import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
@@ -18,9 +19,102 @@ import http from "@/utils/http";
 
 const router = useRouter();
 const route = useRoute();
+const authStore = useAuthStore();
+const SITE_INSTRUCTIONS_CATEGORY = "SiteInstructions";
+const workOrderCode = ref("");
 
 const isEditMode = computed(() => !!route.params.id);
-const pageTitle = computed(() => (isEditMode.value ? "Edit Work Order" : "Create New Work Order"));
+const isReadOnly = computed(() => isEditMode.value && route.query.mode === "view");
+const pageTitle = computed(() => {
+	if (isReadOnly.value) {
+		return workOrderCode.value ? `View Work Order - ${workOrderCode.value}` : "View Work Order";
+	}
+	return isEditMode.value ? "Edit Work Order" : "Create New Work Order";
+});
+
+function normalizeWorkOrderStatus(w: any) {
+	if (w?.isDraft) return "Draft";
+	const status = String(w?.orderStatus || w?.status || "Draft").toLowerCase();
+	if (status === "new") return "New";
+	if (status === "pending") return "PendingApproval";
+	if (status === "progress") return "InProgress";
+	return w?.status || w?.orderStatus || "Draft";
+}
+
+function userOptionDisplay(user: any) {
+	const name = user?.name?.trim();
+	const displayCode = user?.displayCode?.trim();
+	if (name && displayCode && name.includes(displayCode)) return name;
+	if (displayCode?.toUpperCase().startsWith("USR-")) return name || "";
+	if (name && displayCode) return `${name} (${displayCode})`;
+	return name || displayCode || user?.code || "";
+}
+
+function upsertUserOption(
+	code?: string | null,
+	name?: string | null,
+	displayCode?: string | null,
+	role?: string,
+) {
+	if (!code) return;
+	const normalizedCode = String(code);
+	const existing = users.value.find((user: any) => String(user.code) === normalizedCode);
+	const nextName = name?.trim();
+	const nextDisplayCode = displayCode?.trim();
+
+	if (existing) {
+		if (nextName) existing.name = nextName;
+		if (nextDisplayCode) existing.displayCode = nextDisplayCode;
+		if (role && !existing.role) existing.role = role;
+		return;
+	}
+
+	users.value.push({
+		code: normalizedCode,
+		displayCode: nextDisplayCode || normalizedCode,
+		name: nextName || nextDisplayCode || normalizedCode,
+		role: role || "",
+	});
+}
+
+const normalizedStatus = computed(() =>
+	String(formData.value.status || "")
+		.replace(/\s+/g, "")
+		.toLowerCase(),
+);
+const isDraftStatus = computed(() => normalizedStatus.value === "draft");
+const isNewStatus = computed(() => normalizedStatus.value === "new");
+const canEditReadOnlyWorkOrder = computed(() =>
+	["draft", "new", "pending", "pendingapproval"].includes(normalizedStatus.value),
+);
+const isPendingApproval = computed(() =>
+	["pending", "pendingapproval"].includes(normalizedStatus.value),
+);
+const canApprovePending = computed(() => {
+	const user = authStore.currentUser || authStore.user || {};
+	const permissions = [
+		...(user.permissions || []),
+		...(user.userGroups || user.groups || []).flatMap(
+			(group: any) => group.permissions || [],
+		),
+	].map((permission: any) =>
+		String(permission.code || permission.name || permission).toUpperCase(),
+	);
+	const role = String(
+		user.role ||
+			user.userGroupCode ||
+			user.userGroups?.[0]?.code ||
+			user.userGroups?.[0]?.name ||
+			user.groups?.[0]?.code ||
+			user.groups?.[0]?.name ||
+			"",
+	).toUpperCase();
+	return (
+		permissions.includes("WORK_ORDER_MANAGEMENT_APPROVE") ||
+		role.includes("ADMIN") ||
+		role.includes("MANAGER")
+	);
+});
 
 const now = new Date();
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -94,7 +188,13 @@ const formData = ref({
 	},
 
 	// Site Instructions files (min 2, max 3)
-	siteInstructionsFiles: [] as Array<{ name: string; url: string; type: string }>,
+	siteInstructionsFiles: [] as Array<{
+		name: string;
+		url: string;
+		type: string;
+		file?: File;
+		guid?: string;
+	}>,
 });
 
 const workTypeList = ref<any[]>([]);
@@ -118,12 +218,15 @@ function onSiteInstructionsChange(e: Event) {
 
 	for (const file of toAdd) {
 		const url = URL.createObjectURL(file);
-		current.push({ name: file.name, url, type: file.type });
+		current.push({ name: file.name, url, type: file.type, file });
 	}
 	siteInstructionsError.value = "";
+	input.value = "";
 }
 
 function removeSiteInstruction(index: number) {
+	const item = formData.value.siteInstructionsFiles[index];
+	if (item?.url.startsWith("blob:")) URL.revokeObjectURL(item.url);
 	formData.value.siteInstructionsFiles.splice(index, 1);
 }
 
@@ -218,12 +321,21 @@ async function loadOptions() {
 		}
 
 		// Fetch Users
-		const userRes = await userApi.getUsers({ pageIndex: 0, pageSize: 100, timezone: "Asia/Kuala_Lumpur" });
+		const userRes = await userApi.getUsers({ pageIndex: 0, pageSize: 1000, timezone: "Asia/Kuala_Lumpur" });
 		if (userRes.data && userRes.data.data) {
 			users.value = userRes.data.data.map((u: any) => ({
-				code: u.displayCode || u.guid.substring(0, 8).toUpperCase(),
-				name: u.displayName || "Unknown",
-				role: (u.role || u.userGroup || u.description || "").toLowerCase(),
+				code: u.code || u.guid,
+				displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
+				name: u.displayName || u.profile?.displayName || u.name || "Unknown",
+				role: (
+					u.groups?.[0]?.name ||
+					u.groups?.[0]?.code ||
+					u.userGroupCode ||
+					u.role ||
+					u.userGroup ||
+					u.description ||
+					""
+				).toLowerCase(),
 			}));
 		}
 
@@ -279,20 +391,21 @@ async function loadOptions() {
 }
 
 onMounted(async () => {
+	if (!authStore.currentUser) void authStore.fetchMe();
 	await loadOptions();
 
 	// Fallback hardcoded data for UI testing
 	if (users.value.length === 0) {
 		users.value = [
-			{ code: "SAL-001", name: "David Tan", role: "sa" },
-			{ code: "SAL-002", name: "Jessica Lee", role: "sa" },
-			{ code: "MNG-001", name: "Ramasamy Kumar", role: "manager" },
-			{ code: "MNG-002", name: "Chen Wei Ming", role: "manager" },
-			{ code: "ENG-001", name: "Ahmad Faizi", role: "engineer" },
-			{ code: "ENG-002", name: "Nurul Ain", role: "engineer" },
-			{ code: "ENG-003", name: "Lim Wei Chen", role: "engineer" },
-			{ code: "ENG-004", name: "Siti Fatimah", role: "engineer" },
-			{ code: "ENG-005", name: "Kavitha Nair", role: "engineer" },
+			{ code: "SAL-001", displayCode: "SAL-001", name: "David Tan", role: "sa" },
+			{ code: "SAL-002", displayCode: "SAL-002", name: "Jessica Lee", role: "sa" },
+			{ code: "MNG-001", displayCode: "MNG-001", name: "Ramasamy Kumar", role: "manager" },
+			{ code: "MNG-002", displayCode: "MNG-002", name: "Chen Wei Ming", role: "manager" },
+			{ code: "ENG-001", displayCode: "ENG-001", name: "Ahmad Faizi", role: "engineer" },
+			{ code: "ENG-002", displayCode: "ENG-002", name: "Nurul Ain", role: "engineer" },
+			{ code: "ENG-003", displayCode: "ENG-003", name: "Lim Wei Chen", role: "engineer" },
+			{ code: "ENG-004", displayCode: "ENG-004", name: "Siti Fatimah", role: "engineer" },
+			{ code: "ENG-005", displayCode: "ENG-005", name: "Kavitha Nair", role: "engineer" },
 		];
 	}
 	if (customers.value.length === 0) {
@@ -412,10 +525,35 @@ onMounted(async () => {
 		try {
 			loading.value = true;
 			const { data } = await workOrderApi.getWorkOrderByGuid(id);
-			if (data && data.data) {
-				const w = data.data as any;
+			const w = (data?.data || data) as any;
+			if (w && (w.guid || w.code)) {
+				workOrderCode.value = w.docNo || w.code || w.guid?.substring(0, 8).toUpperCase() || "";
+				upsertUserOption(
+					w.salesAgentCode,
+					w.salesAgentName || w.salesAgentDisplayName || w.salesAgentProfileName,
+					w.salesAgentDisplayCode,
+					"sales",
+				);
+				upsertUserOption(
+					w.projectPicCode || w.personInChargeCode,
+					w.projectPicName || w.personInChargeName,
+					w.projectPicDisplayCode || w.personInChargeDisplayCode,
+					"manager",
+				);
+				upsertUserOption(
+					w.leaderCode || w.leadEngineerCode,
+					w.leaderName || w.leadEngineerName,
+					w.leaderDisplayCode || w.leadEngineerDisplayCode,
+					"engineer",
+				);
+				upsertUserOption(
+					w.leaderIICode || w.leaderIiCode,
+					w.leaderIIName,
+					w.leaderIIDisplayCode,
+					"engineer",
+				);
 				formData.value = {
-					status: w.status || "Draft",
+					status: normalizeWorkOrderStatus(w),
 					workType: w.workType || "Maintenance",
 					orderTypeCode: w.orderTypeCode || "mechanical",
 					workTypeGuid: w.workTypeGuid || "",
@@ -436,7 +574,7 @@ onMounted(async () => {
 						? w.estimatedEndDate.slice(0, 16)
 						: nextWeekDateStr,
 					leaderCode: w.leaderCode || w.leadEngineerCode || "",
-					leaderIICode: w.leaderIICode || "",
+					leaderIICode: w.leaderIICode || w.leaderIiCode || "",
 					technicianCodes: w.technicianCodes || w.assistantEngineers || [],
 					contractNo: w.contractNo || "",
 					contractStartDate: w.contractStartDate ? w.contractStartDate.slice(0, 10) : "",
@@ -478,6 +616,31 @@ onMounted(async () => {
 					siteInstructionsFiles: [],
 				};
 
+				const filesResult = await workOrderApi.getFiles(id);
+				const filesData = filesResult.data;
+				const files = Array.isArray(filesData)
+					? filesData
+					: Array.isArray(filesData?.data)
+						? filesData.data
+						: Array.isArray(filesData?.data?.items)
+							? filesData.data.items
+							: Array.isArray(filesData?.items)
+								? filesData.items
+								: [];
+				formData.value.siteInstructionsFiles = files
+					.filter(
+						(file: any) =>
+							file.category === "SiteInstructions" ||
+							file.category === "SiteInstruction" ||
+							file.category === "site_instructions",
+					)
+					.map((file: any) => ({
+						name: file.fileName || "Site instruction",
+						url: file.storageUrl || "",
+						type: file.mimeType || "",
+						guid: file.guid,
+					}));
+
 				// Trigger contract lookup if edit mode has customerCode & contractNo
 				if (formData.value.customerCode) {
 					onCustomerChange();
@@ -506,7 +669,7 @@ const phases = [
 
 const salesAgentUsers = computed(() => {
 	const filtered = users.value.filter((u: any) => {
-		const code = (u.code || "").toUpperCase();
+		const code = (u.displayCode || u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
 		return (
 			(code.startsWith("SAL") || !code.startsWith("SA") || r.includes("sales")) &&
@@ -520,7 +683,7 @@ const salesAgentUsers = computed(() => {
 
 const projectPicUsers = computed(() => {
 	const filtered = users.value.filter((u: any) => {
-		const code = (u.code || "").toUpperCase();
+		const code = (u.displayCode || u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
 		return (
 			(code.startsWith("MNG") ||
@@ -539,7 +702,7 @@ const projectPicUsers = computed(() => {
 
 const engineerUsers = computed(() => {
 	const filtered = users.value.filter((u: any) => {
-		const code = (u.code || "").toUpperCase();
+		const code = (u.displayCode || u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
 		return (
 			(code.startsWith("ENG") ||
@@ -693,6 +856,10 @@ function validateDraftForm(): boolean {
 		formErrors.value.customerCode = "Customer is required";
 		isValid = false;
 	}
+	if (!formData.value.salesAgentCode) {
+		formErrors.value.salesAgentCode = "Sales Agent is required";
+		isValid = false;
+	}
 
 	return isValid;
 }
@@ -751,29 +918,105 @@ function validateForm(): boolean {
 	}
 
 	if (showEquipmentForm.value) {
-		if (!formData.value.equipment.name) {
+		if (!formData.value.equipment.name?.trim()) {
 			formErrors.value["equipment.name"] = "Equipment Name is required";
 			isValid = false;
 		}
-		if (!formData.value.equipment.serialNo) {
+		if (!formData.value.equipment.serialNo?.trim()) {
 			formErrors.value["equipment.serialNo"] = "Equipment Serial No is required";
 			isValid = false;
 		}
-		if (!formData.value.equipment.brand) {
+		if (!formData.value.equipment.brand?.trim()) {
 			formErrors.value["equipment.brand"] = "Equipment Brand is required";
 			isValid = false;
 		}
-		if (!formData.value.equipment.model) {
+		if (!formData.value.equipment.model?.trim()) {
 			formErrors.value["equipment.model"] = "Equipment Model is required";
 			isValid = false;
 		}
-		if (!formData.value.equipment.equipmentType) {
+		if (!formData.value.equipment.equipmentType?.trim()) {
 			formErrors.value["equipment.equipmentType"] = "Equipment Type is required";
 			isValid = false;
 		}
 	}
 
+	if (isMechanical.value) {
+		const technicalFields = [
+			["flowHead", "Flow & Head"],
+			["brandName", "Brand Name"],
+			["serialNo", "Serial No"],
+			["ratedVoltage", "Rated Voltage"],
+			["ratedSpeed", "Rated Speed"],
+			["ratedCurrent", "Rated Current"],
+			["ratedPower", "Rated Power"],
+			["phase", "Phase"],
+			["frameSize", "Frame Size"],
+		] as const;
+
+		for (const [field, label] of technicalFields) {
+			if (!formData.value.technical[field]?.trim()) {
+				formErrors.value[`technical.${field}`] = `${label} is required`;
+				isValid = false;
+			}
+		}
+	}
+
 	return isValid;
+}
+
+function validateApprovalAttachments(): boolean {
+	siteInstructionsError.value = "";
+	if (formData.value.siteInstructionsFiles.length < 2) {
+		siteInstructionsError.value =
+			"At least 2 site instruction files are required when requesting approval";
+		return false;
+	}
+	return true;
+}
+
+function extractWorkOrderGuid(response: any): string {
+	const guid =
+		response?.data?.data?.guid ||
+		response?.data?.guid ||
+		response?.data?.data?.workOrderGuid ||
+		response?.data?.workOrderGuid ||
+		response?.data?.data?.id ||
+		response?.data?.id ||
+		"";
+	if (guid) return guid;
+
+	const location = response?.response?.headers?.get?.("location") || "";
+	return location.split("/").filter(Boolean).pop() || "";
+}
+
+async function uploadSelectedSiteInstructions(workOrderGuid: string): Promise<void> {
+	const selectedFiles = formData.value.siteInstructionsFiles
+		.map((item) => item.file)
+		.filter((file): file is File => !!file);
+
+	if (selectedFiles.length === 0) return;
+
+	const uploadBody = new FormData();
+	for (const file of selectedFiles) {
+		uploadBody.append("files", file, file.name);
+	}
+	uploadBody.append("category", SITE_INSTRUCTIONS_CATEGORY);
+
+	const response = await workOrderApi.uploadFiles(workOrderGuid, uploadBody);
+	if (!response.ok) {
+		let message = "Failed to upload site instruction files";
+		try {
+			const errorBody = await response.json();
+			message = errorBody?.error?.message || errorBody?.message || message;
+		} catch {
+			// Keep the fallback message when the response is not JSON.
+		}
+		throw new Error(message);
+	}
+
+	for (const item of formData.value.siteInstructionsFiles) {
+		if (item.file) item.file = undefined;
+	}
 }
 
 function buildBody(): Record<string, any> {
@@ -813,6 +1056,32 @@ function buildBody(): Record<string, any> {
 	};
 }
 
+function buildPendingBody(): Record<string, any> {
+	return {
+		estimatedEndDate: formData.value.estimatedEndDate
+			? new Date(formData.value.estimatedEndDate).toISOString()
+			: undefined,
+		description: formData.value.description || undefined,
+		jobPriority: formData.value.jobPriority || undefined,
+		siteCode: formData.value.siteCode || undefined,
+		location: formData.value.location || undefined,
+		latitude: formData.value.latitude || undefined,
+		longitude: formData.value.longitude || undefined,
+		personInChargeCode: formData.value.personInChargeCode || undefined,
+		leaderCode: formData.value.leaderCode || undefined,
+		leaderIICode: formData.value.leaderIICode || undefined,
+		technicianCodes: formData.value.technicianCodes,
+	};
+}
+
+function goToWorkOrderReadOnly(workOrderGuid: string) {
+	router.push({
+		name: "Work Order Form",
+		params: { id: workOrderGuid },
+		query: { mode: "view" },
+	});
+}
+
 async function submitDraft() {
 	if (!validateDraftForm()) {
 		console.error("Draft validation failed", formErrors.value);
@@ -822,6 +1091,7 @@ async function submitDraft() {
 		loading.value = true;
 		const id = route.params.id;
 		const body = buildBody();
+		let savedWorkOrderGuid = typeof id === "string" ? id : "";
 		delete body.status;
 		if (id && typeof id === "string") {
 			const { error } = await workOrderApi.updateDraft(id, body);
@@ -829,18 +1099,29 @@ async function submitDraft() {
 				alert(`Failed to update draft: ${error.error?.message || error.message}`);
 				return;
 			}
+			await uploadSelectedSiteInstructions(id);
 			alert("Work order draft updated successfully!");
 		} else {
-			const { error } = await workOrderApi.createDraft(body as any);
+			const result = await workOrderApi.createDraft(body as any);
+			const { error } = result;
 			if (error) {
 				alert(`Failed to save draft: ${error.error?.message || error.message}`);
 				return;
 			}
+			const workOrderGuid = extractWorkOrderGuid(result);
+			savedWorkOrderGuid = workOrderGuid;
+			if (!workOrderGuid) {
+				throw new Error("Draft created, but the server did not return its Work Order GUID");
+			}
+			if (formData.value.siteInstructionsFiles.some((item) => item.file)) {
+				await uploadSelectedSiteInstructions(workOrderGuid);
+			}
 			alert("Work order draft created successfully!");
 		}
-		router.back();
+		if (savedWorkOrderGuid) goToWorkOrderReadOnly(savedWorkOrderGuid);
 	} catch (e) {
 		console.error(e);
+		alert(e instanceof Error ? e.message : "Failed to save work order draft");
 	} finally {
 		loading.value = false;
 	}
@@ -855,32 +1136,62 @@ async function submitNew() {
 		loading.value = true;
 		const id = route.params.id;
 		const body = buildBody();
-		body.status = "New";
+		let savedWorkOrderGuid = typeof id === "string" ? id : "";
 		if (id && typeof id === "string") {
-			const { error } = await workOrderApi.updateNew(id, body);
-			if (error) {
-				alert(`Failed to update work order: ${error.error?.message || error.message}`);
-				return;
+			if (formData.value.status === "Draft") {
+				const updateRes = await workOrderApi.updateDraft(id, body);
+				if (updateRes.error) {
+					alert(`Failed to update draft: ${updateRes.error.error?.message || updateRes.error.message}`);
+					return;
+				}
+				await uploadSelectedSiteInstructions(id);
+				const { error } = await workOrderApi.submitNew(id, {
+					estimatedEndDate: body.estimatedEndDate,
+				} as any);
+				if (error) {
+					alert(`Failed to submit work order: ${error.error?.message || error.message}`);
+					return;
+				}
+			} else {
+				const { error } = await workOrderApi.updateNew(id, body);
+				if (error) {
+					alert(`Failed to update work order: ${error.error?.message || error.message}`);
+					return;
+				}
+				await uploadSelectedSiteInstructions(id);
 			}
 			alert("Work order submitted successfully (Status: New)!");
 		} else {
-			const { error } = await workOrderApi.createNew(body as any);
+			const result = await workOrderApi.createNew(body as any);
+			const { error } = result;
 			if (error) {
 				alert(`Failed to submit work order: ${error.error?.message || error.message}`);
 				return;
 			}
+			const workOrderGuid = extractWorkOrderGuid(result);
+			savedWorkOrderGuid = workOrderGuid;
+			if (!workOrderGuid) {
+				throw new Error("Work Order created, but the server did not return its GUID");
+			}
+			if (formData.value.siteInstructionsFiles.some((item) => item.file)) {
+				await uploadSelectedSiteInstructions(workOrderGuid);
+			}
 			alert("Work order submitted successfully (Status: New)!");
 		}
-		router.back();
+		formData.value.status = "New";
+		if (savedWorkOrderGuid) goToWorkOrderReadOnly(savedWorkOrderGuid);
 	} catch (e) {
 		console.error(e);
+		alert(e instanceof Error ? e.message : "Failed to submit work order");
 	} finally {
 		loading.value = false;
 	}
 }
 
 async function submitAndRequestApproval() {
-	if (!validateForm()) {
+	const isFormValid = validateForm();
+	const areAttachmentsValid = validateApprovalAttachments();
+	if (!isFormValid || !areAttachmentsValid) {
 		console.error("Validation failed", formErrors.value);
 		return;
 	}
@@ -888,31 +1199,139 @@ async function submitAndRequestApproval() {
 		loading.value = true;
 		const id = route.params.id;
 		const body = buildBody();
-		body.status = "PendingApproval";
+		let savedWorkOrderGuid = typeof id === "string" ? id : "";
 		if (id && typeof id === "string") {
-			const { error } = await workOrderApi.updatePending(id, body);
-			if (error) {
-				alert(`Failed to request approval: ${error.error?.message || error.message}`);
-				return;
+			if (formData.value.status === "Draft") {
+				const updateRes = await workOrderApi.updateDraft(id, body);
+				if (updateRes.error) {
+					alert(`Failed to update draft: ${updateRes.error.error?.message || updateRes.error.message}`);
+					return;
+				}
+				await uploadSelectedSiteInstructions(id);
+				const { error } = await workOrderApi.submitApproval(id, {
+					estimatedEndDate: body.estimatedEndDate,
+				} as any);
+				if (error) {
+					alert(`Failed to request approval: ${error.error?.message || error.message}`);
+					return;
+				}
+			} else if (formData.value.status === "New") {
+				const updateRes = await workOrderApi.updateNew(id, body);
+				if (updateRes.error) {
+					alert(`Failed to update work order: ${updateRes.error.error?.message || updateRes.error.message}`);
+					return;
+				}
+				await uploadSelectedSiteInstructions(id);
+				const { error } = await workOrderApi.submitApproval(id, {
+					estimatedEndDate: body.estimatedEndDate,
+				} as any);
+				if (error) {
+					alert(`Failed to request approval: ${error.error?.message || error.message}`);
+					return;
+				}
+			} else {
+				const { error } = await workOrderApi.updatePending(id, body);
+				if (error) {
+					alert(`Failed to request approval: ${error.error?.message || error.message}`);
+					return;
+				}
 			}
 			alert("Work order submitted for approval (Status: Pending Approval)!");
 		} else {
-			const { error } = await workOrderApi.createNew({
-				...body,
-				status: "PendingApproval",
-			} as any);
+			const pendingResult = await workOrderApi.createPending(body as any);
+			const { error } = pendingResult;
 			if (error) {
 				alert(`Failed to request approval: ${error.error?.message || error.message}`);
 				return;
 			}
+			const workOrderGuid = extractWorkOrderGuid(pendingResult);
+			savedWorkOrderGuid = workOrderGuid;
+			if (!workOrderGuid) {
+				throw new Error("Work Order submitted for approval, but the server did not return its GUID");
+			}
+			await uploadSelectedSiteInstructions(workOrderGuid);
 			alert("Work order submitted for approval (Status: Pending Approval)!");
 		}
-		router.back();
+		formData.value.status = "PendingApproval";
+		if (savedWorkOrderGuid) goToWorkOrderReadOnly(savedWorkOrderGuid);
 	} catch (e) {
 		console.error(e);
+		alert(
+			`${e instanceof Error ? e.message : "Failed to request approval"}. The Work Order was not moved to Pending Approval, so you can retry.`,
+		);
 	} finally {
 		loading.value = false;
 	}
+}
+
+async function saveNew() {
+	if (!validateForm()) {
+		console.error("Validation failed", formErrors.value);
+		return;
+	}
+	try {
+		loading.value = true;
+		const id = route.params.id;
+		if (id && typeof id === "string") {
+			const { error } = await workOrderApi.updateNew(id, buildBody());
+			if (error) {
+				alert(`Failed to save work order: ${error.error?.message || error.message}`);
+				return;
+			}
+			await uploadSelectedSiteInstructions(id);
+			alert("Work order saved successfully (Status: New)!");
+			goToWorkOrderReadOnly(id);
+		}
+	} catch (e) {
+		console.error(e);
+		alert(e instanceof Error ? e.message : "Failed to save work order");
+	} finally {
+		loading.value = false;
+	}
+}
+
+async function updatePending(options: { stayInEdit?: boolean; silent?: boolean } = {}) {
+	if (!validateForm()) {
+		console.error("Validation failed", formErrors.value);
+		return false;
+	}
+	try {
+		loading.value = true;
+		const id = route.params.id;
+		if (id && typeof id === "string") {
+			const { error } = await workOrderApi.updatePending(id, buildPendingBody());
+			if (error) {
+				alert(`Failed to update pending approval work order: ${error.error?.message || error.message}`);
+				return false;
+			}
+			if (!options.silent) alert("Pending Approval work order updated successfully!");
+			if (!options.stayInEdit) goToWorkOrderReadOnly(id);
+			return true;
+		}
+		return false;
+	} catch (e) {
+		console.error(e);
+		alert(e instanceof Error ? e.message : "Failed to update pending approval work order");
+		return false;
+	} finally {
+		loading.value = false;
+	}
+}
+
+async function approvePendingFromEdit() {
+	if (!confirm("Save pending approval changes and approve this work order?")) return;
+	const id = route.params.id;
+	if (typeof id !== "string") return;
+	const updated = await updatePending({ stayInEdit: true, silent: true });
+	if (!updated) return;
+	const { error } = await workOrderApi.approve(id);
+	if (error) {
+		alert(`Failed to approve work order: ${error.error?.message || error.message}`);
+		return;
+	}
+	alert("Work order approved successfully!");
+	await router.replace({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
+	window.location.reload();
 }
 
 async function submitChanges() {
@@ -952,6 +1371,34 @@ function cancel() {
 	router.back();
 }
 
+async function approvePendingReadOnly() {
+	const id = route.params.id;
+	if (typeof id !== "string" || !confirm("Approve this work order?")) return;
+	const { error } = await workOrderApi.approve(id);
+	if (error) {
+		alert(`Failed to approve work order: ${error.error?.message || error.message}`);
+		return;
+	}
+	alert("Work order approved successfully!");
+	await router.replace({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
+	window.location.reload();
+}
+
+async function rejectPendingReadOnly() {
+	const id = route.params.id;
+	if (typeof id !== "string") return;
+	const rejectedReason = window.prompt("Please enter the rejection reason:");
+	if (!rejectedReason?.trim()) return;
+	const { error } = await workOrderApi.reject(id, { rejectedReason: rejectedReason.trim() });
+	if (error) {
+		alert(`Failed to reject work order: ${error.error?.message || error.message}`);
+		return;
+	}
+	alert("Work order rejected successfully!");
+	await router.replace({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
+	window.location.reload();
+}
+
 const priorityColors: Record<string, string> = {
 	High: "error",
 	Medium: "warning",
@@ -967,8 +1414,25 @@ const priorityColors: Record<string, string> = {
 				<p>Set the work order details, assign the right schedule and resources.</p>
 			</div>
 			<div class="actions-area">
-				<Button variant="secondary" @click="cancel">Cancel</Button>
-				<template v-if="!isEditMode || formData.status === 'Draft'">
+				<Button variant="secondary" @click="cancel">{{ isReadOnly ? "Back" : "Cancel" }}</Button>
+				<template v-if="isReadOnly">
+					<Button
+						v-if="canEditReadOnlyWorkOrder"
+						variant="primary"
+						@click="router.replace({ name: 'Work Order Form', params: { id: route.params.id } })"
+					>
+						<i class="mdi mdi-note-edit-outline"></i> Edit
+					</Button>
+					<template v-if="isPendingApproval && canApprovePending">
+						<Button variant="primary" @click="approvePendingReadOnly">
+							<i class="mdi mdi-check-circle-outline"></i> Approve
+						</Button>
+						<Button variant="danger" @click="rejectPendingReadOnly">
+							<i class="mdi mdi-close-circle-outline"></i> Reject
+						</Button>
+					</template>
+				</template>
+				<template v-else-if="!isEditMode || isDraftStatus">
 					<Button variant="outlined" @click="submitDraft">
 						<i class="mdi mdi-content-save-outline"></i> Save as Draft
 					</Button>
@@ -977,6 +1441,25 @@ const priorityColors: Record<string, string> = {
 					</Button>
 					<Button variant="primary" @click="submitAndRequestApproval">
 						<i class="mdi mdi-check"></i> Save & Request Approval
+					</Button>
+				</template>
+				<template v-else-if="isNewStatus">
+					<Button variant="outlined" @click="saveNew">
+						<i class="mdi mdi-content-save"></i> Save
+					</Button>
+					<Button variant="primary" @click="submitAndRequestApproval">
+						<i class="mdi mdi-check"></i> Save & Request Approval
+					</Button>
+				</template>
+				<template v-else-if="isPendingApproval">
+					<Button variant="outlined" @click="() => updatePending()">
+						<i class="mdi mdi-content-save"></i> Update
+					</Button>
+					<Button v-if="canApprovePending" variant="primary" @click="approvePendingFromEdit">
+						<i class="mdi mdi-check-circle-outline"></i> Approve
+					</Button>
+					<Button v-if="canApprovePending" variant="danger" @click="rejectPendingReadOnly">
+						<i class="mdi mdi-close-circle-outline"></i> Reject
 					</Button>
 				</template>
 				<template v-else>
@@ -988,7 +1471,7 @@ const priorityColors: Record<string, string> = {
 		</div>
 
 		<!-- Helper Banner -->
-		<div class="form-helper-banner">
+		<div v-if="!isReadOnly" class="form-helper-banner">
 			<div class="form-helper-banner__icon">
 				<i class="mdi mdi-information"></i>
 			</div>
@@ -997,9 +1480,10 @@ const priorityColors: Record<string, string> = {
 					<span class="helper-bullet">-</span>
 					<span
 						><strong>Save as Draft</strong> creates a New editable work order.
-						<em
-							>(Required: Work Type, Title, Sales Agent, Customer, Description)</em
-						></span
+							<em
+								>(Required: Work Type Item, Title, Sales Agent, Customer,
+								Description)</em
+							></span
 					>
 				</div>
 				<div class="helper-line">
@@ -1019,6 +1503,7 @@ const priorityColors: Record<string, string> = {
 			</div>
 		</div>
 
+		<fieldset class="read-only-fieldset" :disabled="isReadOnly">
 		<div class="form-grid">
 			<div class="form-grid__main">
 				<!-- Work Order Details -->
@@ -1083,13 +1568,14 @@ const priorityColors: Record<string, string> = {
 								:options="
 									salesAgentUsers.map((u) => ({
 										id: u.code,
-										name: u.name,
-										code: u.code,
+										name: userOptionDisplay(u),
+										code: u.displayCode || u.code,
 									}))
 								"
 								label="Sales Agent *"
 								placeholder="Search or select Sales Agent..."
 								:error="formErrors.salesAgentCode"
+								:showCode="false"
 							/>
 						</div>
 						<div class="col-6">
@@ -1098,13 +1584,14 @@ const priorityColors: Record<string, string> = {
 								:options="
 									projectPicUsers.map((u) => ({
 										id: u.code,
-										name: u.name,
-										code: u.code,
+										name: userOptionDisplay(u),
+										code: u.displayCode || u.code,
 									}))
 								"
-								label="Project PIC"
+								label="Project PIC *"
 								placeholder="Search or select Project PIC..."
 								:error="formErrors.personInChargeCode"
+								:showCode="false"
 							/>
 						</div>
 
@@ -1134,13 +1621,14 @@ const priorityColors: Record<string, string> = {
 								:options="
 									leaderOptions.map((u) => ({
 										id: u.code,
-										name: u.name,
-										code: u.code,
+										name: userOptionDisplay(u),
+										code: u.displayCode || u.code,
 									}))
 								"
 								label="Leader"
 								placeholder="Search or select Leader..."
 								:error="formErrors.leaderCode"
+								:showCode="false"
 							/>
 						</div>
 						<div class="col-6">
@@ -1149,12 +1637,13 @@ const priorityColors: Record<string, string> = {
 								:options="
 									leaderIIOptions.map((u) => ({
 										id: u.code,
-										name: u.name,
-										code: u.code,
+										name: userOptionDisplay(u),
+										code: u.displayCode || u.code,
 									}))
 								"
 								label="Leader II"
 								placeholder="Search or select Leader II..."
+								:showCode="false"
 							/>
 						</div>
 
@@ -1263,6 +1752,10 @@ const priorityColors: Record<string, string> = {
 							<i class="mdi mdi-information-outline"></i>
 							Minimum 2 files required when submitting for approval
 						</div>
+						<p v-if="siteInstructionsError" class="site-instructions__error">
+							<i class="mdi mdi-alert-circle-outline"></i>
+							{{ siteInstructionsError }}
+						</p>
 					</div>
 				</Card>
 
@@ -1440,7 +1933,7 @@ const priorityColors: Record<string, string> = {
 							<Select
 								v-model="formData.contractNo"
 								:options="contractSelectOptions"
-								label="Contract No"
+								label="Contract No *"
 								placeholder="Select Contract"
 								:disabled="!formData.customerCode"
 								:error="formErrors.contractNo"
@@ -1580,10 +2073,22 @@ const priorityColors: Record<string, string> = {
 				</Card>
 			</div>
 		</div>
+		</fieldset>
 	</div>
 </template>
 
 <style lang="scss" scoped>
+.read-only-fieldset {
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+
+	&:disabled {
+		pointer-events: none;
+	}
+}
+
 .badge-action-btn {
 	display: inline-flex;
 	align-items: center;
@@ -1922,6 +2427,15 @@ const priorityColors: Record<string, string> = {
 		color: var(--colors-brand-primary);
 		font-size: 14px;
 	}
+}
+
+.site-instructions__error {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+	font-size: 12px;
+	color: var(--colors-state-error);
 }
 
 .textbox-field {

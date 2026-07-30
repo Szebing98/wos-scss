@@ -9,12 +9,15 @@ import Textbox from "@/components/Textbox.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Select from "@/components/Select.vue";
 import Badge from "@/components/Badge.vue";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
+
+type AuditAction = "create" | "update" | "delete";
 
 interface AuditLog {
 	guid: string;
 	module: string;
 	moduleCode: string | null;
-	auditType: string;
+	auditType: AuditAction;
 	createdAt: string;
 	createdBy: string | null;
 }
@@ -35,6 +38,7 @@ const headers: TableHeader[] = [
 
 const logs = ref<AuditLog[]>([]);
 const modules = ref<string[]>([]);
+const dateFormatStore = useDateFormatStore();
 
 const searchQuery = ref("");
 const filterModule = ref("all");
@@ -65,29 +69,28 @@ function resetFilters() {
 }
 
 function formatDate(isoString: string) {
-	if (!isoString) return "";
-	return new Date(isoString).toLocaleDateString("en-GB", {
-		day: "2-digit",
-		month: "short",
-		year: "numeric"
-	});
+	return isoString ? dateFormatStore.formatDate(isoString) : "";
 }
 
 function formatTime(isoString: string) {
-	if (!isoString) return "";
-	return new Date(isoString).toLocaleTimeString("en-GB", {
-		hour: "2-digit",
-		minute: "2-digit",
-		second: "2-digit",
-		hour12: true
-	});
+	return isoString ? dateFormatStore.formatTime(isoString) : "";
+}
+
+function normalizeAuditType(type: string): AuditAction {
+	const value = type.toLowerCase();
+	if (value === "update" || value === "delete") return value;
+	return "create";
+}
+
+function formatAuditType(type?: string) {
+	return type ? type.toUpperCase() : "";
 }
 
 function getActionTypeClass(type: string): "success" | "warning" | "error" | "info" | "default" {
-	switch (type.toUpperCase()) {
-		case "CREATE": return "success";
-		case "UPDATE": return "warning";
-		case "DELETE": return "error";
+	switch (type.toLowerCase()) {
+		case "create": return "success";
+		case "update": return "warning";
+		case "delete": return "error";
 		default: return "info";
 	}
 }
@@ -114,7 +117,7 @@ async function loadLogs() {
 		};
 		if (searchQuery.value) query.q = searchQuery.value;
 		if (filterModule.value !== "all") query.module = filterModule.value;
-		if (filterType.value !== "all") query.auditType = filterType.value.toLowerCase() as any;
+		if (filterType.value !== "all") query.auditType = filterType.value;
 
 		const { data, error } = await auditApi.getAudits(query);
 		if (data && data.data) {
@@ -122,7 +125,7 @@ async function loadLogs() {
 				guid: item.guid,
 				module: item.module,
 				moduleCode: item.moduleCode,
-				auditType: item.auditType,
+				auditType: normalizeAuditType(item.auditType),
 				createdAt: item.createdAt,
 				createdBy: item.createdBy,
 			}));
@@ -132,9 +135,9 @@ async function loadLogs() {
 	} catch {
 		// Fallback mock data
 		logs.value = [
-			{ guid: "1", module: "WorkOrder", moduleCode: "WO-2023-001", auditType: "CREATE", createdAt: new Date(Date.now() - 3600000).toISOString(), createdBy: "USR-001" },
-			{ guid: "2", module: "Customer", moduleCode: "CUST-008", auditType: "UPDATE", createdAt: new Date(Date.now() - 7200000).toISOString(), createdBy: "USR-002" },
-			{ guid: "3", module: "System", moduleCode: "CONFIG", auditType: "DELETE", createdAt: new Date(Date.now() - 86400000).toISOString(), createdBy: "SYSTEM" },
+			{ guid: "1", module: "WorkOrder", moduleCode: "WO-2023-001", auditType: "create", createdAt: new Date(Date.now() - 3600000).toISOString(), createdBy: "USR-001" },
+			{ guid: "2", module: "Customer", moduleCode: "CUST-008", auditType: "update", createdAt: new Date(Date.now() - 7200000).toISOString(), createdBy: "USR-002" },
+			{ guid: "3", module: "System", moduleCode: "CONFIG", auditType: "delete", createdAt: new Date(Date.now() - 86400000).toISOString(), createdBy: "SYSTEM" },
 		];
 	}
 }
@@ -159,12 +162,12 @@ async function viewDetails(log: AuditLog) {
 	} catch {
 		// Mock changes based on action
 		setTimeout(() => {
-			if (log.auditType === "UPDATE") {
+			if (log.auditType === "update") {
 				logChanges.value = [
 					{ changedField: "status", old: "PENDING", new: "IN_PROGRESS" },
 					{ changedField: "assignedTo", old: "USR-001", new: "USR-002" }
 				];
-			} else if (log.auditType === "CREATE") {
+			} else if (log.auditType === "create") {
 				logChanges.value = [
 					{ changedField: "id", old: null, new: log.moduleCode }
 				];
@@ -214,9 +217,9 @@ onMounted(() => {
 
 					<Select v-model="filterType" label="Action Type">
 						<option value="all">All Actions</option>
-						<option value="CREATE">Create</option>
-						<option value="UPDATE">Update</option>
-						<option value="DELETE">Delete</option>
+						<option value="create">Create</option>
+						<option value="update">Update</option>
+						<option value="delete">Delete</option>
 					</Select>
 				</FilterPanel>
 			</div>
@@ -257,7 +260,7 @@ onMounted(() => {
 
 				<template #item-action="{ item }">
 					<Badge :type="getActionTypeClass(item.auditType)">
-						{{ item.auditType }}
+						{{ formatAuditType(item.auditType) }}
 					</Badge>
 				</template>
 
@@ -275,7 +278,7 @@ onMounted(() => {
 				<div class="drawer-header">
 					<h2>Record Details</h2>
 					<Badge :type="getActionTypeClass(selectedLog?.auditType || '')">
-						{{ selectedLog?.auditType }}
+						{{ formatAuditType(selectedLog?.auditType) }}
 					</Badge>
 				</div>
 				<p class="drawer-subtitle">

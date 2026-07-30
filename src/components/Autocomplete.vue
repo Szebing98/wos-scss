@@ -16,8 +16,10 @@ const props = withDefaults(defineProps<{
 	disabled?: boolean;
 	error?: string;
 	emptyMessage?: string;
+	showCode?: boolean;
 }>(), {
 	emptyMessage: "Not found",
+	showCode: true,
 });
 
 const emit = defineEmits<{
@@ -35,8 +37,8 @@ const selectedOption = computed(() => {
 
 // Sync input display text with selected model value when closed
 watch(
-	() => props.modelValue,
-	(val) => {
+	[() => props.modelValue, selectedOption],
+	([val]) => {
 		if (!val) {
 			searchInput.value = "";
 		} else if (selectedOption.value) {
@@ -161,7 +163,7 @@ onUnmounted(() => {
 					@click="selectOption(opt)"
 				>
 					<span class="option-name">{{ opt.name }}</span>
-					<span v-if="opt.code" class="option-code">({{ opt.code }})</span>
+					<span v-if="showCode && opt.code" class="option-code">({{ opt.code }})</span>
 					<span v-if="opt.info" class="option-info">{{ opt.info }}</span>
 				</li>
 			</ul>

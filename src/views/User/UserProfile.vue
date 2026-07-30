@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
 import Textbox from "@/components/Textbox.vue";
-import Select from "@/components/Select.vue";
+import Select, { type SelectOption } from "@/components/Select.vue";
 import Dialog from "@/components/Dialog.vue";
 import Button from "@/components/Button.vue";
 import { useAuthStore } from "@/stores/auth.store";
@@ -79,6 +79,7 @@ interface ProfileForm {
 	name: string;
 	email: string;
 	role: string;
+	roleDisplayName: string;
 	isActive: boolean;
 	profileImage: string | null;
 }
@@ -88,6 +89,7 @@ const profileData = ref<ProfileForm>({
 	name: "",
 	email: "",
 	role: "ENG",
+	roleDisplayName: "Engineer",
 	isActive: true,
 	profileImage: null,
 });
@@ -112,6 +114,7 @@ async function loadProfile() {
 				name: "",
 				email: "",
 				role: defaultRoleCode,
+				roleDisplayName: getRoleDisplayName(defaultRoleCode),
 				isActive: true,
 				profileImage: null,
 			};
@@ -122,13 +125,13 @@ async function loadProfile() {
 			const u = (data as any)?.data || data;
 			if (u && (u.guid || u.email || u.displayCode || u.profile)) {
 				const userProfile = u.profile || {};
-				const g = (u.groups || u.userGroups || [])[0];
-				const rawRole = g ? (g.code || g.name) : (u.userGroupCode || u.role || "ENG");
+				const roleInfo = resolveLoadedRole(u, "ENG");
 				profileData.value = {
 					code: u.displayCode || u.code || (u.guid ? u.guid.substring(0, 8).toUpperCase() : ""),
 					name: u.displayName || userProfile.displayName || u.name || "Employee Profile",
 					email: u.email || "",
-					role: normalizeRoleCode(rawRole),
+					role: roleInfo.code,
+					roleDisplayName: roleInfo.name,
 					isActive: u.isActive ?? true,
 					profileImage: u.profileImage || userProfile.profileImage || null,
 				};
@@ -143,13 +146,13 @@ async function loadProfile() {
 			if (data) {
 				const u = data as any;
 				const userProfile = u.profile || {};
-				const g = (u.groups || u.userGroups || [])[0];
-				const rawRole = g ? (g.code || g.name) : (u.userGroupCode || u.role || "ADM");
+				const roleInfo = resolveLoadedRole(u, "ADM");
 				profileData.value = {
 					code: u.displayCode || u.code || "",
 					name: u.displayName || userProfile.displayName || u.name || "My Profile",
 					email: u.email || "",
-					role: normalizeRoleCode(rawRole),
+					role: roleInfo.code,
+					roleDisplayName: roleInfo.name,
 					isActive: u.isActive ?? true,
 					profileImage: u.profileImage || userProfile.profileImage || null,
 				};
@@ -191,18 +194,36 @@ function normalizeRoleCode(rawRole: string): string {
 	return rawRole;
 }
 
+function resolveLoadedRole(user: any, fallbackRole: string) {
+	const group = (user.groups || user.userGroups || [])[0];
+	const rawRole = group?.code || user.userGroupCode || user.role || fallbackRole;
+	const code = normalizeRoleCode(rawRole);
+	const name =
+		group?.name ||
+		user.userGroupName ||
+		user.roleName ||
+		roleList.value.find((role) => role.code === code)?.name ||
+		getRoleDisplayName(code);
+
+	return { code, name };
+}
+
 function getRoleDisplayName(roleCode: string): string {
 	if (!roleCode) return "Unassigned";
-	if (roleCode === "SA" || roleCode === "Superadmin") return "Superadmin";
 	const found = roleList.value.find(
 		r => r.code === roleCode || r.name === roleCode || r.code.toLowerCase() === roleCode.toLowerCase()
 	);
 	if (found) return found.name;
+	if (roleCode === "SA" || roleCode === "Superadmin") return "Superadmin";
 	if (roleCode === "ADM" || roleCode === "Administrator") return "Administrator";
 	if (roleCode === "MGR" || roleCode === "Manager") return "Manager";
 	if (roleCode === "ENG" || roleCode === "Engineer") return "Engineer";
 	if (roleCode === "Sales") return "Sales";
 	return roleCode;
+}
+
+function handleRoleChange() {
+	profileData.value.roleDisplayName = getRoleDisplayName(profileData.value.role);
 }
 
 function updateBreadcrumbs() {
@@ -232,6 +253,26 @@ const roleList = ref<RoleModel[]>([]);
 
 const assignableRoles = computed(() => {
 	return roleList.value.filter(r => r.code !== "SA" && r.name !== "Superadmin");
+});
+
+const profileRoleOptions = computed<SelectOption[]>(() => {
+	const options: SelectOption[] = assignableRoles.value.map((role) => ({
+		value: role.code,
+		label: role.name,
+	}));
+
+	if (
+		profileData.value.role &&
+		!options.some((option) => String(option.value) === String(profileData.value.role))
+	) {
+		options.unshift({
+			value: profileData.value.role,
+			label: profileData.value.roleDisplayName || getRoleDisplayName(profileData.value.role),
+			disabled: true,
+		});
+	}
+
+	return options;
 });
 
 onMounted(async () => {
@@ -487,7 +528,9 @@ async function confirmAvatarUpload() {
 					<span class="user-meta-card__email">{{ profileData.email || "no-email@gstech.com" }}</span>
 
 					<div class="user-meta-card__badges mt-sm">
-						<Badge type="info" icon="mdi-shield-account">{{ getRoleDisplayName(profileData.role) }}</Badge>
+						<Badge type="info" icon="mdi-shield-account">
+							{{ profileData.roleDisplayName || getRoleDisplayName(profileData.role) }}
+						</Badge>
 						<Badge :type="profileData.isActive ? 'success' : 'error'">
 							{{ profileData.isActive ? "Active" : "Inactive" }}
 						</Badge>
@@ -563,11 +606,12 @@ async function confirmAvatarUpload() {
 
 						<div class="form-group">
 							<label class="form-group__label">Role</label>
-							<Select v-model="profileData.role" :disabled="!isEditMode || (isOwnProfile && !isNewMode)">
-								<option v-for="role in assignableRoles" :key="role.code" :value="role.code">
-									{{ role.name }}
-								</option>
-							</Select>
+							<Select
+								v-model="profileData.role"
+								:options="profileRoleOptions"
+								:disabled="!isEditMode || (isOwnProfile && !isNewMode)"
+								@change="handleRoleChange"
+							/>
 						</div>
 
 						<!-- Account Status Card -->

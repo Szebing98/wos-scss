@@ -28,9 +28,18 @@ const priorityColors: Record<string, string> = {
 	Low: "info",
 };
 
+const jobPriorityOptions = ["High", "Medium", "Low"];
+
+function userDisplay(user: any) {
+	const name = user?.name?.trim();
+	const displayCode = user?.displayCode?.trim();
+	if (name && displayCode) return `${name} (${displayCode})`;
+	return name || displayCode || user?.code || "—";
+}
+
 const salesAgentUsers = computed(() => {
 	return props.users.filter((u: any) => {
-		const code = (u.code || "").toUpperCase();
+		const code = (u.displayCode || u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
 		return (
 			(code.startsWith("SAL") || !code.startsWith("SA") || r.includes("sales")) &&
@@ -43,7 +52,7 @@ const salesAgentUsers = computed(() => {
 
 const projectPicUsers = computed(() => {
 	return props.users.filter((u: any) => {
-		const code = (u.code || "").toUpperCase();
+		const code = (u.displayCode || u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
 		return (
 			(code.startsWith("MNG") ||
@@ -61,7 +70,7 @@ const projectPicUsers = computed(() => {
 
 const engineerUsers = computed(() => {
 	return props.users.filter((u: any) => {
-		const code = (u.code || "").toUpperCase();
+		const code = (u.displayCode || u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
 		return (
 			(code.startsWith("ENG") ||
@@ -93,9 +102,12 @@ const leaderIIOptions = computed(() => {
 });
 
 const technicianOptions = computed(() => {
-	return engineerUsers.value.filter(
-		(u: any) => u.code !== props.workOrder.leaderCode && u.code !== props.workOrder.leaderIICode,
-	);
+	return engineerUsers.value
+		.filter(
+			(u: any) =>
+				u.code !== props.workOrder.leaderCode && u.code !== props.workOrder.leaderIICode,
+		)
+		.map((u: any) => ({ ...u, name: userDisplay(u) }));
 });
 </script>
 
@@ -141,8 +153,10 @@ const technicianOptions = computed(() => {
 
 		<!-- Row 1: Job Priority + Work Type Item -->
 		<div class="col-6">
-			<Select v-model="workOrder.jobPriority" label="Job Priority" disabled>
-				<option :value="workOrder.jobPriority">{{ workOrder.jobPriority }}</option>
+			<Select v-model="workOrder.jobPriority" label="Job Priority" :disabled="!isEditing">
+				<option v-for="priority in jobPriorityOptions" :key="priority" :value="priority">
+					{{ priority }}
+				</option>
 			</Select>
 		</div>
 		<div class="col-6">
@@ -163,10 +177,11 @@ const technicianOptions = computed(() => {
 				:options="
 					salesAgentUsers.map((u) => ({
 						id: u.code,
-						name: u.name,
-						code: u.code,
+						name: userDisplay(u),
+						code: u.displayCode || u.code,
 					}))
 				"
+				:showCode="false"
 				label="Sales Agent"
 				placeholder="Search or select Sales Agent..."
 				disabled
@@ -178,15 +193,16 @@ const technicianOptions = computed(() => {
 				:options="
 					projectPicUsers.map((u) => ({
 						id: u.code,
-						name: u.name,
-						code: u.code,
+						name: userDisplay(u),
+						code: u.displayCode || u.code,
 					}))
 				"
+				:showCode="false"
 				placeholder="Search or select Project Person In Charge..."
 				:disabled="!isEditing"
 			>
 				<template #label>
-					Project Person In Charge
+					Project PIC
 					<i
 						class="mdi mdi-information text-primary"
 						style="margin-left: 4px; font-size: 14px"
@@ -211,7 +227,7 @@ const technicianOptions = computed(() => {
 					v-model="workOrder.estimatedEndDate"
 					label="Estimated Date of Completion *"
 					:enableTime="false"
-					disabled
+					:disabled="!isEditing"
 					style="flex-grow: 1"
 				/>
 				<Button
@@ -258,10 +274,11 @@ const technicianOptions = computed(() => {
 				:options="
 					leaderOptions.map((u) => ({
 						id: u.code,
-						name: u.name,
-						code: u.code,
+						name: userDisplay(u),
+						code: u.displayCode || u.code,
 					}))
 				"
+				:showCode="false"
 				label="Leader"
 				placeholder="Search or select Leader..."
 				:disabled="!isEditing"
@@ -273,10 +290,11 @@ const technicianOptions = computed(() => {
 				:options="
 					leaderIIOptions.map((u) => ({
 						id: u.code,
-						name: u.name,
-						code: u.code,
+						name: userDisplay(u),
+						code: u.displayCode || u.code,
 					}))
 				"
+				:showCode="false"
 				label="Leader II"
 				placeholder="Search or select Leader II..."
 				:disabled="!isEditing"
@@ -289,7 +307,6 @@ const technicianOptions = computed(() => {
 						class="btn-icon-map"
 						@click="emit('openMap')"
 						title="View Map"
-						:disabled="!isEditing"
 					>
 						<i class="mdi mdi-map-marker"></i>
 					</button>
@@ -321,6 +338,7 @@ const technicianOptions = computed(() => {
 			<MultiSelect
 				v-model="workOrder.technicianCodes"
 				:options="technicianOptions"
+				:showCode="false"
 				label="Technicians"
 				placeholder="Search to add technicians..."
 				:disabled="!isEditing"

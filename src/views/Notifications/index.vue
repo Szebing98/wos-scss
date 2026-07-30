@@ -1,0 +1,517 @@
+<script setup lang="ts">
+import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import { notificationApi } from "@/api/notification/notification.api";
+import type { NotificationItem } from "@/api/notification/notification.types";
+import Button from "@/components/Button.vue";
+import Card from "@/components/Card.vue";
+
+type Filter = "all" | "unread" | "read";
+
+const router = useRouter();
+const notifications = ref<NotificationItem[]>([]);
+const activeFilter = ref<Filter>("all");
+const isLoading = ref(false);
+const errorMessage = ref("");
+const updatingCode = ref("");
+const page = ref(1);
+const pageSize = 10;
+
+const filteredNotifications = computed(() => {
+	if (activeFilter.value === "unread") {
+		return notifications.value.filter((item) => !item.isRead);
+	}
+	if (activeFilter.value === "read") {
+		return notifications.value.filter((item) => item.isRead);
+	}
+	return notifications.value;
+});
+
+const totalPages = computed(() =>
+	Math.max(1, Math.ceil(filteredNotifications.value.length / pageSize)),
+);
+
+const pagedNotifications = computed(() => {
+	const start = (page.value - 1) * pageSize;
+	return filteredNotifications.value.slice(start, start + pageSize);
+});
+
+const unreadCount = computed(() =>
+	notifications.value.filter((item) => !item.isRead).length,
+);
+
+function setFilter(filter: Filter) {
+	activeFilter.value = filter;
+	page.value = 1;
+}
+
+async function loadNotifications() {
+	isLoading.value = true;
+	errorMessage.value = "";
+
+	try {
+		const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kuala_Lumpur";
+		const response = await notificationApi.getAll({
+			pageIndex: 0,
+			pageSize: 100,
+			sort: "createdAt-desc",
+			timezone,
+		});
+
+		if (response.error) {
+			throw new Error(getApiErrorMessage(response.error, "Unable to load notifications."));
+		}
+
+		notifications.value = response.data?.data || [];
+	} catch (error) {
+		errorMessage.value =
+			error instanceof Error ? error.message : "Unable to load notifications.";
+	} finally {
+		isLoading.value = false;
+	}
+}
+
+async function toggleRead(notification: NotificationItem) {
+	updatingCode.value = notification.code;
+	errorMessage.value = "";
+
+	try {
+		const response = notification.isRead
+			? await notificationApi.markUnread(notification.code)
+			: await notificationApi.markRead(notification.code);
+
+		if (response.error) {
+			throw new Error(getApiErrorMessage(response.error, "Unable to update notification."));
+		}
+
+		notification.isRead = !notification.isRead;
+		if (page.value > totalPages.value) page.value = totalPages.value;
+	} catch (error) {
+		errorMessage.value =
+			error instanceof Error ? error.message : "Unable to update notification.";
+	} finally {
+		updatingCode.value = "";
+	}
+}
+
+async function markAllRead() {
+	if (!unreadCount.value) return;
+	updatingCode.value = "all";
+	errorMessage.value = "";
+
+	try {
+		const response = await notificationApi.markAllRead();
+		if (response.error) {
+			throw new Error(getApiErrorMessage(response.error, "Unable to update notifications."));
+		}
+		notifications.value.forEach((notification) => {
+			notification.isRead = true;
+		});
+		if (page.value > totalPages.value) page.value = totalPages.value;
+	} catch (error) {
+		errorMessage.value =
+			error instanceof Error ? error.message : "Unable to update notifications.";
+	} finally {
+		updatingCode.value = "";
+	}
+}
+
+async function openNotification(notification: NotificationItem) {
+	if (!notification.isRead) await toggleRead(notification);
+
+	if (notification.referenceType === "WorkOrder" && notification.referenceId) {
+		router.push({
+			name: "Work Order Detail",
+			params: { id: notification.referenceId },
+		});
+	}
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+	if (error && typeof error === "object") {
+		const value = error as Record<string, any>;
+		if (typeof value.message === "string") return value.message;
+		if (typeof value.error?.message === "string") return value.error.message;
+	}
+	return fallback;
+}
+
+function getPayloadRecord(payload: unknown) {
+	if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+		return payload as Record<string, unknown>;
+	}
+	return null;
+}
+
+function getNotificationTitle(notification: NotificationItem) {
+	const payload = getPayloadRecord(notification.payload);
+	const code = typeof payload?.code === "string" ? payload.code : "";
+	const title = typeof payload?.title === "string" ? payload.title : "";
+	const titles: Record<string, string> = {
+		WO_DRAFT_CREATED: code ? `Draft Work Order ${code}` : "Draft Work Order Saved",
+		WO_CREATED: code ? `New Work Order ${code}` : "New Work Order",
+		WO_SUBMITTED: code ? `Work Order ${code} Pending Approval` : "Work Order Pending Approval",
+		WO_APPROVED: code ? `Work Order ${code} Approved` : "Work Order Approved",
+		WO_REJECTED: code ? `Work Order ${code} Rejected` : "Work Order Rejected",
+	};
+
+	if (titles[notification.templateCode]) return titles[notification.templateCode];
+	const value = title || payload?.subject || payload?.heading;
+	if (typeof value === "string" && value.trim()) return value;
+	return notification.templateCode
+		.replace(/[_-]+/g, " ")
+		.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getNotificationDescription(notification: NotificationItem) {
+	const payload = getPayloadRecord(notification.payload);
+	const title = typeof payload?.title === "string" ? payload.title : "";
+	const code = typeof payload?.code === "string" ? payload.code : "";
+
+	if (notification.referenceType === "WorkOrder" && title) {
+		return code ? `${title} (${code})` : title;
+	}
+
+	const value = payload?.message || payload?.description || payload?.body || payload?.content;
+	if (typeof value === "string" && value.trim()) return value;
+	if (notification.referenceType) return `Related to ${notification.referenceType}`;
+	return "Open WOS MariaDB to review this notification.";
+}
+
+function formatDate(value?: string) {
+	if (!value) return "";
+	return new Intl.DateTimeFormat("en-MY", {
+		day: "2-digit",
+		month: "short",
+		year: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	}).format(new Date(value));
+}
+
+onMounted(loadNotifications);
+</script>
+
+<template>
+	<div class="notifications-page">
+		<header class="notifications-page__header">
+			<div>
+				<h1>Notifications</h1>
+				<p>Review all your updates, including notifications you have already read.</p>
+			</div>
+			<Button
+				v-if="unreadCount"
+				variant="secondary"
+				:disabled="updatingCode === 'all'"
+				@click="markAllRead"
+			>
+				<i :class="updatingCode === 'all' ? 'mdi mdi-loading mdi-spin' : 'mdi mdi-check-all'"></i>
+				Mark all as read
+			</Button>
+		</header>
+
+		<Card class="notifications-card">
+			<div class="notifications-tabs" role="tablist" aria-label="Notification filters">
+				<button
+					v-for="filter in (['all', 'unread', 'read'] as Filter[])"
+					:key="filter"
+					type="button"
+					role="tab"
+					:aria-selected="activeFilter === filter"
+					:class="{ 'is-active': activeFilter === filter }"
+					@click="setFilter(filter)"
+				>
+					{{ filter[0].toUpperCase() + filter.slice(1) }}
+					<span v-if="filter === 'unread' && unreadCount">{{ unreadCount }}</span>
+				</button>
+			</div>
+
+			<div v-if="errorMessage" class="notifications-state notifications-state--error">
+				<i class="mdi mdi-alert-circle-outline"></i>
+				<div>
+					<strong>Something went wrong</strong>
+					<p>{{ errorMessage }}</p>
+				</div>
+				<button type="button" @click="loadNotifications">Try again</button>
+			</div>
+
+			<div v-else-if="isLoading" class="notifications-state">
+				<i class="mdi mdi-loading mdi-spin"></i>
+				<p>Loading notifications...</p>
+			</div>
+
+			<div v-else-if="!pagedNotifications.length" class="notifications-state">
+				<i class="mdi mdi-bell-check-outline"></i>
+				<strong>No {{ activeFilter === "all" ? "" : activeFilter }} notifications</strong>
+				<p>You're all caught up.</p>
+			</div>
+
+			<div v-else class="notifications-list">
+				<article
+					v-for="notification in pagedNotifications"
+					:key="notification.code"
+					class="notification-row"
+					:class="{ 'notification-row--unread': !notification.isRead }"
+				>
+					<button
+						class="notification-row__main"
+						type="button"
+						@click="openNotification(notification)"
+					>
+						<span class="notification-row__icon">
+							<i :class="notification.isRead ? 'mdi mdi-bell-outline' : 'mdi mdi-bell-ring-outline'"></i>
+						</span>
+						<span class="notification-row__content">
+							<span class="notification-row__topline">
+								<strong>{{ getNotificationTitle(notification) }}</strong>
+								<time>{{ formatDate(notification.createdAt) }}</time>
+							</span>
+							<span class="notification-row__message">
+								{{ getNotificationDescription(notification) }}
+							</span>
+							<span class="notification-row__status">
+								<i v-if="!notification.isRead" class="notification-row__dot"></i>
+								{{ notification.isRead ? "Read" : "Unread" }}
+							</span>
+						</span>
+					</button>
+
+					<button
+						class="notification-row__action"
+						type="button"
+						:disabled="updatingCode === notification.code"
+						:title="notification.isRead ? 'Mark as unread' : 'Mark as read'"
+						:aria-label="notification.isRead ? 'Mark as unread' : 'Mark as read'"
+						@click="toggleRead(notification)"
+					>
+						<i
+							:class="
+								updatingCode === notification.code
+									? 'mdi mdi-loading mdi-spin'
+									: notification.isRead
+										? 'mdi mdi-email-outline'
+										: 'mdi mdi-email-open-outline'
+							"
+						></i>
+					</button>
+				</article>
+			</div>
+
+			<footer v-if="filteredNotifications.length > pageSize" class="notifications-pagination">
+				<button type="button" :disabled="page === 1" @click="page--">
+					<i class="mdi mdi-chevron-left"></i>
+					Previous
+				</button>
+				<span>Page {{ page }} of {{ totalPages }}</span>
+				<button type="button" :disabled="page === totalPages" @click="page++">
+					Next
+					<i class="mdi mdi-chevron-right"></i>
+				</button>
+			</footer>
+		</Card>
+	</div>
+</template>
+
+<style scoped lang="scss">
+.notifications-page {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	max-width: 1040px;
+	margin: 0 auto;
+
+	&__header {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 20px;
+
+		h1 {
+			margin: 0;
+			color: var(--colors-text-primary);
+			font-size: 28px;
+			line-height: 1.2;
+		}
+
+		p {
+			margin: 7px 0 0;
+			color: var(--colors-text-muted);
+			font-size: 14px;
+		}
+	}
+}
+
+.notifications-card {
+	padding: 0 !important;
+	overflow: hidden;
+}
+
+.notifications-tabs {
+	display: flex;
+	gap: 4px;
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--colors-surface-border);
+
+	button {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 9px 14px;
+		border: 0;
+		border-radius: 8px;
+		background: transparent;
+		color: var(--colors-text-secondary);
+		font: inherit;
+		font-size: 13px;
+		font-weight: 700;
+		cursor: pointer;
+
+		&:hover { background: var(--colors-surface-hover); }
+		&.is-active {
+			background: var(--colors-brand-primarySoft);
+			color: var(--colors-brand-primary);
+		}
+
+		span {
+			min-width: 20px;
+			padding: 2px 6px;
+			border-radius: 999px;
+			background: var(--colors-brand-primary);
+			color: #fff;
+			font-size: 10px;
+		}
+	}
+}
+
+.notifications-list { display: flex; flex-direction: column; }
+
+.notification-row {
+	display: flex;
+	align-items: stretch;
+	border-bottom: 1px solid var(--colors-surface-border);
+	background: var(--colors-surface-card);
+
+	&:last-child { border-bottom: 0; }
+	&--unread { background: color-mix(in srgb, var(--colors-brand-primarySoft) 45%, var(--colors-surface-card)); }
+
+	&__main {
+		display: grid;
+		grid-template-columns: 44px minmax(0, 1fr);
+		gap: 14px;
+		flex: 1;
+		padding: 18px 16px;
+		border: 0;
+		background: transparent;
+		text-align: left;
+		cursor: pointer;
+
+		&:hover { background: var(--colors-surface-hover); }
+	}
+
+	&__icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		background: var(--colors-brand-primarySoft);
+		color: var(--colors-brand-primary);
+		font-size: 21px;
+	}
+
+	&__content { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+	&__topline {
+		display: flex;
+		justify-content: space-between;
+		gap: 20px;
+		color: var(--colors-text-primary);
+
+		strong { font-size: 14px; line-height: 1.45; }
+		time { flex: none; color: var(--colors-text-muted); font-size: 11px; font-weight: 600; }
+	}
+	&__message { color: var(--colors-text-secondary); font-size: 13px; line-height: 1.5; }
+	&__status {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--colors-text-muted);
+		font-size: 11px;
+		font-weight: 700;
+	}
+	&__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--colors-brand-primary); }
+
+	&__action {
+		align-self: center;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		margin: 0 16px 0 4px;
+		border: 0;
+		border-radius: 8px;
+		background: transparent;
+		color: var(--colors-text-muted);
+		font-size: 19px;
+		cursor: pointer;
+
+		&:hover { background: var(--colors-surface-hover); color: var(--colors-brand-primary); }
+		&:disabled { opacity: .55; cursor: wait; }
+	}
+}
+
+.notifications-state {
+	min-height: 260px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 32px;
+	color: var(--colors-text-muted);
+	text-align: center;
+
+	> i { color: var(--colors-brand-primary); font-size: 34px; }
+	strong { color: var(--colors-text-primary); }
+	p { margin: 0; font-size: 13px; }
+
+	&--error > i { color: var(--colors-state-error); }
+	button { border: 0; background: none; color: var(--colors-brand-primary); font-weight: 700; cursor: pointer; }
+}
+
+.notifications-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 13px 16px;
+	border-top: 1px solid var(--colors-surface-border);
+	color: var(--colors-text-muted);
+	font-size: 12px;
+	font-weight: 700;
+
+	button {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		padding: 7px 9px;
+		border: 0;
+		border-radius: 7px;
+		background: transparent;
+		color: var(--colors-brand-primary);
+		font: inherit;
+		cursor: pointer;
+		&:hover:not(:disabled) { background: var(--colors-surface-hover); }
+		&:disabled { opacity: .4; cursor: not-allowed; }
+	}
+}
+
+@media (max-width: 640px) {
+	.notifications-page__header { align-items: flex-start; flex-direction: column; }
+	.notifications-tabs { overflow-x: auto; }
+	.notification-row__topline { flex-direction: column; gap: 4px; }
+	.notification-row__action { margin-right: 8px; }
+	.notification-row__main { grid-template-columns: 38px minmax(0, 1fr); padding: 14px 10px; gap: 10px; }
+	.notification-row__icon { width: 38px; height: 38px; }
+}
+</style>

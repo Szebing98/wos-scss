@@ -3,6 +3,12 @@ import { ref, computed, onMounted } from "vue";
 import Textbox from "@/components/Textbox.vue";
 import Badge from "@/components/Badge.vue";
 import http from "@/utils/http";
+import { useAuthStore } from "@/stores/auth.store";
+import {
+	getPermissionActionLabel,
+	getPermissionSubjectLabel,
+} from "@/utils/permission-label";
+import { getHighestRoleLevel, getRoleLevel, hasRole } from "@/utils/role";
 
 interface UserGroupModel {
 	guid?: string;
@@ -19,19 +25,21 @@ interface PermissionModel {
 	inverted?: boolean;
 }
 
-const isAllGrantedGroup = ref(false);
-
 const isLoadingGroups = ref(false);
 const isLoadingPermissions = ref(false);
 const isSaving = ref(false);
 const showPermissionMatrix = ref(false);
+const isEditingPermissions = ref(false);
 
 const selectedGroup = ref<UserGroupModel | null>(null);
 const searchQuery = ref("");
+const permissionGuardMessage = ref("");
 
 const groups = ref<UserGroupModel[]>([]);
 const allPermissions = ref<PermissionModel[]>([]);
 const selectedPermissionCodes = ref<Set<string>>(new Set());
+const originalPermissionCodes = ref<Set<string>>(new Set());
+const authStore = useAuthStore();
 
 const defaultSystemPermissions: PermissionModel[] = [
 	{ code: "read:WorkOrder", subject: "WorkOrder", action: "read" },
@@ -78,6 +86,28 @@ const defaultSystemPermissions: PermissionModel[] = [
 	{ code: "update:Ability", subject: "Ability", action: "update" },
 ];
 
+function getPermissionCode(permission: Partial<PermissionModel>): string {
+	return permission.code || `${permission.action}:${permission.subject}`;
+}
+
+function isManageAllPermission(permission: Partial<PermissionModel>): boolean {
+	const code = getPermissionCode(permission).toLowerCase();
+	const subject = String(permission.subject || "").toLowerCase();
+
+	return (
+		code === "manage_all" ||
+		code === "manage:all" ||
+		code === "manage:*" ||
+		subject === "all" ||
+		subject === "*"
+	);
+}
+
+function grantAllVisiblePermissions() {
+	selectedPermissionCodes.value = new Set(allPermissions.value.map((p) => p.code));
+	showPermissionMatrix.value = true;
+}
+
 async function loadGroups() {
 	isLoadingGroups.value = true;
 	try {
@@ -106,6 +136,8 @@ async function loadGroups() {
 
 async function handleGroupChange(group: UserGroupModel) {
 	selectedGroup.value = group;
+	isEditingPermissions.value = false;
+	permissionGuardMessage.value = "";
 	// Load group permissions
 	isLoadingPermissions.value = true;
 	selectedPermissionCodes.value.clear();
@@ -114,30 +146,27 @@ async function handleGroupChange(group: UserGroupModel) {
 		const res = await http.get(`/abilities/groups/${group.code}`);
 		const groupPermissions: any[] = res.data?.data || res.data || [];
 		// Detect MANAGE_ALL permission indicating full access
-		const hasManageAll = groupPermissions.some((p) => {
-			const code = p.code || `${p.action}:${p.subject}`;
-			return code === "MANAGE_ALL";
-		});
+		const hasManageAll = groupPermissions.some(isManageAllPermission);
 		if (hasManageAll) {
-			// Grant all permissions without further processing
-			selectedPermissionCodes.value = new Set(allPermissions.value.map((p) => p.code));
-			isAllGrantedGroup.value = true;
-			showPermissionMatrix.value = false;
+			// MANAGE_ALL means every visible module permission is selected;
+			// the synthetic All module itself is not rendered.
+			grantAllVisiblePermissions();
+			originalPermissionCodes.value = new Set(selectedPermissionCodes.value);
 			isLoadingPermissions.value = false;
-			return; // skip loading matrix
-		} else {
-			isAllGrantedGroup.value = false;
+			return;
 		}
 
 		if (Array.isArray(groupPermissions) && groupPermissions.length > 0) {
 			groupPermissions.forEach((p) => {
-				const code = p.code || `${p.action}:${p.subject}`;
+				if (isManageAllPermission(p)) return;
+				const code = getPermissionCode(p);
 				selectedPermissionCodes.value.add(code);
 			});
 		} else {
 			allPermissions.value.forEach((p) => selectedPermissionCodes.value.add(p.code));
 		}
 		showPermissionMatrix.value = true;
+		originalPermissionCodes.value = new Set(selectedPermissionCodes.value);
 	} catch (e) {
 		console.error("Failed to load group abilities", e);
 	} finally {
@@ -150,13 +179,15 @@ async function loadAllPermissions() {
 		const res = await http.get("/abilities");
 		const data = res.data?.data || res.data || [];
 		if (Array.isArray(data) && data.length > 0) {
-			allPermissions.value = data.map((p: any) => ({
-				guid: p.guid,
-				code: p.code || `${p.action}:${p.subject}`,
-				action: p.action,
-				subject: p.subject,
-				inverted: p.inverted ?? false,
-			}));
+			allPermissions.value = data
+				.map((p: any) => ({
+					guid: p.guid,
+					code: getPermissionCode(p),
+					action: p.action,
+					subject: p.subject,
+					inverted: p.inverted ?? false,
+				}))
+				.filter((p) => !isManageAllPermission(p));
 		} else {
 			allPermissions.value = defaultSystemPermissions;
 		}
@@ -176,7 +207,9 @@ const filteredGroupedPermissions = computed(() => {
 			!searchQuery.value ||
 			x.subject.toLowerCase().includes(query) ||
 			x.action.toLowerCase().includes(query) ||
-			x.code.toLowerCase().includes(query);
+			x.code.toLowerCase().includes(query) ||
+			getPermissionSubjectLabel(x.subject).toLowerCase().includes(query) ||
+			getPermissionActionLabel(x.action).toLowerCase().includes(query);
 
 		if (matches) {
 			if (!result[x.subject]) result[x.subject] = [];
@@ -186,16 +219,43 @@ const filteredGroupedPermissions = computed(() => {
 	return result;
 });
 
+const currentUserGroups = computed(() => {
+	const user = authStore.currentUser || authStore.user || {};
+	return [...(user.userGroups || user.groups || []), { code: user.role, name: user.role }];
+});
+
+const selectedGroupLevel = computed(() => getRoleLevel(selectedGroup.value));
+const currentUserRoleLevel = computed(() => getHighestRoleLevel(currentUserGroups.value));
+
+const canEditSelectedGroup = computed(() => {
+	if (!selectedGroup.value) return false;
+	if (hasRole(currentUserGroups.value, selectedGroup.value)) return false;
+	return currentUserRoleLevel.value >= selectedGroupLevel.value;
+});
+
+const selectedGroupEditMessage = computed(() => {
+	if (!selectedGroup.value) return "";
+	if (hasRole(currentUserGroups.value, selectedGroup.value)) {
+		return "You cannot edit permissions for a role assigned to your own account.";
+	}
+	if (!canEditSelectedGroup.value) {
+		return "Your role level cannot edit permissions for a higher-level role.";
+	}
+	return "";
+});
+
 function isChecked(code: string): boolean {
 	return selectedPermissionCodes.value.has(code);
 }
 
 function onPermissionToggle(code: string, checked: boolean) {
+	if (!isEditingPermissions.value) return;
 	if (checked) selectedPermissionCodes.value.add(code);
 	else selectedPermissionCodes.value.delete(code);
 }
 
 function togglePermission(code: string) {
+	if (!isEditingPermissions.value) return;
 	if (selectedPermissionCodes.value.has(code)) {
 		selectedPermissionCodes.value.delete(code);
 	} else {
@@ -204,6 +264,7 @@ function togglePermission(code: string) {
 }
 
 function toggleAllInSubject(subject: string, enable: boolean) {
+	if (!isEditingPermissions.value) return;
 	const subjectPerms = allPermissions.value.filter((x) => x.subject === subject);
 	subjectPerms.forEach((p) => {
 		if (enable) selectedPermissionCodes.value.add(p.code);
@@ -211,8 +272,28 @@ function toggleAllInSubject(subject: string, enable: boolean) {
 	});
 }
 
+function startEditingPermissions() {
+	if (!canEditSelectedGroup.value) {
+		permissionGuardMessage.value = selectedGroupEditMessage.value;
+		return;
+	}
+	originalPermissionCodes.value = new Set(selectedPermissionCodes.value);
+	permissionGuardMessage.value = "";
+	isEditingPermissions.value = true;
+}
+
+function cancelEditingPermissions() {
+	selectedPermissionCodes.value = new Set(originalPermissionCodes.value);
+	isEditingPermissions.value = false;
+	permissionGuardMessage.value = "";
+}
+
 async function saveGroupPermissions() {
-	if (!selectedGroup.value?.code) return;
+	if (!selectedGroup.value?.code || !isEditingPermissions.value) return;
+	if (!canEditSelectedGroup.value) {
+		permissionGuardMessage.value = selectedGroupEditMessage.value;
+		return;
+	}
 	isSaving.value = true;
 
 	try {
@@ -220,6 +301,8 @@ async function saveGroupPermissions() {
 		await http.post(`/abilities/groups/${selectedGroup.value.code}/sync`, {
 			abilityCodes,
 		});
+		originalPermissionCodes.value = new Set(selectedPermissionCodes.value);
+		isEditingPermissions.value = false;
 		alert(`Successfully updated permissions for ${selectedGroup.value.name}!`);
 	} catch (e) {
 		console.error("Failed to save group permissions", e);
@@ -229,9 +312,12 @@ async function saveGroupPermissions() {
 	}
 }
 
-onMounted(() => {
+onMounted(async () => {
+	if (!authStore.currentUser) {
+		await authStore.fetchMe();
+	}
+	await loadAllPermissions();
 	loadGroups();
-	loadAllPermissions();
 });
 </script>
 
@@ -244,17 +330,34 @@ onMounted(() => {
 					Configure permissions and global authorization policies for user groups
 				</p>
 			</div>
-			<button
-				class="btn btn--primary"
-				:disabled="!selectedGroup || isSaving"
-				@click="saveGroupPermissions"
-			>
-				<i
-					class="mdi"
-					:class="isSaving ? 'mdi-loading mdi-spin' : 'mdi-content-save-outline'"
-				></i>
-				Save Permissions
-			</button>
+			<div class="maintenance-view__actions">
+				<button
+					v-if="!isEditingPermissions"
+					class="btn btn--primary"
+					:disabled="!selectedGroup || !canEditSelectedGroup || isLoadingPermissions"
+					:title="selectedGroupEditMessage || 'Edit Permissions'"
+					@click="startEditingPermissions"
+				>
+					<i class="mdi mdi-pencil-outline"></i>
+					Edit Permissions
+				</button>
+				<template v-else>
+					<button class="btn btn--secondary" :disabled="isSaving" @click="cancelEditingPermissions">
+						Cancel
+					</button>
+					<button
+						class="btn btn--primary"
+						:disabled="!selectedGroup || isSaving"
+						@click="saveGroupPermissions"
+					>
+						<i
+							class="mdi"
+							:class="isSaving ? 'mdi-loading mdi-spin' : 'mdi-content-save-outline'"
+						></i>
+						Save Permissions
+					</button>
+				</template>
+			</div>
 		</div>
 
 		<div class="maintenance-grid">
@@ -293,20 +396,34 @@ onMounted(() => {
 					</span>
 				</div>
 
-				<div v-else-if="isAllGrantedGroup" class="empty-state border-dashed">
-					<i class="mdi mdi-shield-check-outline empty-state__icon u-text-primary"></i>
-					<p>All Permissions Granted</p>
-					<span class="empty-state__sub"
-						>This role has full system access via the MANAGE_ALL policy.</span
-					>
-				</div>
-
 				<div v-else-if="isLoadingPermissions" class="empty-state">
 					<i class="mdi mdi-loading mdi-spin empty-state__icon u-text-primary"></i>
 					<p>Fetching Authorized Policies...</p>
 				</div>
 
 				<div v-else-if="showPermissionMatrix" class="matrix-container">
+					<div
+						v-if="selectedGroupEditMessage || permissionGuardMessage || !isEditingPermissions"
+						class="permission-notice mb-md"
+						:class="{ 'permission-notice--warning': selectedGroupEditMessage || permissionGuardMessage }"
+					>
+						<i
+							class="mdi"
+							:class="
+								selectedGroupEditMessage || permissionGuardMessage
+									? 'mdi-lock-alert-outline'
+									: 'mdi-eye-outline'
+							"
+						></i>
+						<span>
+							{{
+								permissionGuardMessage ||
+								selectedGroupEditMessage ||
+								"Viewing permissions. Click Edit Permissions before making changes."
+							}}
+						</span>
+					</div>
+
 					<div class="filter-panel mb-md">
 						<Textbox
 							v-model="searchQuery"
@@ -330,17 +447,19 @@ onMounted(() => {
 						<div class="panel-card__header">
 							<div class="panel-card__header-title">
 								<i class="mdi mdi-folder-key-network-outline u-text-primary"></i>
-								<h2>{{ subject }} Permissions</h2>
+								<h2>{{ getPermissionSubjectLabel(String(subject)) }} Permissions</h2>
 							</div>
 							<div class="panel-card__header-actions">
 								<button
 									class="btn btn--text"
+									:disabled="!isEditingPermissions"
 									@click="toggleAllInSubject(String(subject), true)"
 								>
 									Select All
 								</button>
 								<button
 									class="btn btn--text"
+									:disabled="!isEditingPermissions"
 									@click="toggleAllInSubject(String(subject), false)"
 								>
 									Clear All
@@ -353,13 +472,17 @@ onMounted(() => {
 								v-for="perm in perms"
 								:key="perm.code"
 								class="perm-box"
-								:class="{ 'perm-box--checked': isChecked(perm.code) }"
+								:class="{
+									'perm-box--checked': isChecked(perm.code),
+									'perm-box--readonly': !isEditingPermissions,
+								}"
 								@click="togglePermission(perm.code)"
 							>
 								<label class="checkbox-container" @click.stop>
 									<input
 										type="checkbox"
 										:checked="isChecked(perm.code)"
+										:disabled="!isEditingPermissions"
 										@change="
 											(e) =>
 												onPermissionToggle(
@@ -369,7 +492,9 @@ onMounted(() => {
 										"
 									/>
 									<span class="checkbox-container__box"></span>
-									<span class="perm-box__action-label">{{ perm.action }}</span>
+									<span class="perm-box__action-label">
+										{{ getPermissionActionLabel(perm.action) }}
+									</span>
 								</label>
 
 								<span
@@ -407,6 +532,11 @@ onMounted(() => {
 		flex-wrap: wrap;
 		gap: var(--spacing-md);
 	}
+	&__actions {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+	}
 	&__title-area {
 		h1 {
 			font-size: 24px;
@@ -427,6 +557,7 @@ onMounted(() => {
 	grid-template-columns: 4.2fr 7.8fr;
 	gap: var(--spacing-lg);
 	align-items: start;
+	min-height: 0;
 	@media (max-width: 960px) {
 		grid-template-columns: 1fr;
 	}
@@ -436,20 +567,29 @@ onMounted(() => {
 		border: 1px solid var(--colors-surface-border);
 		border-radius: 12px;
 		padding: var(--spacing-md);
-		height: 600px;
+		height: min(600px, calc(100vh - var(--topbar-h) - 170px));
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
+		position: sticky;
+		top: var(--spacing-lg);
 		@media (max-width: 960px) {
+			position: static;
 			height: auto;
 			max-height: 400px;
 		}
 	}
 	&__right-panel {
-		min-height: 600px;
-		height: 100%;
+		height: calc(100vh - var(--topbar-h) - 170px);
+		min-height: 480px;
+		overflow-y: auto;
+		padding-right: 4px;
+		scrollbar-gutter: stable;
 		@media (max-width: 960px) {
+			height: auto;
 			min-height: auto;
+			overflow: visible;
+			padding-right: 0;
 		}
 	}
 }
@@ -515,6 +655,29 @@ onMounted(() => {
 	width: 100%;
 }
 
+.permission-notice {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 10px;
+	color: var(--colors-text-muted);
+	font-size: 13px;
+	font-weight: 600;
+	padding: 10px var(--spacing-md);
+
+	i {
+		font-size: 18px;
+	}
+
+	&--warning {
+		background: rgba(245, 158, 11, 0.08);
+		border-color: rgba(245, 158, 11, 0.25);
+		color: #b45309;
+	}
+}
+
 .permission-item-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -551,6 +714,15 @@ onMounted(() => {
 		background-color: var(--colors-surface-hover) !important;
 		.perm-box__action-label {
 			color: var(--colors-brand-primary);
+		}
+	}
+
+	&--readonly {
+		cursor: default;
+		opacity: 0.86;
+
+		&:hover {
+			border-color: var(--colors-surface-border);
 		}
 	}
 }

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { useRoute } from "vue-router";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import type { MeResponse } from "@/api/auth/auth.types";
+import { notificationApi } from "@/api/notification/notification.api";
+import type { NotificationItem } from "@/api/notification/notification.types";
 import { getAvatarUrl } from "@/utils/avatar";
 
 const props = defineProps<{
@@ -14,7 +16,18 @@ const emit = defineEmits<{
 }>();
 
 const route = useRoute();
+const router = useRouter();
 const isAccountOpenMobile = defineModel<boolean>("isAccountOpenMobile", { default: false });
+const isNotificationsOpen = ref(false);
+const notifications = ref<NotificationItem[]>([]);
+const unreadTotal = ref(0);
+const isLoadingNotifications = ref(false);
+const notificationError = ref("");
+
+const unreadLabel = computed(() => {
+	if (!unreadTotal.value) return "";
+	return unreadTotal.value > 99 ? "99+" : String(unreadTotal.value);
+});
 
 const isOwnProfileActive = computed(() => {
 	if (route.path !== "/user/profile") return false;
@@ -28,6 +41,178 @@ function handleLogoutClick() {
 	isAccountOpenMobile.value = false;
 	emit("open-logout");
 }
+
+function handleDocumentClick(e: MouseEvent) {
+	const target = e.target as HTMLElement;
+	if (!target.closest(".notification-menu-wrapper")) {
+		isNotificationsOpen.value = false;
+	}
+}
+
+function toggleNotifications() {
+	isAccountOpenMobile.value = false;
+	isNotificationsOpen.value = !isNotificationsOpen.value;
+
+	if (isNotificationsOpen.value) {
+		fetchUnreadNotifications();
+	}
+}
+
+async function fetchUnreadNotifications() {
+	isLoadingNotifications.value = true;
+	notificationError.value = "";
+
+	try {
+		const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kuala_Lumpur";
+		const response = await notificationApi.getUnread({
+			pageIndex: 0,
+			pageSize: 5,
+			sort: "createdAt-desc",
+			timezone,
+		});
+
+		if (response.error) {
+			throw new Error(getApiErrorMessage(response.error, "Unable to load notifications."));
+		}
+
+		notifications.value = response.data?.data || [];
+		unreadTotal.value = response.data?.total || 0;
+	} catch (error) {
+		notificationError.value =
+			error instanceof Error ? error.message : "Unable to load notifications.";
+	} finally {
+		isLoadingNotifications.value = false;
+	}
+}
+
+async function markAllNotificationsRead() {
+	if (!unreadTotal.value) return;
+
+	try {
+		await notificationApi.markAllRead();
+		notifications.value = [];
+		unreadTotal.value = 0;
+	} catch (error) {
+		notificationError.value =
+			error instanceof Error ? error.message : "Unable to update notifications.";
+	}
+}
+
+async function openNotification(notification: NotificationItem) {
+	if (!notification.isRead) {
+		try {
+			const response = await notificationApi.markRead(notification.code);
+			if (response.error) {
+				throw new Error(getApiErrorMessage(response.error, "Unable to update notification."));
+			}
+
+			notifications.value = notifications.value.filter((item) => item.code !== notification.code);
+			unreadTotal.value = Math.max(unreadTotal.value - 1, 0);
+		} catch (error) {
+			notificationError.value =
+				error instanceof Error ? error.message : "Unable to update notification.";
+		}
+	}
+
+	isNotificationsOpen.value = false;
+	if (notification.referenceType === "WorkOrder" && notification.referenceId) {
+		router.push({
+			name: "Work Order Detail",
+			params: { id: notification.referenceId },
+		});
+	}
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+	if (error && typeof error === "object") {
+		const errorRecord = error as Record<string, any>;
+		if (typeof errorRecord.message === "string") return errorRecord.message;
+		if (typeof errorRecord.error?.message === "string") return errorRecord.error.message;
+	}
+
+	return fallback;
+}
+
+function getNotificationTitle(notification: NotificationItem) {
+	const payload = getPayloadRecord(notification.payload);
+	const code = typeof payload?.code === "string" ? payload.code : "";
+	const title = typeof payload?.title === "string" ? payload.title : "";
+
+	switch (notification.templateCode) {
+		case "WO_DRAFT_CREATED":
+			return code ? `Draft Work Order ${code}` : "Draft Work Order Saved";
+		case "WO_CREATED":
+			return code ? `New Work Order ${code}` : "New Work Order";
+		case "WO_SUBMITTED":
+			return code ? `Work Order ${code} Pending Approval` : "Work Order Pending Approval";
+		case "WO_APPROVED":
+			return code ? `Work Order ${code} Approved` : "Work Order Approved";
+		case "WO_REJECTED":
+			return code ? `Work Order ${code} Rejected` : "Work Order Rejected";
+	}
+
+	const value = title || payload?.subject || payload?.heading;
+
+	if (typeof value === "string" && value.trim()) return value;
+	return notification.templateCode
+		.replace(/[_-]+/g, " ")
+		.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getNotificationDescription(notification: NotificationItem) {
+	const payload = getPayloadRecord(notification.payload);
+	const title = typeof payload?.title === "string" ? payload.title : "";
+	const code = typeof payload?.code === "string" ? payload.code : "";
+
+	if (notification.referenceType === "WorkOrder" && title) {
+		return code ? `${title} (${code})` : title;
+	}
+
+	const value = payload?.message || payload?.description || payload?.body || payload?.content;
+
+	if (typeof value === "string" && value.trim()) return value;
+	if (notification.referenceType) return `Related to ${notification.referenceType}`;
+	return "Open WOS MariaDB to review this notification.";
+}
+
+function getPayloadRecord(payload: unknown) {
+	if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+		return payload as Record<string, unknown>;
+	}
+
+	return null;
+}
+
+function formatNotificationTime(value?: string) {
+	if (!value) return "";
+
+	const date = new Date(value);
+	const diffMs = Date.now() - date.getTime();
+	const diffMinutes = Math.floor(diffMs / 60000);
+
+	if (diffMinutes < 1) return "Just now";
+	if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+	const diffHours = Math.floor(diffMinutes / 60);
+	if (diffHours < 24) return `${diffHours}h ago`;
+
+	const diffDays = Math.floor(diffHours / 24);
+	if (diffDays < 7) return `${diffDays}d ago`;
+
+	return new Intl.DateTimeFormat("en-MY", {
+		day: "2-digit",
+		month: "short",
+	}).format(date);
+}
+
+onMounted(() => {
+	document.addEventListener("click", handleDocumentClick);
+	fetchUnreadNotifications();
+});
+
+onUnmounted(() => {
+	document.removeEventListener("click", handleDocumentClick);
+});
 </script>
 
 <template>
@@ -41,9 +226,84 @@ function handleLogoutClick() {
 
 		<div class="header-right">
 			<!-- Notifications -->
-			<button class="btn btn--icon" aria-label="Notifications">
-				<i class="mdi mdi-bell-outline"></i>
-			</button>
+			<div class="notification-menu-wrapper">
+				<button
+					class="btn btn--icon notification-btn"
+					:class="{ 'notification-btn--active': isNotificationsOpen }"
+					:aria-expanded="isNotificationsOpen"
+					aria-label="Notifications"
+					@click.stop="toggleNotifications"
+				>
+					<i class="mdi mdi-bell-outline"></i>
+					<span v-if="unreadLabel" class="notification-btn__badge">{{ unreadLabel }}</span>
+				</button>
+
+				<div v-if="isNotificationsOpen" class="notification-dropdown">
+					<div class="notification-dropdown__header">
+						<div>
+							<p class="notification-dropdown__title">Notifications</p>
+							<p class="notification-dropdown__subtitle">Synced from WOS MariaDB</p>
+						</div>
+						<button
+							v-if="unreadTotal"
+							class="notification-dropdown__mark-read"
+							type="button"
+							@click="markAllNotificationsRead"
+						>
+							Mark all read
+						</button>
+					</div>
+
+					<div v-if="isLoadingNotifications" class="notification-dropdown__state">
+						<i class="mdi mdi-loading mdi-spin"></i>
+						Loading notifications
+					</div>
+
+					<div v-else-if="notificationError" class="notification-dropdown__state">
+						<i class="mdi mdi-alert-circle-outline"></i>
+						{{ notificationError }}
+					</div>
+
+					<div v-else-if="!notifications.length" class="notification-dropdown__state">
+						<i class="mdi mdi-bell-check-outline"></i>
+						No unread notifications
+					</div>
+
+					<div v-else class="notification-dropdown__list">
+						<button
+							v-for="notification in notifications"
+							:key="notification.code"
+							class="notification-item"
+							type="button"
+							@click="openNotification(notification)"
+						>
+							<span class="notification-item__icon">
+								<i class="mdi mdi-bell-ring-outline"></i>
+							</span>
+							<span class="notification-item__content">
+								<span class="notification-item__title">
+									{{ getNotificationTitle(notification) }}
+								</span>
+								<span class="notification-item__message">
+									{{ getNotificationDescription(notification) }}
+								</span>
+								<span class="notification-item__meta">
+									{{ formatNotificationTime(notification.createdAt) }}
+								</span>
+							</span>
+						</button>
+					</div>
+
+					<RouterLink
+						class="notification-dropdown__footer"
+						:to="{ name: 'Notifications' }"
+						@click="isNotificationsOpen = false"
+					>
+						View all notifications
+						<i class="mdi mdi-arrow-right"></i>
+					</RouterLink>
+				</div>
+			</div>
 
 			<!-- Account -->
 			<div class="account-menu-wrapper">

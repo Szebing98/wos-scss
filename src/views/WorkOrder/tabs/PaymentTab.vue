@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import Button from "@/components/Button.vue";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 const props = defineProps<{
 	workOrder: any;
@@ -16,6 +17,7 @@ const emit = defineEmits(["uploadInvoice", "editInvoice", "deleteFile", "uploadP
 
 const invoiceInput = ref<HTMLInputElement | null>(null);
 const paymentInput = ref<HTMLInputElement | null>(null);
+const dateFormatStore = useDateFormatStore();
 </script>
 
 <template>
@@ -111,7 +113,7 @@ const paymentInput = ref<HTMLInputElement | null>(null);
 						</div>
 						<div class="ocr-field">
 							<span class="label">Date Issued:</span>
-							<span class="value">{{ inv.date }}</span>
+							<span class="value">{{ dateFormatStore.formatDate(inv.date) }}</span>
 						</div>
 						<div class="ocr-field">
 							<span class="label">Amount:</span>
@@ -183,7 +185,7 @@ const paymentInput = ref<HTMLInputElement | null>(null);
 				</thead>
 				<tbody>
 					<tr v-for="pay in payments" :key="pay.id">
-						<td>{{ pay.date }}</td>
+						<td>{{ dateFormatStore.formatDate(pay.date) }}</td>
 						<td>
 							<span class="method-badge">
 								<i class="mdi mdi-bank" v-if="pay.method === 'Bank Transfer'"></i>

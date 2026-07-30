@@ -11,6 +11,10 @@ export interface TableHeader {
 	width?: string;
 	minWidth?: string;
 	sortable?: boolean;
+	mobileIcon?: string;
+	fixed?: "left" | "right";
+	fixedOffset?: string;
+	defaultVisible?: boolean;
 }
 
 interface InternalHeader extends TableHeader {
@@ -90,7 +94,7 @@ function loadTablePreferences() {
 				});
 				props.headers.forEach((ph) => {
 					if (!savedMap.has(ph.key)) {
-						restored.push({ ...ph, visible: true });
+						restored.push({ ...ph, visible: ph.defaultVisible !== false });
 					}
 				});
 				internalHeaders.value = restored;
@@ -126,7 +130,8 @@ watch(
 			const existing = currentMap.get(h.key);
 			return {
 				...h,
-				visible: existing !== undefined ? existing.visible : true,
+				visible:
+					existing !== undefined ? existing.visible : h.defaultVisible !== false,
 				_width: existing?._width || h.width,
 			};
 		});
@@ -440,6 +445,8 @@ const paginationText = computed(() => {
 							{
 								dragging: draggedColumn === header.key,
 								'sortable-header': isHeaderSortable(header),
+								'mud-table-cell-fixed-left': header.fixed === 'left',
+								'mud-table-cell-fixed-right': header.fixed === 'right',
 							},
 						]"
 						:style="{
@@ -450,6 +457,8 @@ const paginationText = computed(() => {
 								(header.width && header.width.endsWith('px')
 									? header.width
 									: '100px'),
+							left: header.fixed === 'left' ? header.fixedOffset || '0' : undefined,
+							right: header.fixed === 'right' ? header.fixedOffset || '0' : undefined,
 						}"
 						:draggable="!isHoveringResizer && !resizingColumn"
 						@dragstart="onDragStart($event, header.key)"
@@ -511,7 +520,11 @@ const paginationText = computed(() => {
 						:class="[
 							`mud-table-cell-${header.key}`,
 							`u-text-${header.align || 'left'}`,
-							{ 'mud-table-cell-dense': dense },
+							{
+								'mud-table-cell-dense': dense,
+								'mud-table-cell-fixed-left': header.fixed === 'left',
+								'mud-table-cell-fixed-right': header.fixed === 'right',
+							},
 						]"
 						:style="{
 							width: header._width || header.width,
@@ -521,9 +534,15 @@ const paginationText = computed(() => {
 								(header.width && header.width.endsWith('px')
 									? header.width
 									: '100px'),
+							left: header.fixed === 'left' ? header.fixedOffset || '0' : undefined,
+							right: header.fixed === 'right' ? header.fixedOffset || '0' : undefined,
 						}"
 						:data-label="header.label"
 					>
+						<span v-if="header.label" class="mud-table-mobile-label">
+							<i v-if="header.mobileIcon" class="mdi" :class="header.mobileIcon"></i>
+							{{ header.label }}
+						</span>
 						<slot :name="`item-${header.key}`" :item="item" :index="index">
 							<HighlightText :text="item[header.key]" :query="searchQuery" />
 						</slot>
@@ -769,6 +788,23 @@ const paginationText = computed(() => {
 	}
 }
 
+.mud-table-cell-fixed-left,
+.mud-table-cell-fixed-right {
+	position: sticky;
+	z-index: 2;
+	background: var(--colors-surface-card);
+}
+
+.mud-table-cell-header.mud-table-cell-fixed-left,
+.mud-table-cell-header.mud-table-cell-fixed-right {
+	z-index: 4;
+	background: var(--colors-brand-primary);
+}
+
+.mud-table-mobile-label {
+	display: none;
+}
+
 .mud-table-cell-actions,
 .mud-table-cell-status,
 .mud-table-cell-select,
@@ -965,6 +1001,7 @@ const paginationText = computed(() => {
 	}
 
 	.mud-table-cell {
+		position: static !important;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -990,19 +1027,20 @@ const paginationText = computed(() => {
 			border-bottom: none;
 		}
 
-		&::before {
-			content: attr(data-label);
+		.mud-table-mobile-label {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
 			font-weight: 600;
 			color: var(--colors-text-secondary);
 			text-align: left;
 			flex-shrink: 0;
 			max-width: 45%;
-		}
 
-		&[data-label=""]::before,
-		&:not([data-label])::before {
-			content: none !important;
-			display: none !important;
+			i {
+				font-size: 16px;
+				color: var(--colors-brand-primary);
+			}
 		}
 	}
 

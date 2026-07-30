@@ -7,6 +7,7 @@ const props = defineProps<{
     label?: string;
     placeholder?: string;
     disabled?: boolean;
+    showCode?: boolean;
 }>();
 
 const emit = defineEmits(['update:modelValue']);
@@ -80,7 +81,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
                 class="dropdown-item"
                 @click="selectOption(opt.code)"
             >
-                {{ opt.name }} <span class="opt-code">({{ opt.code }})</span>
+                {{ opt.name }} <span v-if="showCode !== false" class="opt-code">({{ opt.code }})</span>
             </div>
         </div>
         <div class="dropdown-menu empty-msg" v-else-if="isDropdownOpen">

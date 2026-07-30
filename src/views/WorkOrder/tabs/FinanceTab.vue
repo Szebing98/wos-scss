@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import Button from "@/components/Button.vue";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 const props = defineProps<{
 	quotations: any[];
@@ -11,6 +12,7 @@ const props = defineProps<{
 const emit = defineEmits(["upload", "delete", "edit"]);
 
 const quotationInput = ref<HTMLInputElement | null>(null);
+const dateFormatStore = useDateFormatStore();
 </script>
 
 <template>
@@ -76,7 +78,7 @@ const quotationInput = ref<HTMLInputElement | null>(null);
 						</div>
 						<div class="ocr-field">
 							<span class="label">Date Issued:</span>
-							<span class="value">{{ qt.date }}</span>
+							<span class="value">{{ dateFormatStore.formatDate(qt.date) }}</span>
 						</div>
 						<div class="ocr-field">
 							<span class="label">Amount:</span>

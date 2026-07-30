@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from "@/components/Button.vue";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 const props = defineProps<{
 	workOrder: any;
@@ -9,21 +10,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(["updateRole", "approve", "reject"]);
+const dateFormatStore = useDateFormatStore();
 
 function formatDateString(dateStr: string) {
-	if (!dateStr) return "—";
-	try {
-		const date = new Date(dateStr);
-		return date.toLocaleDateString("en-GB", {
-			day: "2-digit",
-			month: "short",
-			year: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-		});
-	} catch {
-		return dateStr;
-	}
+	return dateFormatStore.formatDateTime(dateStr);
 }
 </script>
 

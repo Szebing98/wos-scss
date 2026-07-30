@@ -12,12 +12,14 @@ import type { AutocompleteOption } from "@/components/Autocomplete.vue";
 import { customerApi } from "@/api/customer/customer.api";
 import { locationApi } from "@/api/maintenance/location/location.api";
 import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 import { LHDN_COUNTRIES, LHDN_STATES } from "@/utils/lhdn-countries";
 
 const route = useRoute();
 const router = useRouter();
 const snackbar = useSnackbarStore();
+const dateFormatStore = useDateFormatStore();
 
 const isNewMode = ref(true);
 const customerGuid = ref<string | null>(null);
@@ -220,8 +222,7 @@ function computeStatus(endDateStr: string): "Active" | "ExpiringSoon" | "Expired
 }
 
 function formatDate(iso: string) {
-	if (!iso) return "—";
-	return iso.slice(0, 10);
+	return dateFormatStore.formatDate(iso);
 }
 
 onMounted(async () => {

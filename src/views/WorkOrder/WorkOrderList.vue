@@ -12,11 +12,12 @@ import Checkbox from "@/components/Checkbox.vue";
 import Button from "@/components/Button.vue";
 import Dialog from "@/components/Dialog.vue";
 import DatePicker from "@/components/DatePicker.vue";
-import WorkOrderDetailsDialog from "./WorkOrderDetailsDialog.vue";
 import { workOrderApi } from "@/api/work-order/work-order.api";
+import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
 import HighlightText from "@/components/HighlightText.vue";
 import Autocomplete from "@/components/Autocomplete.vue";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 const props = defineProps({
 	status: {
@@ -31,9 +32,16 @@ const props = defineProps({
 
 const route = useRoute();
 const router = useRouter();
+const dateFormatStore = useDateFormatStore();
+const priorityColors: Record<string, string> = {
+	High: "error",
+	Medium: "warning",
+	Low: "info",
+};
 
 // Constants
 enum WorkOrderStatus {
+	Draft = "Draft",
 	New = "New",
 	PendingApproval = "PendingApproval",
 	InProgress = "InProgress",
@@ -67,10 +75,6 @@ const selectedItem = ref<WorkOrderModel>();
 const isReject = ref(false);
 const rejectReason = ref("");
 
-const isViewDetails = ref(false);
-const viewSelectedItem = ref<WorkOrderModel | null>(null);
-const startDetailsInEditMode = ref(false);
-
 const isApproveDialog = ref(false);
 const approveFormData = ref({
 	estimatedEndDate: "",
@@ -89,6 +93,63 @@ const users = [
 const isConfirmBulkAction = ref(false);
 
 const activeStatus = ref(props.status);
+const activeIsDraft = ref<string | undefined>();
+const activeIncludesDraftAndNew = ref(false);
+
+const backendToUiStatusMap: Record<string, WorkOrderStatus> = {
+	draft: WorkOrderStatus.Draft,
+	new: WorkOrderStatus.New,
+	pending: WorkOrderStatus.PendingApproval,
+	pendingapproval: WorkOrderStatus.PendingApproval,
+	progress: WorkOrderStatus.InProgress,
+	inprogress: WorkOrderStatus.InProgress,
+	done: WorkOrderStatus.Done,
+	completed: WorkOrderStatus.Completed,
+	claimed: WorkOrderStatus.Claimed,
+	closed: WorkOrderStatus.Closed,
+	cancelled: WorkOrderStatus.Cancelled,
+	rejected: WorkOrderStatus.Rejected,
+};
+
+const uiToBackendStatusMap: Record<string, string> = {
+	Draft: "draft",
+	New: "new",
+	PendingApproval: "pending",
+	InProgress: "progress",
+	Done: "done",
+	Completed: "completed",
+	Claimed: "claimed",
+	Closed: "closed",
+	Cancelled: "cancelled",
+	Rejected: "rejected",
+	draft: "draft",
+	new: "new",
+	pending: "pending",
+	progress: "progress",
+	done: "done",
+	completed: "completed",
+	claimed: "claimed",
+	closed: "closed",
+	cancelled: "cancelled",
+	rejected: "rejected",
+};
+
+function normalizeStatusForUi(status?: string | null) {
+	if (!status) return "";
+	return backendToUiStatusMap[status] || status;
+}
+
+function normalizeStatusForApi(status?: string | null) {
+	if (!status || status === "All" || status === "all") return "";
+	return uiToBackendStatusMap[status] || status;
+}
+
+function formatUserDisplay(name?: string | null, code?: string | null) {
+	const cleanName = name?.trim();
+	const cleanCode = code?.trim();
+	if (cleanName && cleanCode && cleanName !== cleanCode) return `${cleanName} (${cleanCode})`;
+	return cleanName || cleanCode || "Unassigned";
+}
 
 watch(
 	() => props.status,
@@ -98,10 +159,22 @@ watch(
 );
 
 watch(
-	() => route.query.status,
-	(newVal) => {
-		if (newVal && typeof newVal === "string") {
-			activeStatus.value = newVal;
+	() => [route.query.orderStatus, route.query.status, route.query.isDraft],
+	([orderStatus, status, isDraft]) => {
+		activeIsDraft.value = typeof isDraft === "string" ? isDraft : undefined;
+		const routeStatus = typeof orderStatus === "string" ? orderStatus : status;
+		activeIncludesDraftAndNew.value =
+			typeof routeStatus === "string" &&
+			routeStatus.toLowerCase() === "new" &&
+			activeIsDraft.value === undefined;
+
+		if (typeof routeStatus === "string") {
+			activeStatus.value =
+				routeStatus === "draft" || activeIsDraft.value === "true"
+					? WorkOrderStatus.Draft
+					: normalizeStatusForUi(routeStatus);
+		} else if (!activeIsDraft.value) {
+			activeStatus.value = props.status;
 		}
 	},
 	{ immediate: true },
@@ -135,6 +208,7 @@ interface TechnicalModel {
 
 interface WorkOrderModel {
 	guid?: string;
+	isDraft?: boolean;
 	woNumber: string;
 	title: string;
 	personInCharge: string;
@@ -145,6 +219,11 @@ interface WorkOrderModel {
 	createdAt: string;
 	estimatedEndDate?: string;
 	leadEngineer?: string;
+	leader?: string;
+	leaderII?: string;
+	salesAgent?: string;
+	site?: string;
+	jobPriority?: string;
 	assistantEngineers?: string[];
 	description?: string;
 	location?: string;
@@ -195,6 +274,38 @@ function resetFilters() {
 
 const workOrders = ref<any[]>([]);
 const loading = ref(false);
+const userDirectory = ref<any[]>([]);
+
+async function fetchUserDirectory() {
+	try {
+		const { data } = await userApi.getUsers({
+			pageIndex: 0,
+			pageSize: 1000,
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+		});
+		userDirectory.value = data?.data || [];
+	} catch (error) {
+		console.error("Failed to fetch users for Work Order list:", error);
+		userDirectory.value = [];
+	}
+}
+
+function resolveUserDisplay(
+	value?: string | null,
+	fallbackName?: string | null,
+	fallbackDisplayCode?: string | null,
+) {
+	const lookup = String(value || fallbackDisplayCode || "").toLowerCase();
+	const user = userDirectory.value.find((item: any) =>
+		[item.guid, item.code, item.displayCode, item.userCode]
+			.filter(Boolean)
+			.some((candidate) => String(candidate).toLowerCase() === lookup),
+	);
+	if (!user) return formatUserDisplay(fallbackName, fallbackDisplayCode || value);
+	const name = user.displayName || user.profile?.displayName || user.name;
+	const displayCode = user.displayCode || user.code || user.userCode;
+	return formatUserDisplay(name, displayCode);
+}
 
 async function fetchWorkOrders() {
 	loading.value = true;
@@ -208,9 +319,17 @@ async function fetchWorkOrders() {
 
 		// Status query
 		if (activeStatus.value !== "All" && activeStatus.value !== "all") {
-			query.status = activeStatus.value;
+			const orderStatus = normalizeStatusForApi(activeStatus.value);
+			if (orderStatus && orderStatus !== "draft") query.orderStatus = orderStatus;
 		} else if (appliedStatusFilter.value !== "all") {
-			query.status = appliedStatusFilter.value;
+			query.orderStatus = normalizeStatusForApi(appliedStatusFilter.value);
+		}
+
+		if (activeIsDraft.value !== undefined) {
+			query.isDraft = activeIsDraft.value;
+		} else if (activeStatus.value === WorkOrderStatus.Draft) {
+			query.isDraft = "true";
+			query.orderStatus = "new";
 		}
 
 		if (appliedWorkTypeFilter.value !== "all") {
@@ -227,24 +346,76 @@ async function fetchWorkOrders() {
 		if (data && data.data && Array.isArray(data.data)) {
 			workOrders.value = data.data.map((w: any) => ({
 				guid: w.guid,
+				isDraft: !!w.isDraft,
 				woNumber: w.docNo || w.code || w.guid.substring(0, 8).toUpperCase(),
 				title: w.title,
-				personInCharge: w.projectPicName || w.personInChargeCode || "Unassigned",
+				personInCharge: resolveUserDisplay(
+					w.projectPicCode ||
+						w.personInChargeCode ||
+						w.personInCharge?.code ||
+						w.projectPic?.code,
+					w.projectPicName ||
+						w.personInChargeName ||
+						w.personInCharge?.userProfile?.displayName ||
+						w.projectPic?.userProfile?.displayName,
+					w.projectPicDisplayCode ||
+						w.personInChargeDisplayCode ||
+						w.personInCharge?.displayCode ||
+						w.projectPic?.displayCode,
+				),
 				customer: {
 					name: w.customerName || "Unknown",
 					email: w.customerEmail || "",
 					phone: w.customerPhone || "",
 				},
 				workType: w.workType || "Maintenance",
-				status: w.orderStatus || w.status,
+				status: normalizeStatusForUi(w.orderStatus || w.status || "new"),
 				jobPriority: w.jobPriority || "Low",
 				siteCode: w.siteCode || "",
+				site: w.siteName
+					? `${w.siteName}${w.siteCode ? ` (${w.siteCode})` : ""}`
+					: w.siteCode || "—",
+				salesAgent: resolveUserDisplay(
+					w.salesAgentCode ||
+						w.salesAgent?.code ||
+						w.salesAgent?.guid,
+					w.salesAgentName ||
+						w.salesAgentDisplayName ||
+						w.salesAgentProfileName ||
+						w.salesAgent?.displayName ||
+						w.salesAgent?.profile?.displayName ||
+						w.salesAgent?.userProfile?.displayName,
+					w.salesAgentDisplayCode ||
+						w.salesAgent?.displayCode,
+				),
 				createdAt: w.createdAt,
 				rejectedReason: w.rejectedReason || "",
 				description: w.description || "",
 				location: w.location || w.locationName || "",
 				estimatedEndDate: w.estimatedEndDate || "",
 				leadEngineer: w.leadEngineerName || w.leaderCode || "",
+				leader: resolveUserDisplay(
+					w.leaderCode ||
+						w.leadEngineerCode ||
+						w.leader?.code ||
+						w.leadEngineer?.code,
+					w.leaderName ||
+						w.leadEngineerName ||
+						w.leader?.userProfile?.displayName ||
+						w.leadEngineer?.userProfile?.displayName,
+					w.leaderDisplayCode ||
+						w.leadEngineerDisplayCode ||
+						w.leader?.displayCode ||
+						w.leadEngineer?.displayCode,
+				),
+				leaderII: resolveUserDisplay(
+					w.leaderIICode ||
+						w.leaderIiCode ||
+						w.leaderII?.code,
+					w.leaderIIName || w.leaderII?.userProfile?.displayName,
+					w.leaderIIDisplayCode ||
+						w.leaderII?.displayCode,
+				),
 				assistantEngineers: w.technicianCodes || w.assistantEngineers || [],
 			}));
 		} else {
@@ -261,6 +432,15 @@ async function fetchWorkOrders() {
 function goToDetail(item: any) {
 	if (!item) return;
 	const id = item.guid || item.woNumber;
+	if (
+		item.isDraft ||
+		item.status === WorkOrderStatus.Draft ||
+		item.status === WorkOrderStatus.New ||
+		item.status === WorkOrderStatus.PendingApproval
+	) {
+		router.push({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
+		return;
+	}
 	router.push({
 		name: "Work Order Detail",
 		params: { id },
@@ -275,6 +455,8 @@ watch(
 	[
 		searchQuery,
 		activeStatus,
+		activeIsDraft,
+		activeIncludesDraftAndNew,
 		appliedStatusFilter,
 		appliedWorkTypeFilter,
 		appliedDateFrom,
@@ -285,8 +467,9 @@ watch(
 	},
 );
 
-onMounted(() => {
-	fetchWorkOrders();
+onMounted(async () => {
+	await fetchUserDirectory();
+	await fetchWorkOrders();
 	fetchWorkTypes();
 });
 
@@ -295,9 +478,18 @@ const filteredWorkOrders = computed(() => {
 	return workOrders.value.filter((w) => {
 		if (!w) return false;
 		if (activeStatus.value !== "All" && activeStatus.value !== "all") {
-			if (w.status?.toLowerCase() !== activeStatus.value?.toLowerCase()) return false;
+			if (activeIncludesDraftAndNew.value) {
+				if (![WorkOrderStatus.Draft, WorkOrderStatus.New].includes(w.status)) return false;
+			} else {
+				if (activeStatus.value === WorkOrderStatus.Draft) {
+					if (!w.isDraft) return false;
+				} else if (
+					normalizeStatusForApi(w.status) !== normalizeStatusForApi(activeStatus.value)
+				)
+					return false;
+			}
 		} else if (appliedStatusFilter.value !== "all") {
-			if (w.status?.toLowerCase() !== appliedStatusFilter.value?.toLowerCase()) return false;
+			if (normalizeStatusForApi(w.status) !== normalizeStatusForApi(appliedStatusFilter.value)) return false;
 		}
 
 		if (appliedWorkTypeFilter.value !== "all") {
@@ -382,16 +574,106 @@ const headers = computed<TableHeader[]>(() => {
 	];
 
 	if (effectiveStatus.value === "All" || effectiveStatus.value === "all") {
-		base.push({ key: "status", label: "Status", width: "140px", minWidth: "130px" });
+		base.push({
+			key: "status",
+			label: "Status",
+			width: "140px",
+			minWidth: "130px",
+			mobileIcon: "mdi-weather-cloudy-clock",
+		});
+	} else if (activeIncludesDraftAndNew.value) {
+		base.push({
+			key: "status",
+			label: "Status",
+			width: "140px",
+			minWidth: "130px",
+			mobileIcon: "mdi-weather-cloudy-clock",
+		});
 	}
 
 	base.push(
-		{ key: "woNumber", label: "WO #", width: "130px", minWidth: "115px" },
-		{ key: "title", label: "Work Order Title", width: "320px", minWidth: "220px" },
-		{ key: "customer", label: "Customer", width: "280px", minWidth: "220px" },
-		{ key: "workType", label: "Work Type", width: "150px", minWidth: "130px" },
-		{ key: "personInCharge", label: "Person In Charge", width: "160px", minWidth: "140px" },
-		{ key: "createdAt", label: "Created Date", width: "130px", minWidth: "110px" },
+		{
+			key: "woNumber",
+			label: "WO #",
+			width: "130px",
+			minWidth: "115px",
+			mobileIcon: "mdi-clipboard-text-outline",
+		},
+		{
+			key: "title",
+			label: "Work Order Title",
+			width: "320px",
+			minWidth: "220px",
+			mobileIcon: "mdi-folder-information",
+		},
+		{
+			key: "customer",
+			label: "Customer",
+			width: "280px",
+			minWidth: "220px",
+			mobileIcon: "mdi-account",
+		},
+		{
+			key: "workType",
+			label: "Work Type",
+			width: "150px",
+			minWidth: "130px",
+			mobileIcon: "mdi-tools",
+		},
+		{
+			key: "personInCharge",
+			label: "PIC",
+			width: "190px",
+			minWidth: "160px",
+			mobileIcon: "mdi-account-tie",
+		},
+		{
+			key: "leader",
+			label: "Leader",
+			width: "190px",
+			minWidth: "160px",
+			mobileIcon: "mdi-account-star",
+			defaultVisible: false,
+		},
+		{
+			key: "leaderII",
+			label: "Leader II",
+			width: "190px",
+			minWidth: "160px",
+			mobileIcon: "mdi-account-star-outline",
+			defaultVisible: false,
+		},
+		{
+			key: "salesAgent",
+			label: "Sales Agent",
+			width: "190px",
+			minWidth: "160px",
+			mobileIcon: "mdi-account-edit",
+			defaultVisible: false,
+		},
+		{
+			key: "site",
+			label: "Site",
+			width: "180px",
+			minWidth: "150px",
+			mobileIcon: "mdi-map-marker-radius",
+			defaultVisible: false,
+		},
+		{
+			key: "jobPriority",
+			label: "Job Priority",
+			width: "130px",
+			minWidth: "115px",
+			mobileIcon: "mdi-alert-circle-outline",
+			defaultVisible: false,
+		},
+		{
+			key: "createdAt",
+			label: "Created Date",
+			width: "130px",
+			minWidth: "110px",
+			mobileIcon: "mdi-calendar-clock",
+		},
 	);
 
 	if (isRejectedView.value) {
@@ -410,6 +692,8 @@ const headers = computed<TableHeader[]>(() => {
 		width: "140px",
 		minWidth: "120px",
 		sortable: false,
+		fixed: "right",
+		fixedOffset: "0px",
 	});
 
 	return base;
@@ -418,6 +702,7 @@ const headers = computed<TableHeader[]>(() => {
 const pageTitle = computed(() => {
 	if (effectiveStatus.value === "All" || effectiveStatus.value === "all")
 		return "All Work Orders";
+	if (activeIncludesDraftAndNew.value) return "Draft & New Work Orders";
 	const spacedStatus = effectiveStatus.value.replace(/([A-Z])/g, " $1").trim();
 	return `${spacedStatus} Work Orders`;
 });
@@ -429,18 +714,27 @@ const buttonList = [
 		class: "btn--icon-secondary",
 		tooltip: "Edit",
 		status: [
+			WorkOrderStatus.Draft,
 			WorkOrderStatus.New,
 			WorkOrderStatus.PendingApproval,
 			WorkOrderStatus.InProgress,
 			WorkOrderStatus.Completed,
 		],
 		click: (item: WorkOrderModel) => {
-			if (item.status === WorkOrderStatus.PendingApproval) {
-				// If it's pending approval, editing primarily means dealing with the schedule & resources
-				openApproveDialog(item);
-			} else if (item.status === WorkOrderStatus.InProgress) {
+			if (item.status === WorkOrderStatus.InProgress) {
 				// If it's in progress, navigate to the full detail page for execution
 				router.push({ name: "Work Order Detail", params: { id: item.guid } });
+			} else if (
+				item.isDraft ||
+				item.status === WorkOrderStatus.Draft ||
+				item.status === WorkOrderStatus.New ||
+				item.status === WorkOrderStatus.PendingApproval
+			) {
+				router.push({
+					name: "Work Order Form",
+					params: { id: item.guid },
+					query: { mode: "view" },
+				});
 			} else {
 				router.push({ name: "Work Order Form", params: { id: item.guid } });
 			}
@@ -865,31 +1159,31 @@ function proceedCreateWorkOrder() {
 	});
 }
 
-function viewWorkOrder(woNumber: string, startInEditMode = false) {
+function viewWorkOrder(woNumber: string) {
 	console.log(`View work order ${woNumber}`);
 	const wo = workOrders.value.find((w) => w.woNumber === woNumber);
 	if (wo) {
-		viewSelectedItem.value = wo;
-		startDetailsInEditMode.value = startInEditMode;
-		isViewDetails.value = true;
-	}
-}
-
-function handleEditFromView() {
-	if (!viewSelectedItem.value) return;
-
-	if (viewSelectedItem.value.status === WorkOrderStatus.PendingApproval) {
-		isViewDetails.value = false;
-		openApproveDialog(viewSelectedItem.value);
-	} else {
-		router.push({ name: "Work Order Form", params: { id: viewSelectedItem.value.guid } });
-	}
-}
-
-function handleSaveProgress(updatedWorkOrder: WorkOrderModel) {
-	const target = workOrders.value.find((w) => w.woNumber === updatedWorkOrder.woNumber);
-	if (target) {
-		Object.assign(target, updatedWorkOrder);
+		if (
+			wo.isDraft ||
+			wo.status === WorkOrderStatus.Draft ||
+			wo.status === WorkOrderStatus.New ||
+			wo.status === WorkOrderStatus.PendingApproval
+		) {
+			router.push({
+				name: "Work Order Form",
+				params: { id: wo.guid || wo.woNumber },
+				query: { mode: "view" },
+			});
+			return;
+		}
+		router.push({
+			name: "Work Order Detail",
+			params: { id: wo.guid || wo.woNumber },
+			query:
+				wo.status === WorkOrderStatus.Completed || wo.status === WorkOrderStatus.Claimed
+					? { status: "completed" }
+					: undefined,
+		});
 	}
 }
 
@@ -899,6 +1193,9 @@ function getStatusChipType(status: string) {
 		case "New":
 		case "new":
 			return "new";
+		case "Draft":
+		case "draft":
+			return "pending";
 		case "PendingApproval":
 		case "pending":
 		case "Pending Approval":
@@ -934,6 +1231,9 @@ function getStatusChipType(status: string) {
 function formatStatusLabel(status: string) {
 	if (!status) return "";
 	switch (status) {
+		case "Draft":
+		case "draft":
+			return "Draft";
 		case "PendingApproval":
 		case "pending":
 		case "Pending Approval":
@@ -971,6 +1271,7 @@ function formatStatusLabel(status: string) {
 
 defineExpose({
 	handleCreateWorkOrder,
+	fetchWorkOrders,
 	viewWorkOrder,
 });
 </script>
@@ -1128,13 +1429,16 @@ defineExpose({
 					</div>
 				</template>
 				<template #item-woNumber="{ item }">
-					<span
-						class="u-font-mono u-font-weight-medium text-primary"
-						style="cursor: pointer; text-decoration: underline"
-						@click.stop="goToDetail(item)"
-					>
-						<HighlightText :text="item.woNumber" :query="searchQuery" />
-					</span>
+					<div style="display: flex; align-items: center; gap: 8px">
+						<span
+							class="u-font-mono u-font-weight-medium text-primary"
+							style="cursor: pointer; text-decoration: underline"
+							@click.stop="goToDetail(item)"
+						>
+							<HighlightText :text="item.woNumber" :query="searchQuery" />
+						</span>
+						<Badge v-if="item.isDraft" type="warning">Draft</Badge>
+					</div>
 				</template>
 				<template #item-title="{ item }">
 					<span class="u-font-weight-medium">
@@ -1153,9 +1457,23 @@ defineExpose({
 					</div>
 				</template>
 				<template #item-workType="{ item }">
-					<span class="u-text-muted">
-						<HighlightText :text="item.workType" :query="searchQuery" />
-					</span>
+					<Badge type="primary" icon="mdi-tools">
+						{{ item.workType }}
+					</Badge>
+				</template>
+				<template #item-jobPriority="{ item }">
+					<Badge
+						:type="priorityColors[item.jobPriority] as any"
+						:icon="
+							item.jobPriority === 'High'
+								? 'mdi-alert-circle'
+								: item.jobPriority === 'Medium'
+									? 'mdi-alert'
+									: 'mdi-information'
+						"
+					>
+						{{ item.jobPriority }} Priority
+					</Badge>
 				</template>
 				<template #item-personInCharge="{ item }">
 					<span :class="{ 'u-text-muted': item.personInCharge === 'Unassigned' }">
@@ -1163,10 +1481,10 @@ defineExpose({
 					</span>
 				</template>
 				<template #item-createdAt="{ item }">
-					{{ new Date(item.createdAt).toLocaleDateString() }}
+					{{ dateFormatStore.formatDate(item.createdAt) }}
 				</template>
 				<template #item-status="{ item }">
-					<Badge :type="getStatusChipType(item.status) as any">{{
+					<Badge class="wo-order-status-badge" :type="getStatusChipType(item.status) as any">{{
 						formatStatusLabel(item.status)
 					}}</Badge>
 				</template>
@@ -1307,14 +1625,6 @@ defineExpose({
 			</template>
 		</Dialog>
 
-		<WorkOrderDetailsDialog
-			v-model="isViewDetails"
-			:workOrder="viewSelectedItem"
-			:users="users"
-			:startInEditMode="startDetailsInEditMode"
-			@edit="handleEditFromView"
-			@save-progress="handleSaveProgress"
-		/>
 	</div>
 </template>
 
@@ -1498,6 +1808,62 @@ defineExpose({
 		border-color: var(--colors-brand-primary);
 	}
 }
+
+.wo-order-status-badge {
+	padding: 0 8px;
+	font-size: 10px;
+	line-height: 2;
+	color: #ffffff;
+	border-radius: var(--radius-xs, 4px);
+	text-align: center;
+	font-weight: 500;
+}
+
+.wo-order-status-badge.badge--new {
+	background-color: #3b82f6;
+}
+
+.wo-order-status-badge.badge--pending,
+.wo-order-status-badge.badge--pending-approval {
+	background-color: #f59e0b;
+}
+
+.wo-order-status-badge.badge--progress,
+.wo-order-status-badge.badge--in-progress {
+	background-color: #6366f1;
+}
+
+.wo-order-status-badge.badge--done {
+	background-color: #08aed8;
+}
+
+.wo-order-status-badge.badge--completed {
+	background-color: #23af5d;
+}
+
+.wo-order-status-badge.badge--claimed {
+	background-color: #00dada;
+}
+
+.wo-order-status-badge.badge--closed {
+	background-color: #629bc2;
+}
+
+.wo-order-status-badge.badge--cancelled {
+	background-color: #f0713f;
+}
+
+.wo-order-status-badge.badge--rejected {
+	background-color: #dc2626;
+}
+
+.wo-order-status-badge :deep(span) {
+	display: block;
+	white-space: normal;
+	line-height: 1.5;
+	padding: 2px;
+}
+
 .customer-cell-content {
 	line-height: 1.4;
 	text-align: left;

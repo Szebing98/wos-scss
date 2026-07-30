@@ -1,443 +1,505 @@
 <script setup lang="ts">
+import { computed, ref, watch } from "vue";
 import Button from "@/components/Button.vue";
+import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 const props = defineProps<{
 	workOrder: any;
-	reportType: string;
 	partsReplaced: any[];
 	images: any[];
 }>();
 
-const emit = defineEmits(["updateReportType", "print"]);
+const emit = defineEmits(["print"]);
+const dateFormatStore = useDateFormatStore();
 
-function formatDateString(dateStr: string) {
-	if (!dateStr) return "—";
-	try {
-		const date = new Date(dateStr);
-		return date.toLocaleDateString("en-GB", {
-			day: "2-digit",
-			month: "short",
-			year: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-		});
-	} catch {
-		return dateStr;
-	}
+const showCompanyHeader = ref(true);
+
+const reportKind = computed(() => {
+	const workType = `${props.workOrder?.workType || ""} ${props.workOrder?.workTypeItem || ""}`.toLowerCase();
+	if (workType.includes("pipe")) return "piping";
+	if (workType.includes("mechanical") || workType.includes("maintenance")) return "mechanical";
+	return "general";
+});
+
+watch(
+	reportKind,
+	(kind) => {
+		showCompanyHeader.value = kind !== "piping";
+	},
+	{ immediate: true },
+);
+
+const reportTitle = computed(() => {
+	if (reportKind.value === "mechanical") return "Mechanical Report";
+	if (reportKind.value === "piping") return "Pipework Report";
+	return "General Report";
+});
+
+const reportTypeLabel = computed(() => {
+	if (reportKind.value === "mechanical") return "Mechanical";
+	return props.workOrder?.workTypeItem || props.workOrder?.workType || "-";
+});
+
+const doneBy = computed(() => {
+	const technicians = props.workOrder?.technicianCodes || props.workOrder?.assistantEngineers || [];
+	return Array.isArray(technicians) && technicians.length ? technicians.join(", ") : "-";
+});
+
+function formatDateString(dateStr: string | Date | null) {
+	if (!dateStr) return "";
+	return dateFormatStore.formatDate(dateStr);
+}
+
+function display(value: unknown, fallback = "-") {
+	if (value === null || value === undefined || value === "") return fallback;
+	return String(value);
+}
+
+function photosFor(category: string) {
+	const normalized = category.toLowerCase();
+	return props.images.filter((image: any) => {
+		const imageCategory = String(image.subCategory || image.category || "").toLowerCase();
+		return imageCategory === normalized || imageCategory.replace(/\s+/g, "") === normalized.replace(/\s+/g, "");
+	});
 }
 </script>
 
 <template>
-	<div
-		class="card-header no-print"
-		style="
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-		"
-	>
-		<div style="display: flex; align-items: center; gap: 16px">
+	<div class="report-toolbar no-print">
+		<div class="report-toolbar__title">
 			<h3>Work Order Report</h3>
-			<select
-				:value="reportType"
-				@change="emit('updateReportType', ($event.target as HTMLSelectElement).value)"
-				style="
-					padding: 8px 12px;
-					border-radius: 6px;
-					border: 1px solid var(--colors-border);
-					background-color: var(--colors-bg-card);
-					color: var(--colors-text-primary);
-					font-size: 14px;
-					font-weight: 500;
-					width: 220px;
-				"
-			>
-				<option value="general">General Report</option>
-				<option value="mechanical">Mechanical Report</option>
-				<option value="piping">Pipework Report (No Header)</option>
-				<option value="piping_header">Pipework Report (With Header)</option>
-			</select>
+			<span class="report-toolbar__badge">{{ reportTitle }}</span>
 		</div>
-		<Button variant="outlined" @click="emit('print')">
-			<i class="mdi mdi-printer" style="margin-right: 6px"></i> Print Report
-		</Button>
+
+		<div class="report-toolbar__actions">
+			<button
+				class="header-toggle"
+				type="button"
+				:class="{ 'header-toggle--active': showCompanyHeader }"
+				@click="showCompanyHeader = !showCompanyHeader"
+			>
+				<span class="header-toggle__track">
+					<span class="header-toggle__thumb" />
+				</span>
+				<span>Company Header</span>
+			</button>
+
+			<Button variant="outlined" @click="emit('print')">
+				<i class="mdi mdi-printer" style="margin-right: 6px"></i> Print Report
+			</Button>
+		</div>
 	</div>
 
-	<div class="report-document">
-		<div class="report-table">
-			<!-- GS-TECH Header (Visible for Mechanical, General, and Piping With Header) -->
-			<div class="rt-row" v-if="reportType !== 'piping'">
-				<div class="rt-logo">
-					<img src="@/assets/logo.svg" alt="GS-TECH" />
-				</div>
-				<div class="rt-company-info">
-					<strong style="font-size: 13px">GS-TECH Engineering Sdn. Bhd (853477-A)</strong><br />
-					1009, Jalan 7, Demak Laut Industrial Park, 93050 Kuching,<br />
-					Sarawak. Tel: 082-439863; Fax: 082- 439862<br />
-					Email:
-					<a href="mailto:kch@gstech.com.my" style="color: #0ea5e9; text-decoration: none"
-						>kch@gstech.com.my</a
-					>; Website: www.gstech.com.my
-				</div>
-				<div class="rt-label">WORK ORDER:</div>
-				<div class="rt-value">{{ workOrder.woNumber }}</div>
-			</div>
+	<div class="report-document" :class="`report-document--${reportKind}`">
+		<table class="report-table">
+			<tbody>
+				<tr v-if="showCompanyHeader" class="company-row">
+					<td class="logo-cell" colspan="2">
+						<img src="@/assets/logo.svg" alt="GS-TECH" />
+					</td>
+					<td class="company-cell" colspan="5">
+						<strong>GS-TECH Engineering Sdn. Bhd (853477-A)</strong><br />
+						1009, Jalan 7, Demak Laut Industrial Park, 93050 Kuching, Sarawak.<br />
+						Tel: 082-439863; Fax: 082-439862<br />
+						Email: <span class="report-blue">kch@gstech.com.my</span>; Website: www.gstech.com.my
+					</td>
+					<th colspan="2">WORK ORDER:</th>
+					<td colspan="2">{{ display(workOrder.woNumber) }}</td>
+				</tr>
 
-			<!-- Common details grid -->
-			<div class="rt-row">
-				<div class="rt-label">CUSTOMER NAME:</div>
-				<div class="rt-value" colspan="3">
-					{{ workOrder.customer?.name }}
-				</div>
-				<div class="rt-label" v-if="reportType === 'piping'">WORK ORDER:</div>
-				<div class="rt-value" v-if="reportType === 'piping'">
-					{{ workOrder.woNumber }}
-				</div>
-			</div>
+				<template v-if="reportKind === 'mechanical'">
+					<tr v-if="!showCompanyHeader">
+						<th colspan="2">WORK ORDER:</th>
+						<td colspan="9">{{ display(workOrder.woNumber) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">REPORT TYPE:</th>
+						<td colspan="2" class="report-blue">{{ reportTypeLabel }}</td>
+						<th>TYPE:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.workTypeItem) }}</td>
+						<th colspan="2">LOCATION:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.location) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">CUSTOMER NAME:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.customer?.name) }}</td>
+						<th colspan="2">CUST REF NO.:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.cusRefNo) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">PROBLEM:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.title) }}</td>
+						<th colspan="2">START DATE:</th>
+						<td colspan="2">{{ formatDateString(workOrder.startDate) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">EQUIPMENT NAME:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.equipment?.name) }}</td>
+						<th colspan="2">COMPLETE DATE:</th>
+						<td colspan="2">{{ formatDateString(workOrder.completedDate || workOrder.estimatedEndDate) }}</td>
+					</tr>
+					<tr><th colspan="11" class="section-cell">GENERAL INFORMATION</th></tr>
+					<tr>
+						<th colspan="2">EQUIPMENT TYPE:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.equipment?.equipmentType) }}</td>
+						<th colspan="2">BRAND NAME:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.equipment?.brand) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">MODEL:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.equipment?.model) }}</td>
+						<th colspan="2">SERIAL NO.:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.equipment?.serialNo) }}</td>
+					</tr>
+					<tr>
+						<th colspan="4" class="section-cell">TECHNICAL DATA</th>
+						<th colspan="7" class="section-cell">ELECTRICAL DATA</th>
+					</tr>
+					<tr>
+						<th colspan="2">FLOW&HEAD:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.flowHead) }}</td>
+						<th colspan="2">BRAND NAME:</th>
+						<td class="report-blue">{{ display(workOrder.technical?.brandName) }}</td>
+						<th colspan="2">RATED VOLTAGE:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.ratedVoltage) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">OTHERS:</th>
+						<td colspan="2"></td>
+						<th colspan="2">SERIAL NO.:</th>
+						<td class="report-blue">{{ display(workOrder.technical?.serialNo) }}</td>
+						<th colspan="2">RATED SPEED:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.ratedSpeed) }}</td>
+					</tr>
+					<tr>
+						<td colspan="4"></td>
+						<th colspan="2">FRAME SIZE:</th>
+						<td class="report-blue">{{ display(workOrder.technical?.frameSize) }}</td>
+						<th colspan="2">RATED CURRENT:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.ratedCurrent) }}</td>
+					</tr>
+					<tr>
+						<td colspan="4"></td>
+						<th colspan="2">PHASE:</th>
+						<td class="report-blue">{{ display(workOrder.technical?.phase) }}</td>
+						<th colspan="2">RATED POWER:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.ratedPower) }}</td>
+					</tr>
+					<tr><th colspan="11" class="section-cell section-cell--left">DETAIL OF WORK:</th></tr>
+					<tr><td colspan="11" class="large-cell report-blue">{{ display(workOrder.description, "") }}</td></tr>
+					<tr><th colspan="11" class="section-cell">PARTS REPLACED/ REPAIR:</th></tr>
+					<tr><th colspan="11" class="section-cell section-cell--light">Parts Detail (Parts Name, Qty)</th></tr>
+					<tr v-for="idx in 5" :key="`part-line-${idx}`">
+						<td colspan="11" class="line-cell">
+							<span v-if="partsReplaced[idx - 1]">
+								{{ partsReplaced[idx - 1].name }} - Qty: {{ partsReplaced[idx - 1].quantity }}
+							</span>
+						</td>
+					</tr>
+				</template>
 
-			<div class="rt-row">
-				<div class="rt-label">REPORT TYPE:</div>
-				<div class="rt-value">
-					{{ workOrder.workTypeItem || "Work Type Item" }}
-				</div>
-				<div class="rt-label">CUS REF NO:</div>
-				<div class="rt-value">{{ workOrder.cusRefNo || "—" }}</div>
-			</div>
+				<template v-else-if="reportKind === 'piping'">
+					<tr v-if="!showCompanyHeader">
+						<th colspan="2">CUSTOMER NAME:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.customer?.name) }}</td>
+						<th colspan="2">WORK ORDER:</th>
+						<td colspan="2">{{ display(workOrder.woNumber) }}</td>
+					</tr>
+					<tr v-else>
+						<th colspan="2">CUSTOMER NAME:</th>
+						<td colspan="9" class="report-blue">{{ display(workOrder.customer?.name) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">REPORT TYPE:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.workTypeItem || workOrder.title) }}</td>
+						<th colspan="2">CUST REF NO:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.cusRefNo) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">LOCATION:</th>
+						<td colspan="9" class="report-blue">{{ display(workOrder.location) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">START DATE:</th>
+						<td colspan="5">{{ formatDateString(workOrder.startDate) }}</td>
+						<th colspan="2">COMPLETE DATE:</th>
+						<td colspan="2">{{ formatDateString(workOrder.completedDate || workOrder.estimatedEndDate) }}</td>
+					</tr>
+					<tr><th colspan="11" class="section-cell section-cell--left">WORK DESCRIPTION:</th></tr>
+					<tr><td colspan="11" class="medium-cell report-blue">{{ display(workOrder.description, "") }}</td></tr>
+					<tr>
+						<th colspan="2">REMARK(S):</th>
+						<td colspan="9" class="remark-cell report-blue">{{ display(workOrder.remarks, "") }}</td>
+					</tr>
+				</template>
 
-			<div class="rt-row" v-if="reportType === 'mechanical'">
-				<div class="rt-label">EQUIPMENT NAME:</div>
-				<div class="rt-value">
-					{{ workOrder.equipment?.name || "—" }}
-				</div>
-				<div class="rt-label">BRAND/MODEL:</div>
-				<div class="rt-value">
-					{{ workOrder.equipment?.brand || "" }}
-					{{ workOrder.equipment?.model || "" }}
-				</div>
-			</div>
+				<template v-else>
+					<tr v-if="!showCompanyHeader">
+						<th colspan="2">WORK ORDER:</th>
+						<td colspan="9">{{ display(workOrder.woNumber) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">CUSTOMER NAME:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.customer?.name) }}</td>
+						<th colspan="2">CUSTOMER REF NO:</th>
+						<td colspan="2" class="report-blue">{{ display(workOrder.cusRefNo) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">REPORT TYPE:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.workTypeItem || workOrder.workType) }}</td>
+						<th colspan="2">START DATE:</th>
+						<td colspan="2" class="report-blue">{{ formatDateString(workOrder.startDate) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">LOCATION:</th>
+						<td colspan="5" class="report-blue">{{ display(workOrder.location) }}</td>
+						<th colspan="2">COMPLETE DATE:</th>
+						<td colspan="2" class="report-blue">{{ formatDateString(workOrder.completedDate || workOrder.estimatedEndDate) }}</td>
+					</tr>
+					<tr>
+						<th colspan="2">WORK DESCRIPTION:</th>
+						<td colspan="9" class="report-blue">{{ display(workOrder.description, "") }}</td>
+					</tr>
+					<tr><th colspan="11" class="section-cell">DETAIL OF WORK:</th></tr>
+					<tr><td colspan="11" class="large-cell"></td></tr>
+				</template>
 
-			<div class="rt-row">
-				<div class="rt-label">LOCATION:</div>
-				<div class="rt-value" style="width: 85%">
-					{{ workOrder.location }}
-				</div>
-			</div>
-
-			<div class="rt-row">
-				<div class="rt-label">START DATE:</div>
-				<div class="rt-value">
-					{{ formatDateString(workOrder.startDate) }}
-				</div>
-				<div class="rt-label">COMPLETE DATE:</div>
-				<div class="rt-value">
-					{{ formatDateString(workOrder.completedDate || workOrder.estimatedEndDate) }}
-				</div>
-			</div>
-
-			<!-- Mechanical Special: General Information & Technical Data -->
-			<template v-if="reportType === 'mechanical'">
-				<div class="rt-header">GENERAL INFORMATION</div>
-				<div class="rt-row">
-					<div class="rt-label">EQUIPMENT TYPE:</div>
-					<div class="rt-value">
-						{{ workOrder.equipment?.equipmentType || "—" }}
-					</div>
-					<div class="rt-label">SERIAL NO:</div>
-					<div class="rt-value">
-						{{ workOrder.equipment?.serialNo || "—" }}
-					</div>
-				</div>
-
-				<div class="rt-header">TECHNICAL & ELECTRICAL DATA</div>
-				<div class="rt-content" style="padding: 0">
-					<table style="width: 100%; border-collapse: collapse; border: none">
-						<tr>
-							<th
-								style="
-									width: 25%;
-									text-align: left;
-									background: #f3f4f6;
-									padding: 6px;
-									border: 1px solid var(--colors-border);
-								"
-							>
-								Flow & Head
-							</th>
-							<td
-								style="
-									width: 25%;
-									padding: 6px;
-									border: 1px solid var(--colors-border);
-								"
-							>
-								{{ workOrder.technical?.flowHead || workOrder.equipment?.flowHead || "—" }}
-							</td>
-							<th
-								style="
-									width: 25%;
-									text-align: left;
-									background: #f3f4f6;
-									padding: 6px;
-									border: 1px solid var(--colors-border);
-								"
-							>
-								Rated Voltage
-							</th>
-							<td
-								style="
-									width: 25%;
-									padding: 6px;
-									border: 1px solid var(--colors-border);
-								"
-							>
-								{{ workOrder.technical?.ratedVoltage || workOrder.equipment?.ratedVoltage || "—" }}
-							</td>
-						</tr>
-						<tr>
-							<th
-								style="
-									text-align: left;
-									background: #f3f4f6;
-									padding: 6px;
-									border: 1px solid var(--colors-border);
-								"
-							>
-								Rated Speed
-							</th>
-							<td
-								style="
-									padding: 6px;
-									border: 1px solid var(--colors-border);
-								"
-							>
-								{{ workOrder.technical?.ratedSpeed || workOrder.equipment?.ratedSpeed || "—" }}
-							</td>
-							<th
-								style="
-									text-align: left;
-									background: #f3f4f6;
-									padding: 6px;
-									border: 1px solid var(--colors-border);
-								"
-							>
-								Rated Current
-							</th>
-							<td
-								style="
-									padding: 6px;
-									border: 1px solid var(--colors-border);
-								"
-							>
-								{{ workOrder.technical?.ratedCurrent || workOrder.equipment?.ratedCurrent || "—" }}
-							</td>
-						</tr>
-					</table>
-				</div>
-			</template>
-
-			<div class="rt-header">WORK DESCRIPTION</div>
-			<div class="rt-content work-desc-content" style="min-height: 180px">
-				{{ workOrder.description }}
-			</div>
-
-			<!-- Mechanical Special: Parts Replaced -->
-			<template v-if="reportType === 'mechanical' && partsReplaced.length > 0">
-				<div class="rt-header">PARTS REPLACED/REPAIRED</div>
-				<div class="rt-content">
-					<ul style="margin: 0; padding-left: 20px">
-						<li v-for="part in partsReplaced" :key="part.id">
-							<strong>{{ part.name }}</strong> ({{ part.code }}) - Qty: {{ part.quantity }}
-						</li>
-					</ul>
-				</div>
-			</template>
-
-			<div class="rt-header">REMARK(S)</div>
-			<div class="rt-content" style="min-height: 80px">
-				{{ workOrder.remarks || "—" }}
-			</div>
-
-			<div class="rt-header">WORK PROGRESS PHOTO(S)</div>
-			<div class="rt-content">
-				<div class="report-photos">
-					<div
-						class="photo-category"
-						v-for="cat in ['Before', 'In Progress', 'After']"
-						:key="cat"
-					>
-						<strong>{{ cat.toUpperCase() }}:</strong>
-						<div class="photo-row">
+				<tr><th colspan="11" class="section-cell">WORK PROGRESS PHOTO(S):</th></tr>
+				<tr v-for="category in ['Before', 'During', 'After']" :key="category">
+					<td colspan="11" class="photo-cell">
+						<strong>{{ category.toUpperCase() }}:</strong>
+						<div v-if="photosFor(category).length" class="photo-grid">
 							<img
-								v-for="img in images.filter((i: any) => i.category === cat)"
-								:key="img.id"
+								v-for="img in photosFor(category)"
+								:key="img.id || img.guid || img.url"
 								:src="img.url"
-								class="report-img"
-								:alt="img.name"
+								:alt="img.name || category"
 							/>
-							<span
-								v-if="images.filter((i: any) => i.category === cat).length === 0"
-								class="text-muted"
-								style="font-size: 12px; margin-left: 8px"
-								>No photos</span
-							>
 						</div>
-					</div>
-				</div>
-			</div>
+					</td>
+				</tr>
 
-			<div class="rt-row signature-row">
-				<div class="rt-label">CREATED BY:</div>
-				<div class="rt-value">
-					{{ workOrder.createdBy || "Engineer" }}
-				</div>
-				<div class="rt-label">DONE BY:</div>
-				<div class="rt-value">
-					{{ workOrder.assistantEngineers?.join(", ") || "Technicians" }}
-				</div>
-				<div class="rt-label">CHECKED BY:</div>
-				<div class="rt-value">
-					{{ workOrder.leadEngineerName || "Lead Engineer" }}
-				</div>
-				<div class="rt-label">VERIFIED BY:</div>
-				<div class="rt-value">
-					{{ workOrder.projectPicName || "PIC" }}
-				</div>
-			</div>
-		</div>
+				<tr class="signature-row">
+					<th colspan="2">{{ reportKind === "piping" ? "CREATED BY:" : "REPORTED BY:" }}</th>
+					<td colspan="2" class="report-blue">
+						{{ display(workOrder.salesAgentDisplay || workOrder.salesAgent || workOrder.createdBy) }}
+					</td>
+					<th>DONE BY:</th>
+					<td colspan="2" class="report-blue">{{ doneBy }}</td>
+					<th colspan="2">{{ reportKind === "piping" ? "CHECKED BY:" : "QC MINGGU:" }}</th>
+					<td class="report-blue">
+						{{
+							display(
+								workOrder.leaderDisplay ||
+									workOrder.leadEngineerDisplay ||
+									workOrder.leaderCode ||
+									workOrder.leadEngineer,
+							)
+						}}
+					</td>
+					<th>VERIFIED BY:</th>
+				</tr>
+				<tr class="signature-row">
+					<td colspan="9"></td>
+					<td colspan="2" class="report-blue">
+						{{ display(workOrder.projectPersonInChargeDisplay || workOrder.projectPersonInCharge) }}
+					</td>
+				</tr>
+			</tbody>
+		</table>
 	</div>
 </template>
 
 <style scoped lang="scss">
-/* Printable Report */
+.report-toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+}
+
+.report-toolbar__title,
+.report-toolbar__actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.report-toolbar__badge {
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 6px;
+	padding: 5px 10px;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--colors-text-secondary);
+	background: var(--colors-surface-background);
+}
+
+.header-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 6px;
+	background: var(--colors-surface-card);
+	color: var(--colors-text-primary);
+	font-size: 13px;
+	font-weight: 700;
+	padding: 8px 10px;
+	cursor: pointer;
+}
+
+.header-toggle__track {
+	width: 34px;
+	height: 18px;
+	border-radius: 99px;
+	background: #cbd5e1;
+	position: relative;
+	transition: background 0.15s ease;
+}
+
+.header-toggle__thumb {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #fff;
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	transition: transform 0.15s ease;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.header-toggle--active .header-toggle__track {
+	background: var(--colors-brand-primary);
+}
+
+.header-toggle--active .header-toggle__thumb {
+	transform: translateX(16px);
+}
+
 .report-document {
 	background: white;
-	padding: 24px;
+	padding: 18px;
 	border: 1px solid var(--colors-surface-border);
 	border-radius: 8px;
-	color: #000;
+	color: #111;
 	font-family: Arial, Helvetica, sans-serif;
-	font-size: 13px;
+	font-size: 12px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 	margin-top: 16px;
+	overflow-x: auto;
 }
 
 .report-table {
-	border: 1px solid #999;
-	display: flex;
-	flex-direction: column;
+	width: 190mm;
+	min-height: 277mm;
+	margin: 0 auto;
+	border-collapse: collapse;
+	table-layout: fixed;
+	background: #fff;
 }
 
-.rt-row {
-	display: flex;
-	border-bottom: 1px solid #999;
-}
-.rt-row:last-child {
-	border-bottom: none;
+.report-table th,
+.report-table td {
+	border: 1px solid #222;
+	padding: 4px 7px;
+	vertical-align: top;
+	line-height: 1.25;
 }
 
-.rt-label {
-	flex: 0 0 15%;
-	box-sizing: border-box;
-	background: #e5e7eb;
-	font-weight: bold;
-	padding: 6px 8px;
-	border-right: 1px solid #999;
+.report-table th {
+	background: #d0cece;
 	text-align: right;
+	font-weight: 800;
 	text-transform: uppercase;
-	display: flex;
-	align-items: center;
-	justify-content: flex-end;
 }
 
-.rt-value {
-	flex: 0 0 35%;
-	box-sizing: border-box;
-	padding: 6px 8px;
-	border-right: 1px solid #999;
-	display: flex;
-	align-items: center;
-}
-.rt-value:last-child {
-	border-right: none;
+.section-cell {
+	background: #d0cece !important;
+	text-align: center !important;
+	font-weight: 800;
 }
 
-.rt-header {
-	background: #e5e7eb;
-	font-weight: bold;
+.section-cell--left {
+	text-align: left !important;
+}
+
+.section-cell--light {
+	background: #e5e5e5 !important;
+	text-transform: none !important;
+}
+
+.logo-cell {
 	text-align: center;
-	padding: 6px;
-	border-bottom: 1px solid #999;
-	text-transform: uppercase;
+	vertical-align: middle !important;
 }
 
-.rt-logo {
-	flex: 0 0 15%;
-	box-sizing: border-box;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-right: 1px solid #999;
-	padding: 10px;
-}
-.rt-logo img {
-	max-height: 50px;
+.logo-cell img {
+	width: 92px;
 	max-width: 100%;
 }
 
-.rt-company-info {
-	flex: 0 0 35%;
-	box-sizing: border-box;
-	padding: 10px;
-	border-right: 1px solid #999;
-	font-size: 11px;
-	line-height: 1.3;
+.company-cell {
+	font-size: 10px;
+	line-height: 1.25;
 }
 
-.rt-content {
-	padding: 8px 12px;
-	border-bottom: 1px solid #999;
-	line-height: 1.4;
-}
-.rt-content:last-child {
-	border-bottom: none;
-}
-
-.report-photos {
-	display: flex;
-	flex-direction: column;
-	gap: 24px;
-}
-.photo-category strong {
-	display: block;
-	margin-bottom: 6px;
+.company-cell strong {
 	font-size: 13px;
-	text-transform: uppercase;
-}
-.photo-row {
-	display: flex;
-	gap: 12px;
-	flex-wrap: wrap;
-	min-height: 140px;
-}
-.report-img {
-	width: calc(25% - 9px);
-	height: 140px;
-	object-fit: cover;
-	border: 1px solid #ccc;
 }
 
-.signature-row {
-	background: #f3f4f6;
+.report-blue {
+	color: #3f70d9;
 }
-.signature-row .rt-label {
-	width: auto;
-	background: transparent;
-	padding: 8px;
-	justify-content: flex-end;
+
+.large-cell {
+	height: 92px;
+	white-space: pre-line;
 }
-.signature-row .rt-value {
-	flex: 1;
-	font-weight: normal;
+
+.medium-cell {
+	height: 76px;
+	white-space: pre-line;
+}
+
+.remark-cell {
+	height: 46px;
+	white-space: pre-line;
+}
+
+.line-cell {
+	height: 18px;
+}
+
+.photo-cell {
+	height: 150px;
+	padding: 6px 7px !important;
+}
+
+.report-document--piping .photo-cell,
+.report-document--general .photo-cell {
+	height: 195px;
+}
+
+.photo-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.photo-grid img {
+	width: 100%;
+	height: 115px;
+	object-fit: cover;
+	border: 1px solid #999;
+}
+
+.signature-row th,
+.signature-row td {
+	vertical-align: middle;
+	height: 30px;
 }
 
 @media print {
@@ -488,57 +550,34 @@ function formatDateString(dateStr: string) {
 		background: transparent !important;
 		padding: 0 !important;
 		margin: 0 !important;
-		page-break-inside: avoid;
+		overflow: visible !important;
 	}
 	.report-table {
+		width: 190mm !important;
+		min-height: 277mm !important;
 		border: 1px solid #000 !important;
 		font-size: 11px !important;
 	}
-	.rt-row,
-	.rt-header,
-	.rt-content,
-	.rt-label,
-	.rt-value,
-	.rt-logo,
-	.rt-company-info {
+	.report-table th,
+	.report-table td {
 		border-color: #000 !important;
+		padding: 3px 5px !important;
 	}
-	.rt-label,
-	.rt-header {
-		background-color: #e5e7eb !important;
-		-webkit-print-color-adjust: exact;
-		print-color-adjust: exact;
-		padding: 4px !important;
-	}
-	.rt-value {
-		padding: 4px !important;
-	}
-	.rt-content {
-		padding: 6px !important;
-	}
-	.photo-row {
-		min-height: 95px !important;
-	}
-	.report-photos {
-		gap: 8px !important;
-	}
-	.report-img {
-		height: 95px !important;
-	}
-	.signature-row {
-		background-color: #f3f4f6 !important;
+	.report-table th,
+	.section-cell {
+		background-color: #d0cece !important;
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
 	}
-	.work-desc-content {
-		min-height: 80px !important;
+	.photo-cell {
+		height: 130px !important;
 	}
-	@page {
-		size: A4 portrait;
-		margin: 5mm;
+	.report-document--piping .photo-cell,
+	.report-document--general .photo-cell {
+		height: 180px !important;
 	}
-	body {
-		background: white;
+	.photo-grid img {
+		height: 96px !important;
 	}
 }
 </style>

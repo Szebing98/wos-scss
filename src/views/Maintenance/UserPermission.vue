@@ -3,6 +3,12 @@ import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import Textbox from "@/components/Textbox.vue";
 import http from "@/utils/http";
+import { useAuthStore } from "@/stores/auth.store";
+import {
+	getPermissionActionLabel,
+	getPermissionSubjectLabel,
+} from "@/utils/permission-label";
+import { getHighestRoleLevel } from "@/utils/role";
 
 const route = useRoute();
 
@@ -11,6 +17,8 @@ interface UserModel {
 	code: string;
 	name: string;
 	email: string;
+	userGroups?: Array<{ code?: string; name?: string }>;
+	role?: string;
 }
 
 interface PermissionModel {
@@ -27,10 +35,13 @@ const searchQuery = ref("");
 const isLoadingPermissions = ref(false);
 const showPermissionMatrix = ref(false);
 const isSaving = ref(false);
+const isEditingOverrides = ref(false);
 
 const userSearchQuery = ref("");
 const showUserList = ref(false);
 const autocompleteRef = ref<HTMLElement | null>(null);
+const permissionGuardMessage = ref("");
+const authStore = useAuthStore();
 
 const filteredAutocompleteUsers = computed(() => {
 	if (!userSearchQuery.value) return users.value;
@@ -48,6 +59,29 @@ const allPermissions = ref<PermissionModel[]>([]);
 
 const inheritedPermissions = ref<Set<string>>(new Set());
 const userOverrides = ref<Map<string, "allow" | "deny">>(new Map());
+const originalUserOverrides = ref<Map<string, "allow" | "deny">>(new Map());
+
+function getPermissionCode(permission: Partial<PermissionModel>): string {
+	return permission.code || `${permission.action}:${permission.subject}`;
+}
+
+function isManageAllPermission(permission: Partial<PermissionModel>): boolean {
+	const code = getPermissionCode(permission).toLowerCase();
+	const subject = String(permission.subject || "").toLowerCase();
+
+	return (
+		code === "manage_all" ||
+		code === "manage:all" ||
+		code === "manage:*" ||
+		subject === "all" ||
+		subject === "*"
+	);
+}
+
+function inheritAllVisiblePermissions() {
+	inheritedPermissions.value = new Set(allPermissions.value.map((p) => p.code));
+	userOverrides.value.clear();
+}
 
 // 1. Load users
 async function loadUsers() {
@@ -60,6 +94,8 @@ async function loadUsers() {
 				code: u.code || u.guid.substring(0, 8).toUpperCase(),
 				name: u.name || u.displayName || u.profile?.displayName || "Unknown User",
 				email: u.email || "",
+				userGroups: u.userGroups || u.groups || [],
+				role: u.role,
 			}));
 		}
 	} catch (e) {
@@ -74,13 +110,15 @@ async function loadAllPermissions() {
 		const res = await http.get("/abilities");
 		const data = res.data?.data || res.data || [];
 		if (Array.isArray(data)) {
-			allPermissions.value = data.map((p: any) => ({
-				guid: p.guid,
-				code: p.code || `${p.action}_${p.subject}`,
-				action: p.action,
-				subject: p.subject,
-				inverted: p.inverted ?? false,
-			}));
+			allPermissions.value = data
+				.map((p: any) => ({
+					guid: p.guid,
+					code: getPermissionCode(p),
+					action: p.action,
+					subject: p.subject,
+					inverted: p.inverted ?? false,
+				}))
+				.filter((p) => !isManageAllPermission(p));
 		}
 	} catch (e) {
 		console.error("Failed to load abilities", e);
@@ -91,16 +129,31 @@ async function handleUserSelection(user: UserModel) {
 	userSearchQuery.value = `${user.name} (${user.email})`;
 	showUserList.value = false;
 	showPermissionMatrix.value = false;
+	isEditingOverrides.value = false;
 
 	selectedUserCode.value = user.code;
 	selectedUser.value = user;
 	isLoadingPermissions.value = true;
+	permissionGuardMessage.value = selectedUserEditMessage.value;
 
 	inheritedPermissions.value.clear();
 	userOverrides.value.clear();
 
 	try {
 		if (user.guid) {
+			try {
+				const userRes = await http.get(`/user/${user.guid}`);
+				const userData = userRes.data?.data || userRes.data;
+				selectedUser.value = {
+					...selectedUser.value,
+					userGroups: userData?.userGroups || userData?.groups || selectedUser.value?.userGroups || [],
+					role: userData?.role || selectedUser.value?.role,
+				} as UserModel;
+				permissionGuardMessage.value = selectedUserEditMessage.value;
+			} catch (e) {
+				console.warn("Failed to load selected user detail for role guard", e);
+			}
+
 			const [inheritedRes, overridesRes] = await Promise.all([
 				http.get(`/abilities/users/${user.guid}/inherited`),
 				http.get(`/abilities/users/${user.guid}/overrides`),
@@ -110,20 +163,33 @@ async function handleUserSelection(user: UserModel) {
 			const overridesList: PermissionModel[] =
 				overridesRes.data?.data || overridesRes.data || [];
 
+			const hasInheritedManageAll =
+				Array.isArray(inheritedList) && inheritedList.some(isManageAllPermission);
+			const hasAllowManageAllOverride =
+				Array.isArray(overridesList) &&
+				overridesList.some((p) => isManageAllPermission(p) && !p.inverted);
+
 			if (Array.isArray(inheritedList)) {
-				inheritedList.forEach((p) => {
-					const code = p.code || `${p.action}_${p.subject}`;
-					inheritedPermissions.value.add(code);
-				});
+				if (hasInheritedManageAll || hasAllowManageAllOverride) {
+					inheritAllVisiblePermissions();
+				} else {
+					inheritedList.forEach((p) => {
+						if (isManageAllPermission(p)) return;
+						const code = getPermissionCode(p);
+						inheritedPermissions.value.add(code);
+					});
+				}
 			}
 
 			if (Array.isArray(overridesList)) {
 				overridesList.forEach((p) => {
-					const code = p.code || `${p.action}_${p.subject}`;
+					if (isManageAllPermission(p)) return;
+					const code = getPermissionCode(p);
 					userOverrides.value.set(code, p.inverted ? "deny" : "allow");
 				});
 			}
 		}
+		originalUserOverrides.value = new Map(userOverrides.value);
 		showPermissionMatrix.value = true;
 	} catch (e) {
 		console.error("Failed to load user abilities", e);
@@ -145,6 +211,11 @@ function handleClickOutside(e: MouseEvent) {
 }
 
 function selectAllPermissions(action: "allow" | "deny") {
+	if (!isEditingOverrides.value) return;
+	if (!canEditSelectedUser.value) {
+		permissionGuardMessage.value = selectedUserEditMessage.value;
+		return;
+	}
 	// Reset overrides and set all permissions to the chosen action
 	userOverrides.value.clear();
 	if (action === "allow" || action === "deny") {
@@ -155,6 +226,9 @@ function selectAllPermissions(action: "allow" | "deny") {
 }
 
 onMounted(async () => {
+	if (!authStore.currentUser) {
+		await authStore.fetchMe();
+	}
 	await loadUsers();
 	await loadAllPermissions();
 	document.addEventListener("mousedown", handleClickOutside);
@@ -186,7 +260,9 @@ const filteredGroupedPermissions = computed(() => {
 				!searchQuery.value ||
 				x.subject.toLowerCase().includes(query) ||
 				x.action.toLowerCase().includes(query) ||
-				x.code.toLowerCase().includes(query);
+				x.code.toLowerCase().includes(query) ||
+				getPermissionSubjectLabel(x.subject).toLowerCase().includes(query) ||
+				getPermissionActionLabel(x.action).toLowerCase().includes(query);
 
 			if (matches) {
 				if (!result[x.subject]) result[x.subject] = [];
@@ -196,11 +272,72 @@ const filteredGroupedPermissions = computed(() => {
 	return result;
 });
 
+const currentUserGroups = computed(() => {
+	const user = authStore.currentUser || authStore.user || {};
+	return [...(user.userGroups || user.groups || []), { code: user.role, name: user.role }];
+});
+
+const currentUserRoleLevel = computed(() => getHighestRoleLevel(currentUserGroups.value));
+const selectedUserRoleLevel = computed(() => {
+	const groupLevel = getHighestRoleLevel(selectedUser.value?.userGroups || []);
+	const directRoleLevel = getHighestRoleLevel([{ code: selectedUser.value?.role }]);
+	return Math.max(groupLevel, directRoleLevel);
+});
+
+const isSelectedUserSelf = computed(() => {
+	const currentUser = authStore.currentUser || authStore.user;
+	if (!selectedUser.value || !currentUser) return false;
+	return Boolean(
+		(selectedUser.value.guid && currentUser.guid === selectedUser.value.guid) ||
+		(selectedUser.value.code && currentUser.code === selectedUser.value.code) ||
+		(selectedUser.value.email && currentUser.email === selectedUser.value.email),
+	);
+});
+
+const canEditSelectedUser = computed(() => {
+	if (!selectedUser.value) return false;
+	if (isSelectedUserSelf.value) return false;
+	if (!selectedUserRoleLevel.value) return true;
+	return currentUserRoleLevel.value >= selectedUserRoleLevel.value;
+});
+
+const selectedUserEditMessage = computed(() => {
+	if (!selectedUser.value) return "";
+	if (isSelectedUserSelf.value) {
+		return "You cannot edit your own permission overrides.";
+	}
+	if (!canEditSelectedUser.value) {
+		return "Your role level cannot edit permissions for a higher-level user.";
+	}
+	return "";
+});
+
+function startEditingOverrides() {
+	if (!canEditSelectedUser.value) {
+		permissionGuardMessage.value = selectedUserEditMessage.value;
+		return;
+	}
+	originalUserOverrides.value = new Map(userOverrides.value);
+	permissionGuardMessage.value = "";
+	isEditingOverrides.value = true;
+}
+
+function cancelEditingOverrides() {
+	userOverrides.value = new Map(originalUserOverrides.value);
+	isEditingOverrides.value = false;
+	permissionGuardMessage.value = "";
+}
+
 function getOverrideValue(code: string): "inherited" | "allow" | "deny" {
 	return userOverrides.value.get(code) || "inherited";
 }
 
 function setOverrideValue(code: string, value: "inherited" | "allow" | "deny") {
+	if (!isEditingOverrides.value) return;
+	if (!canEditSelectedUser.value) {
+		permissionGuardMessage.value = selectedUserEditMessage.value;
+		return;
+	}
 	if (value === "inherited") userOverrides.value.delete(code);
 	else userOverrides.value.set(code, value);
 }
@@ -217,7 +354,11 @@ function getRowClass(code: string): string {
 }
 
 async function saveOverrides() {
-	if (!selectedUser.value?.guid) return;
+	if (!selectedUser.value?.guid || !isEditingOverrides.value) return;
+	if (!canEditSelectedUser.value) {
+		permissionGuardMessage.value = selectedUserEditMessage.value;
+		return;
+	}
 	isSaving.value = true;
 
 	try {
@@ -242,6 +383,8 @@ async function saveOverrides() {
 		await http.put(`/abilities/users/${selectedUser.value.guid}`, {
 			abilities: selectedAbilities,
 		});
+		originalUserOverrides.value = new Map(userOverrides.value);
+		isEditingOverrides.value = false;
 		alert(`Authorization overrides for ${selectedUser.value.name} successfully deployed!`);
 	} catch (e) {
 		console.error("Failed to save user overrides", e);
@@ -261,17 +404,34 @@ async function saveOverrides() {
 					Directly override inherited group permissions for specific users
 				</p>
 			</div>
-			<button
-				class="btn btn--primary"
-				:disabled="!selectedUser || isSaving"
-				@click="saveOverrides"
-			>
-				<i
-					class="mdi"
-					:class="isSaving ? 'mdi-loading mdi-spin' : 'mdi-content-save-outline'"
-				></i>
-				Save Overrides
-			</button>
+			<div class="maintenance-view__actions">
+				<button
+					v-if="!isEditingOverrides"
+					class="btn btn--primary"
+					:disabled="!selectedUser || !canEditSelectedUser || isLoadingPermissions"
+					:title="selectedUserEditMessage || 'Edit Overrides'"
+					@click="startEditingOverrides"
+				>
+					<i class="mdi mdi-pencil-outline"></i>
+					Edit Overrides
+				</button>
+				<template v-else>
+					<button class="btn btn--secondary" :disabled="isSaving" @click="cancelEditingOverrides">
+						Cancel
+					</button>
+					<button
+						class="btn btn--primary"
+						:disabled="!selectedUser || isSaving"
+						@click="saveOverrides"
+					>
+						<i
+							class="mdi"
+							:class="isSaving ? 'mdi-loading mdi-spin' : 'mdi-content-save-outline'"
+						></i>
+						Save Overrides
+					</button>
+				</template>
+			</div>
 		</div>
 
 		<div class="overrides-container">
@@ -333,6 +493,28 @@ async function saveOverrides() {
 				</div>
 
 				<div v-else-if="showPermissionMatrix" class="matrix-grid-area">
+					<div
+						v-if="selectedUserEditMessage || permissionGuardMessage || !isEditingOverrides"
+						class="permission-notice mb-md"
+						:class="{ 'permission-notice--warning': selectedUserEditMessage || permissionGuardMessage }"
+					>
+						<i
+							class="mdi"
+							:class="
+								selectedUserEditMessage || permissionGuardMessage
+									? 'mdi-lock-alert-outline'
+									: 'mdi-eye-outline'
+							"
+						></i>
+						<span>
+							{{
+								permissionGuardMessage ||
+								selectedUserEditMessage ||
+								"Viewing overrides. Click Edit Overrides before making changes."
+							}}
+						</span>
+					</div>
+
 					<div class="filter-panel mb-md" style="display: flex; gap: 10px">
 						<Textbox
 							v-model="searchQuery"
@@ -346,10 +528,18 @@ async function saveOverrides() {
 								></i>
 							</template>
 						</Textbox>
-						<button class="btn btn--outline" @click="selectAllPermissions('allow')">
+						<button
+							class="btn btn--outline"
+							:disabled="!isEditingOverrides || !canEditSelectedUser"
+							@click="selectAllPermissions('allow')"
+						>
 							Allow All
 						</button>
-						<button class="btn btn--outline" @click="selectAllPermissions('deny')">
+						<button
+							class="btn btn--outline"
+							:disabled="!isEditingOverrides || !canEditSelectedUser"
+							@click="selectAllPermissions('deny')"
+						>
 							Deny All
 						</button>
 					</div>
@@ -362,7 +552,7 @@ async function saveOverrides() {
 						<div class="panel-card__header">
 							<div class="panel-card__header-title">
 								<i class="mdi mdi-folder-account-outline u-text-primary"></i>
-								<h2>{{ subject }} Permissions</h2>
+								<h2>{{ getPermissionSubjectLabel(String(subject)) }} Permissions</h2>
 							</div>
 						</div>
 
@@ -371,10 +561,12 @@ async function saveOverrides() {
 								v-for="perm in perms"
 								:key="perm.code"
 								class="override-box"
-								:class="getRowClass(perm.code)"
+								:class="[getRowClass(perm.code), { 'override-box--readonly': !isEditingOverrides }]"
 							>
 								<div class="override-box__info">
-									<span class="override-box__action">{{ perm.action }}</span>
+									<span class="override-box__action">
+										{{ getPermissionActionLabel(perm.action) }}
+									</span>
 									<span class="override-box__inherited-text">
 										{{ getInheritedStatusText(perm.code) }}
 									</span>
@@ -387,6 +579,7 @@ async function saveOverrides() {
 											:name="`override_${perm.code}`"
 											value="inherited"
 											:checked="getOverrideValue(perm.code) === 'inherited'"
+											:disabled="!isEditingOverrides || !canEditSelectedUser"
 											@change="setOverrideValue(perm.code, 'inherited')"
 										/>
 										<span class="segmented-control__button">Inherited</span>
@@ -397,6 +590,7 @@ async function saveOverrides() {
 											:name="`override_${perm.code}`"
 											value="allow"
 											:checked="getOverrideValue(perm.code) === 'allow'"
+											:disabled="!isEditingOverrides || !canEditSelectedUser"
 											@change="setOverrideValue(perm.code, 'allow')"
 										/>
 										<span
@@ -410,6 +604,7 @@ async function saveOverrides() {
 											:name="`override_${perm.code}`"
 											value="deny"
 											:checked="getOverrideValue(perm.code) === 'deny'"
+											:disabled="!isEditingOverrides || !canEditSelectedUser"
 											@change="setOverrideValue(perm.code, 'deny')"
 										/>
 										<span
@@ -446,6 +641,11 @@ async function saveOverrides() {
 		flex-wrap: wrap;
 		gap: var(--spacing-md);
 	}
+	&__actions {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+	}
 	&__title-area {
 		h1 {
 			font-size: 24px;
@@ -464,7 +664,9 @@ async function saveOverrides() {
 .overrides-container {
 	display: flex;
 	flex-direction: column;
+	gap: var(--spacing-md);
 	width: 100%;
+	min-height: 0;
 }
 
 .panel-card--selector {
@@ -473,6 +675,34 @@ async function saveOverrides() {
 	border-radius: 12px;
 	padding: var(--spacing-md) var(--spacing-lg);
 	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
+	margin-bottom: 0 !important;
+}
+
+.matrix-content {
+	min-height: 480px;
+}
+
+.permission-notice {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 10px;
+	color: var(--colors-text-muted);
+	font-size: 13px;
+	font-weight: 600;
+	padding: 10px var(--spacing-md);
+
+	i {
+		font-size: 18px;
+	}
+
+	&--warning {
+		background: rgba(245, 158, 11, 0.08);
+		border-color: rgba(245, 158, 11, 0.25);
+		color: #b45309;
+	}
 }
 
 .user-select-wrapper {
@@ -646,6 +876,10 @@ async function saveOverrides() {
 		.override-box__action {
 			color: #dc2626;
 		}
+	}
+
+	&--readonly {
+		opacity: 0.88;
 	}
 }
 
