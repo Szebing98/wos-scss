@@ -12903,6 +12903,13 @@ export interface operations {
                     /** Format: date-time */
                     estimatedEndDate: string;
                     description?: string;
+                    /** @enum {string} */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    personInChargeCode?: string | null;
                     leaderCode?: string;
                     leaderIICode?: string;
                     leadEngineerCode?: string;
@@ -12913,6 +12920,13 @@ export interface operations {
                     /** Format: date-time */
                     estimatedEndDate: string;
                     description?: string;
+                    /** @enum {string} */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    personInChargeCode?: string | null;
                     leaderCode?: string;
                     leaderIICode?: string;
                     leadEngineerCode?: string;
@@ -12923,6 +12937,13 @@ export interface operations {
                     /** Format: date-time */
                     estimatedEndDate: string;
                     description?: string;
+                    /** @enum {string} */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    personInChargeCode?: string | null;
                     leaderCode?: string;
                     leaderIICode?: string;
                     leadEngineerCode?: string;
@@ -12946,11 +12967,13 @@ export interface operations {
             content: {
                 "application/json": {
                     description?: string;
-                    siteCode?: string;
-                    location?: string;
-                    latitude?: number;
-                    longitude?: number;
-                    personInChargeCode?: string;
+                    /** @enum {string} */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    personInChargeCode?: string | null;
                     leaderCode?: string;
                     leaderIICode?: string;
                     leadEngineerCode?: string;
@@ -13015,11 +13038,13 @@ export interface operations {
                 };
                 "application/x-www-form-urlencoded": {
                     description?: string;
-                    siteCode?: string;
-                    location?: string;
-                    latitude?: number;
-                    longitude?: number;
-                    personInChargeCode?: string;
+                    /** @enum {string} */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    personInChargeCode?: string | null;
                     leaderCode?: string;
                     leaderIICode?: string;
                     leadEngineerCode?: string;
@@ -13084,11 +13109,13 @@ export interface operations {
                 };
                 "multipart/form-data": {
                     description?: string;
-                    siteCode?: string;
-                    location?: string;
-                    latitude?: number;
-                    longitude?: number;
-                    personInChargeCode?: string;
+                    /** @enum {string} */
+                    jobPriority?: "High" | "Medium" | "Low";
+                    siteCode?: string | null;
+                    location?: string | null;
+                    latitude?: number | null;
+                    longitude?: number | null;
+                    personInChargeCode?: string | null;
                     leaderCode?: string;
                     leaderIICode?: string;
                     leadEngineerCode?: string;

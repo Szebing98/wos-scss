@@ -75,21 +75,6 @@ const selectedItem = ref<WorkOrderModel>();
 const isReject = ref(false);
 const rejectReason = ref("");
 
-const isApproveDialog = ref(false);
-const approveFormData = ref({
-	estimatedEndDate: "",
-	leadEngineer: "",
-	engineer: "",
-	description: "",
-});
-
-const users = [
-	{ code: "usr-1", name: "Alice Smith" },
-	{ code: "usr-2", name: "Bob Jones" },
-	{ code: "usr-3", name: "Charlie Davis" },
-	{ code: "usr-4", name: "Diana Prince" },
-];
-
 const isConfirmBulkAction = ref(false);
 
 const activeStatus = ref(props.status);
@@ -147,8 +132,12 @@ function normalizeStatusForApi(status?: string | null) {
 function formatUserDisplay(name?: string | null, code?: string | null) {
 	const cleanName = name?.trim();
 	const cleanCode = code?.trim();
-	if (cleanName && cleanCode && cleanName !== cleanCode) return `${cleanName} (${cleanCode})`;
-	return cleanName || cleanCode || "Unassigned";
+	const isGuid =
+		cleanCode &&
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanCode);
+	if (cleanName && cleanCode && !isGuid && cleanName !== cleanCode)
+		return `${cleanName} (${cleanCode})`;
+	return cleanName || (isGuid ? "" : cleanCode) || "Unassigned";
 }
 
 watch(
@@ -376,17 +365,14 @@ async function fetchWorkOrders() {
 					? `${w.siteName}${w.siteCode ? ` (${w.siteCode})` : ""}`
 					: w.siteCode || "—",
 				salesAgent: resolveUserDisplay(
-					w.salesAgentCode ||
-						w.salesAgent?.code ||
-						w.salesAgent?.guid,
+					w.salesAgentCode || w.salesAgent?.code || w.salesAgent?.guid,
 					w.salesAgentName ||
 						w.salesAgentDisplayName ||
 						w.salesAgentProfileName ||
 						w.salesAgent?.displayName ||
 						w.salesAgent?.profile?.displayName ||
 						w.salesAgent?.userProfile?.displayName,
-					w.salesAgentDisplayCode ||
-						w.salesAgent?.displayCode,
+					w.salesAgentDisplayCode || w.salesAgent?.displayCode,
 				),
 				createdAt: w.createdAt,
 				rejectedReason: w.rejectedReason || "",
@@ -395,10 +381,7 @@ async function fetchWorkOrders() {
 				estimatedEndDate: w.estimatedEndDate || "",
 				leadEngineer: w.leadEngineerName || w.leaderCode || "",
 				leader: resolveUserDisplay(
-					w.leaderCode ||
-						w.leadEngineerCode ||
-						w.leader?.code ||
-						w.leadEngineer?.code,
+					w.leaderCode || w.leadEngineerCode || w.leader?.code || w.leadEngineer?.code,
 					w.leaderName ||
 						w.leadEngineerName ||
 						w.leader?.userProfile?.displayName ||
@@ -411,9 +394,19 @@ async function fetchWorkOrders() {
 				leaderII: resolveUserDisplay(
 					w.leaderIICode ||
 						w.leaderIiCode ||
+						w.leaderIicode ||
 						w.leaderII?.code,
-					w.leaderIIName || w.leaderII?.userProfile?.displayName,
+					w.leaderIIName ||
+						w.leaderIiName ||
+						w.leaderIiname ||
+						w.leaderIIDisplayName ||
+						w.leaderIiDisplayName ||
+						w.leaderII?.displayName ||
+						w.leaderII?.profile?.displayName ||
+						w.leaderII?.userProfile?.displayName,
 					w.leaderIIDisplayCode ||
+						w.leaderIiDisplayCode ||
+						w.leaderIidisplayCode ||
 						w.leaderII?.displayCode,
 				),
 				assistantEngineers: w.technicianCodes || w.assistantEngineers || [],
@@ -489,7 +482,10 @@ const filteredWorkOrders = computed(() => {
 					return false;
 			}
 		} else if (appliedStatusFilter.value !== "all") {
-			if (normalizeStatusForApi(w.status) !== normalizeStatusForApi(appliedStatusFilter.value)) return false;
+			if (
+				normalizeStatusForApi(w.status) !== normalizeStatusForApi(appliedStatusFilter.value)
+			)
+				return false;
 		}
 
 		if (appliedWorkTypeFilter.value !== "all") {
@@ -498,12 +494,24 @@ const filteredWorkOrders = computed(() => {
 		}
 
 		if (searchQuery.value) {
-			const q = searchQuery.value.toLowerCase();
-			const matchWo = w.woNumber?.toLowerCase().includes(q);
-			const matchTitle = w.title?.toLowerCase().includes(q);
-			const matchCust = w.customer?.name?.toLowerCase().includes(q);
-			const matchPic = w.personInCharge?.toLowerCase().includes(q);
-			if (!matchWo && !matchTitle && !matchCust && !matchPic) return false;
+			const q = searchQuery.value.trim().toLowerCase();
+			const searchableValues: unknown[] = [];
+			const collectValues = (value: unknown) => {
+				if (value === null || value === undefined) return;
+				if (Array.isArray(value)) {
+					value.forEach(collectValues);
+					return;
+				}
+				if (typeof value === "object") {
+					Object.values(value as Record<string, unknown>).forEach(collectValues);
+					return;
+				}
+				searchableValues.push(value);
+			};
+			collectValues(w);
+			if (!searchableValues.some((value) => String(value).toLowerCase().includes(q))) {
+				return false;
+			}
 		}
 
 		return true;
@@ -692,8 +700,6 @@ const headers = computed<TableHeader[]>(() => {
 		width: "140px",
 		minWidth: "120px",
 		sortable: false,
-		fixed: "right",
-		fixedOffset: "0px",
 	});
 
 	return base;
@@ -702,7 +708,7 @@ const headers = computed<TableHeader[]>(() => {
 const pageTitle = computed(() => {
 	if (effectiveStatus.value === "All" || effectiveStatus.value === "all")
 		return "All Work Orders";
-	if (activeIncludesDraftAndNew.value) return "Draft & New Work Orders";
+	if (activeIncludesDraftAndNew.value) return "New Work Orders";
 	const spacedStatus = effectiveStatus.value.replace(/([A-Z])/g, " $1").trim();
 	return `${spacedStatus} Work Orders`;
 });
@@ -733,7 +739,7 @@ const buttonList = [
 				router.push({
 					name: "Work Order Form",
 					params: { id: item.guid },
-					query: { mode: "view" },
+					query: { mode: "edit" },
 				});
 			} else {
 				router.push({ name: "Work Order Form", params: { id: item.guid } });
@@ -744,7 +750,7 @@ const buttonList = [
 		icon: "mdi-eye",
 		class: "btn--icon-secondary",
 		tooltip: "View Details",
-		status: [WorkOrderStatus.Claimed],
+		status: [WorkOrderStatus.Claimed, WorkOrderStatus.Rejected],
 		click: (item: WorkOrderModel) => {
 			router.push({
 				name: "Work Order Detail",
@@ -759,7 +765,12 @@ const buttonList = [
 		tooltip: "Approve",
 		status: [WorkOrderStatus.PendingApproval],
 		click: (item: WorkOrderModel) => {
-			openApproveDialog(item);
+			openConfirmDialog(
+				"Approve Work Order",
+				`Are you sure you want to approve Work Order ${item.woNumber}?`,
+				WorkOrderAction.Approve,
+				item,
+			);
 		},
 	},
 	{
@@ -903,43 +914,6 @@ function openRejectDialog(item: WorkOrderModel) {
 	selectedItem.value = item;
 	rejectReason.value = "";
 	isReject.value = true;
-}
-
-function openApproveDialog(item: WorkOrderModel) {
-	selectedItem.value = item;
-	approveFormData.value = {
-		estimatedEndDate: item.estimatedEndDate || "",
-		leadEngineer: item.leadEngineer || "",
-		engineer: item.assistantEngineers?.[0] || "",
-		description: item.description || "",
-	};
-	isApproveDialog.value = true;
-}
-
-function saveApproveData() {
-	const target = workOrders.value.find((w) => w.woNumber === selectedItem.value?.woNumber);
-	if (target) {
-		target.estimatedEndDate = approveFormData.value.estimatedEndDate;
-		target.leadEngineer = approveFormData.value.leadEngineer;
-		target.assistantEngineers = approveFormData.value.engineer
-			? [approveFormData.value.engineer]
-			: [];
-		target.description = approveFormData.value.description;
-	}
-}
-
-function handleSaveApproveDraft() {
-	saveApproveData();
-	isApproveDialog.value = false;
-}
-
-function handleApprove() {
-	saveApproveData();
-	const target = workOrders.value.find((w) => w.woNumber === selectedItem.value?.woNumber);
-	if (target) {
-		target.status = WorkOrderStatus.InProgress;
-	}
-	isApproveDialog.value = false;
 }
 
 async function executeAction() {
@@ -1305,7 +1279,7 @@ defineExpose({
 			<div class="filter-bar">
 				<Textbox
 					v-model="searchQuery"
-					placeholder="Search by WO #, Title, or Assignee..."
+					placeholder="Search all columns..."
 					style="flex: 1"
 					hide-footer
 				>
@@ -1476,17 +1450,54 @@ defineExpose({
 					</Badge>
 				</template>
 				<template #item-personInCharge="{ item }">
-					<span :class="{ 'u-text-muted': item.personInCharge === 'Unassigned' }">
-						<HighlightText :text="item.personInCharge" :query="searchQuery" />
+					<span
+						:class="{
+							'u-text-muted':
+								!item.personInCharge || item.personInCharge === 'Unassigned',
+						}"
+					>
+						<HighlightText
+							:text="item.personInCharge || 'Unassigned'"
+							:query="searchQuery"
+						/>
+					</span>
+				</template>
+				<template #item-leader="{ item }">
+					<span :class="{ 'u-text-muted': !item.leader || item.leader === 'Unassigned' }">
+						<HighlightText :text="item.leader || 'Unassigned'" :query="searchQuery" />
+					</span>
+				</template>
+				<template #item-leaderII="{ item }">
+					<span
+						:class="{
+							'u-text-muted': !item.leaderII || item.leaderII === 'Unassigned',
+						}"
+					>
+						<HighlightText :text="item.leaderII || 'Unassigned'" :query="searchQuery" />
+					</span>
+				</template>
+				<template #item-salesAgent="{ item }">
+					<span
+						:class="{
+							'u-text-muted': !item.salesAgent || item.salesAgent === 'Unassigned',
+						}"
+					>
+						<HighlightText
+							:text="item.salesAgent || 'Unassigned'"
+							:query="searchQuery"
+						/>
 					</span>
 				</template>
 				<template #item-createdAt="{ item }">
 					{{ dateFormatStore.formatDate(item.createdAt) }}
 				</template>
 				<template #item-status="{ item }">
-					<Badge class="wo-order-status-badge" :type="getStatusChipType(item.status) as any">{{
-						formatStatusLabel(item.status)
-					}}</Badge>
+					<Badge
+						class="wo-order-status-badge"
+						:type="getStatusChipType(item.status) as any"
+					>
+						{{ formatStatusLabel(item.status) }}
+					</Badge>
 				</template>
 				<template #item-actions="{ item }">
 					<div class="row-actions">
@@ -1580,51 +1591,6 @@ defineExpose({
 				>
 			</template>
 		</Dialog>
-
-		<Dialog v-model="isApproveDialog" title="Approve Work Order" maxWidth="500px">
-			<p style="margin: 0 0 16px 0; font-size: 14px; color: var(--colors-text-muted)">
-				Review and update the schedule and resources before approving Work Order
-				<strong>{{ selectedItem?.woNumber }}</strong
-				>.
-			</p>
-			<div class="form-grid-approve">
-				<DatePicker
-					v-model="approveFormData.estimatedEndDate"
-					label="Estimated Date of Completion"
-					:enableTime="true"
-				/>
-
-				<Select v-model="approveFormData.leadEngineer" label="Lead Engineer">
-					<option value="" disabled>Select Lead Engineer</option>
-					<option v-for="user in users" :key="user.code" :value="user.code">
-						{{ user.name }} ({{ user.code }})
-					</option>
-				</Select>
-
-				<Select v-model="approveFormData.engineer" label="Assistant Engineer">
-					<option value="" disabled>Select Engineer</option>
-					<option v-for="user in users" :key="user.code" :value="user.code">
-						{{ user.name }} ({{ user.code }})
-					</option>
-				</Select>
-
-				<div class="textbox-field">
-					<label class="custom-label">Work Description</label>
-					<textarea
-						v-model="approveFormData.description"
-						class="custom-textarea"
-						placeholder="Enter Description"
-						rows="3"
-					></textarea>
-				</div>
-			</div>
-			<template #footer>
-				<Button variant="secondary" @click="isApproveDialog = false">Cancel</Button>
-				<Button variant="outlined" @click="handleSaveApproveDraft">Save Changes</Button>
-				<Button variant="primary" @click="handleApprove">Approve</Button>
-			</template>
-		</Dialog>
-
 	</div>
 </template>
 

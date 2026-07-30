@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import MultiSelect from "@/components/MultiSelect.vue";
@@ -13,6 +13,7 @@ const props = defineProps<{
 	users: any[];
 	workTypes: any[];
 	isEditing: boolean;
+	canEnterEdit: boolean;
 	contractStatus: string | null;
 	siteInstructionsFiles: any[];
 	phases: any[];
@@ -20,7 +21,7 @@ const props = defineProps<{
 	isMechanical: boolean;
 }>();
 
-const emit = defineEmits(["save", "extend", "openMap"]);
+const emit = defineEmits(["save", "edit", "cancelEdit", "extend", "openMap"]);
 
 const priorityColors: Record<string, string> = {
 	High: "error",
@@ -30,6 +31,10 @@ const priorityColors: Record<string, string> = {
 
 const jobPriorityOptions = ["High", "Medium", "Low"];
 
+const isPriorityEditable = computed(() => {
+	return props.isEditing;
+});
+
 function userDisplay(user: any) {
 	const name = user?.name?.trim();
 	const displayCode = user?.displayCode?.trim();
@@ -38,7 +43,7 @@ function userDisplay(user: any) {
 }
 
 const salesAgentUsers = computed(() => {
-	return props.users.filter((u: any) => {
+	const options = props.users.filter((u: any) => {
 		const code = (u.displayCode || u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
 		return (
@@ -48,10 +53,21 @@ const salesAgentUsers = computed(() => {
 			!code.startsWith("ENG")
 		);
 	});
+	if (
+		props.workOrder.salesAgent &&
+		!options.some((u: any) => u.code === props.workOrder.salesAgent)
+	) {
+		options.push({
+			code: props.workOrder.salesAgent,
+			displayCode: "",
+			name: props.workOrder.salesAgentDisplay || props.workOrder.salesAgent,
+		});
+	}
+	return options;
 });
 
 const projectPicUsers = computed(() => {
-	return props.users.filter((u: any) => {
+	const options = props.users.filter((u: any) => {
 		const code = (u.displayCode || u.code || "").toUpperCase();
 		const r = (u.role || u.userGroup || "").toLowerCase();
 		return (
@@ -66,6 +82,19 @@ const projectPicUsers = computed(() => {
 			!code.startsWith("ENG")
 		);
 	});
+	if (
+		props.workOrder.projectPersonInCharge &&
+		!options.some((u: any) => u.code === props.workOrder.projectPersonInCharge)
+	) {
+		options.push({
+			code: props.workOrder.projectPersonInCharge,
+			displayCode: "",
+			name:
+				props.workOrder.projectPersonInChargeDisplay ||
+				props.workOrder.projectPersonInCharge,
+		});
+	}
+	return options;
 });
 
 const engineerUsers = computed(() => {
@@ -86,29 +115,68 @@ const engineerUsers = computed(() => {
 });
 
 const leaderOptions = computed(() => {
-	return engineerUsers.value.filter(
+	const options = engineerUsers.value.filter(
 		(u: any) =>
 			u.code !== props.workOrder.leaderIICode &&
 			!props.workOrder.technicianCodes?.includes(u.code),
 	);
+	if (
+		props.workOrder.leaderCode &&
+		!options.some((u: any) => u.code === props.workOrder.leaderCode)
+	) {
+		options.push({
+			code: props.workOrder.leaderCode,
+			displayCode: "",
+			name: props.workOrder.leaderDisplay || props.workOrder.leaderCode,
+		});
+	}
+	return options;
 });
 
 const leaderIIOptions = computed(() => {
-	return engineerUsers.value.filter(
+	const options = engineerUsers.value.filter(
 		(u: any) =>
 			u.code !== props.workOrder.leaderCode &&
 			!props.workOrder.technicianCodes?.includes(u.code),
 	);
+	if (
+		props.workOrder.leaderIICode &&
+		!options.some((u: any) => u.code === props.workOrder.leaderIICode)
+	) {
+		options.push({
+			code: props.workOrder.leaderIICode,
+			displayCode: "",
+			name: props.workOrder.leaderIIDisplay || props.workOrder.leaderIICode,
+		});
+	}
+	return options;
 });
 
 const technicianOptions = computed(() => {
-	return engineerUsers.value
+	const options = engineerUsers.value
 		.filter(
 			(u: any) =>
 				u.code !== props.workOrder.leaderCode && u.code !== props.workOrder.leaderIICode,
 		)
 		.map((u: any) => ({ ...u, name: userDisplay(u) }));
+	for (const code of props.workOrder.technicianCodes || []) {
+		if (!options.some((u: any) => u.code === code)) {
+			const technician = props.workOrder.technicians?.find((item: any) => item.code === code);
+			options.push({
+				code,
+				displayCode: "",
+				name: technician?.display || technician?.name || code,
+			});
+		}
+	}
+	return options;
 });
+
+const previewImageUrl = ref<string | null>(null);
+
+function openImageModal(url: string) {
+	previewImageUrl.value = url;
+}
 </script>
 
 <template>
@@ -134,14 +202,17 @@ const technicianOptions = computed(() => {
 					{{ workOrder.jobPriority }} Priority
 				</Badge>
 			</div>
-			<Button
-				v-if="isEditing"
-				variant="primary"
-				@click="emit('save')"
-				style="display: flex; align-items: center; gap: 4px"
-			>
-				<i class="mdi mdi-content-save"></i> Save Changes
-			</Button>
+			<div class="general-actions">
+				<Button v-if="isEditing" variant="primary" @click="emit('save')">
+					<i class="mdi mdi-content-save"></i> Save Changes
+				</Button>
+				<Button v-if="isEditing" variant="outlined" @click="emit('cancelEdit')">
+					Cancel
+				</Button>
+				<Button v-else-if="canEnterEdit" variant="outlined" @click="emit('edit')">
+					<i class="mdi mdi-pencil-outline"></i> Edit
+				</Button>
+			</div>
 		</div>
 		<p class="text-muted">
 			View and manage work order information, assignment schedules, and execution resources.
@@ -153,7 +224,11 @@ const technicianOptions = computed(() => {
 
 		<!-- Row 1: Job Priority + Work Type Item -->
 		<div class="col-6">
-			<Select v-model="workOrder.jobPriority" label="Job Priority" :disabled="!isEditing">
+			<Select
+				v-model="workOrder.jobPriority"
+				label="Job Priority"
+				:disabled="!isPriorityEditable"
+			>
 				<option v-for="priority in jobPriorityOptions" :key="priority" :value="priority">
 					{{ priority }}
 				</option>
@@ -198,18 +273,10 @@ const technicianOptions = computed(() => {
 					}))
 				"
 				:showCode="false"
+				label="Project PIC"
 				placeholder="Search or select Project Person In Charge..."
-				:disabled="!isEditing"
-			>
-				<template #label>
-					Project PIC
-					<i
-						class="mdi mdi-information text-primary"
-						style="margin-left: 4px; font-size: 14px"
-						title="This is the primary point of contact for this work order"
-					></i>
-				</template>
-			</Autocomplete>
+				disabled
+			/>
 		</div>
 
 		<!-- Row 3: Start Date + Estimated End Date -->
@@ -227,11 +294,11 @@ const technicianOptions = computed(() => {
 					v-model="workOrder.estimatedEndDate"
 					label="Estimated Date of Completion *"
 					:enableTime="false"
-					:disabled="!isEditing"
+					disabled
 					style="flex-grow: 1"
 				/>
 				<Button
-					v-if="isEditing"
+					v-if="canEnterEdit"
 					variant="outlined"
 					style="
 						padding: 10px 14px;
@@ -303,18 +370,14 @@ const technicianOptions = computed(() => {
 		<div class="col-6">
 			<Textbox v-model="workOrder.location" label="Location" :disabled="!isEditing">
 				<template #suffix>
-					<button
-						class="btn-icon-map"
-						@click="emit('openMap')"
-						title="View Map"
-					>
+					<button class="btn-icon-map" @click="emit('openMap')" title="View Map">
 						<i class="mdi mdi-map-marker"></i>
 					</button>
 				</template>
 			</Textbox>
 		</div>
 		<div class="col-6">
-			<label class="custom-label">Site Code</label>
+			<label class="custom-label">Site</label>
 			<div
 				class="read-only-val"
 				style="
@@ -353,7 +416,7 @@ const technicianOptions = computed(() => {
 				class="custom-textarea"
 				placeholder="Enter Description"
 				rows="4"
-				:disabled="!isEditing"
+				disabled
 				style="
 					width: 100%;
 					border: 1px solid var(--colors-surface-border);
@@ -392,17 +455,19 @@ const technicianOptions = computed(() => {
 				>
 					<div
 						class="file-item__preview"
-						style="
-							width: 40px;
-							height: 40px;
-							display: flex;
-							align-items: center;
-							justify-content: center;
-							background: var(--colors-bg-hover);
-							border-radius: 4px;
-							overflow: hidden;
-							flex-shrink: 0;
-						"
+						:style="{
+							width: '40px',
+							height: '40px',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							background: 'var(--colors-bg-hover)',
+							borderRadius: '4px',
+							overflow: 'hidden',
+							flexShrink: 0,
+							cursor: file.type?.startsWith('image/') ? 'pointer' : 'default',
+						}"
+						@click="file.type?.startsWith('image/') && openImageModal(file.url)"
 					>
 						<img
 							v-if="file.type?.startsWith('image/')"
@@ -427,6 +492,25 @@ const technicianOptions = computed(() => {
 						"
 					>
 						<a
+							v-if="file.type?.startsWith('image/')"
+							href="javascript:void(0)"
+							@click="openImageModal(file.url)"
+							class="file-item__name"
+							style="
+								font-size: 13px;
+								font-weight: 500;
+								color: var(--colors-brand-primary);
+								text-decoration: none;
+								overflow: hidden;
+								text-overflow: ellipsis;
+								white-space: nowrap;
+								max-width: 150px;
+							"
+						>
+							{{ file.name }}
+						</a>
+						<a
+							v-else
 							:href="file.url"
 							target="_blank"
 							class="file-item__name"
@@ -440,16 +524,17 @@ const technicianOptions = computed(() => {
 								white-space: nowrap;
 								max-width: 150px;
 							"
-							>{{ file.name }}</a
 						>
+							{{ file.name }}
+						</a>
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<!-- Customer & Contract (Read-Only) -->
+		<!-- Customer & Contract -->
 		<div class="col-12">
-			<h4 class="section-title" style="margin-top: 16px">Customer & Contract (Read-Only)</h4>
+			<h4 class="section-title" style="margin-top: 16px">Customer & Contract</h4>
 		</div>
 		<div class="col-4">
 			<Textbox v-model="workOrder.customer.name" label="Customer Name" disabled />
@@ -577,6 +662,16 @@ const technicianOptions = computed(() => {
 			</div>
 		</template>
 	</div>
+
+	<!-- Image Lightbox Modal -->
+	<div v-if="previewImageUrl" class="image-lightbox" @click="previewImageUrl = null">
+		<div class="image-lightbox__content" @click.stop>
+			<img :src="previewImageUrl" class="image-lightbox__img" />
+			<button class="image-lightbox__close" @click="previewImageUrl = null">
+				<i class="mdi mdi-close"></i>
+			</button>
+		</div>
+	</div>
 </template>
 
 <style scoped lang="scss">
@@ -592,6 +687,34 @@ const technicianOptions = computed(() => {
 	}
 	.col-4 {
 		grid-column: span 4;
+	}
+}
+.general-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+	.form-grid {
+		grid-template-columns: 1fr;
+
+		.col-12,
+		.col-6,
+		.col-4 {
+			grid-column: 1;
+		}
+	}
+
+	.header-title-flex {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.general-actions {
+		width: 100%;
 	}
 }
 .section-title {
@@ -758,5 +881,60 @@ const technicianOptions = computed(() => {
 	align-items: center;
 	justify-content: space-between;
 	width: 100%;
+}
+
+.image-lightbox {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.75);
+	backdrop-filter: blur(4px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+	cursor: pointer;
+
+	&__content {
+		position: relative;
+		max-width: 90vw;
+		max-height: 90vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	&__img {
+		max-width: 100%;
+		max-height: 90vh;
+		border-radius: 8px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+		object-fit: contain;
+	}
+
+	&__close {
+		position: absolute;
+		top: -40px;
+		right: 0;
+		background: none;
+		border: none;
+		color: white;
+		font-size: 24px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.1);
+		transition: background 0.2s;
+
+		&:hover {
+			background: rgba(255, 255, 255, 0.25);
+		}
+	}
 }
 </style>

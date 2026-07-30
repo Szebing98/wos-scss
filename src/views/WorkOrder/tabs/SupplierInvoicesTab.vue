@@ -14,30 +14,43 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 </script>
 
 <template>
-	<div class="card-header" style="display: flex; justify-content: space-between; align-items: center">
-		<div>
-			<h3>Supplier Invoices</h3>
-			<p class="text-muted">Upload up to 12 supplier invoice photos or scanned documents.</p>
+	<div
+		class="card-header"
+		style="display: flex; justify-content: space-between; align-items: center"
+	>
+		<div style="display: block">
+			<div style="display: flex; align-items: center; gap: 12px">
+				<h3>Supplier Invoices</h3>
+				<span class="photo-counter-badge">
+					{{ supplierInvoicePhotos.length }}/12 Photos
+				</span>
+			</div>
+			<p class="text-muted" style="margin: 0px">
+				Upload up to 12 supplier invoice photos or scanned documents.
+			</p>
 		</div>
-		<div style="display: flex; align-items: center; gap: 12px">
-			<span class="photo-counter-badge">{{ supplierInvoicePhotos.length }}/12 Files</span>
-			<input type="file" ref="supplierInvoiceInput" style="display: none;" @change="emit('upload', $event)" accept="image/*,application/pdf" />
-			<Button
-				v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
-				variant="primary"
-				@click="supplierInvoiceInput?.click()"
-				:disabled="supplierInvoicePhotos.length >= 12"
-			>
-				<i class="mdi mdi-file-upload" style="margin-right: 4px"></i> Add Invoice
-			</Button>
-		</div>
-	</div>
-	<div class="photo-grid-12">
-		<div
-			v-for="photo in supplierInvoicePhotos"
-			:key="photo.id"
-			class="photo-slot"
+
+		<input
+			type="file"
+			ref="partInfoInput"
+			style="display: none"
+			@change="emit('upload', $event)"
+			accept="image/*,application/pdf"
+		/>
+
+		<Button
+			v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
+			variant="primary"
+			@click="supplierInvoiceInput?.click()"
+			:disabled="supplierInvoicePhotos.length >= 12"
 		>
+			<i class="mdi mdi-file-upload" style="margin-right: 4px"></i> Add Invoice
+		</Button>
+	</div>
+
+	<hr style="margin: 8px" />
+	<div class="photo-grid-12">
+		<div v-for="photo in supplierInvoicePhotos" :key="photo.id" class="photo-slot">
 			<div class="photo-slot__img-wrap">
 				<img :src="photo.url" :alt="photo.name" class="photo-slot__img" />
 				<button
@@ -52,14 +65,20 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 			<div class="photo-slot__name">{{ photo.name }}</div>
 		</div>
 		<div
-			v-if="(isEditing || (isManager && workOrderStatus === 'Claimed')) && supplierInvoicePhotos.length < 12"
+			v-if="
+				(isEditing || (isManager && workOrderStatus === 'Claimed')) &&
+				supplierInvoicePhotos.length < 12
+			"
 			class="photo-slot photo-slot--add"
 			@click="supplierInvoiceInput?.click()"
 		>
 			<i class="mdi mdi-file-plus"></i>
 			<span>Upload Invoice</span>
 		</div>
-		<div v-if="supplierInvoicePhotos.length === 0 && !isEditing && workOrderStatus !== 'Claimed'" class="photo-grid-empty">
+		<div
+			v-if="supplierInvoicePhotos.length === 0 && !isEditing && workOrderStatus !== 'Claimed'"
+			class="photo-grid-empty"
+		>
 			<i class="mdi mdi-file-document-outline"></i>
 			<p>No supplier invoices uploaded yet.</p>
 		</div>
@@ -122,7 +141,9 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 		justify-content: center;
 		cursor: pointer;
 		font-size: 14px;
-		transition: transform 0.2s, background-color 0.2s;
+		transition:
+			transform 0.2s,
+			background-color 0.2s;
 
 		&:hover {
 			background: #dc2626;

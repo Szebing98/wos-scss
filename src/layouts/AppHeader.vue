@@ -103,10 +103,14 @@ async function openNotification(notification: NotificationItem) {
 		try {
 			const response = await notificationApi.markRead(notification.code);
 			if (response.error) {
-				throw new Error(getApiErrorMessage(response.error, "Unable to update notification."));
+				throw new Error(
+					getApiErrorMessage(response.error, "Unable to update notification."),
+				);
 			}
 
-			notifications.value = notifications.value.filter((item) => item.code !== notification.code);
+			notifications.value = notifications.value.filter(
+				(item) => item.code !== notification.code,
+			);
 			unreadTotal.value = Math.max(unreadTotal.value - 1, 0);
 		} catch (error) {
 			notificationError.value =
@@ -235,14 +239,15 @@ onUnmounted(() => {
 					@click.stop="toggleNotifications"
 				>
 					<i class="mdi mdi-bell-outline"></i>
-					<span v-if="unreadLabel" class="notification-btn__badge">{{ unreadLabel }}</span>
+					<span v-if="unreadLabel" class="notification-btn__badge">{{
+						unreadLabel
+					}}</span>
 				</button>
 
 				<div v-if="isNotificationsOpen" class="notification-dropdown">
 					<div class="notification-dropdown__header">
 						<div>
 							<p class="notification-dropdown__title">Notifications</p>
-							<p class="notification-dropdown__subtitle">Synced from WOS MariaDB</p>
 						</div>
 						<button
 							v-if="unreadTotal"

@@ -9,6 +9,7 @@ import Badge from "@/components/Badge.vue";
 import DatePicker from "@/components/DatePicker.vue";
 import Autocomplete from "@/components/Autocomplete.vue";
 import GoogleMapPicker from "@/components/GoogleMapPicker.vue";
+import Dialog from "@/components/Dialog.vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth.store";
 import { customerApi } from "@/api/customer/customer.api";
@@ -16,12 +17,21 @@ import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
 import { workOrderApi } from "@/api/work-order/work-order.api";
 import http from "@/utils/http";
+import { useSnackbarStore } from "@/stores/snackbar.store";
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const snackbar = useSnackbarStore();
 const SITE_INSTRUCTIONS_CATEGORY = "SiteInstructions";
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3707/api").replace(
+	/\/$/,
+	"",
+);
 const workOrderCode = ref("");
+const showApproveDialog = ref(false);
+const showRejectDialog = ref(false);
+const rejectReason = ref("");
 
 const isEditMode = computed(() => !!route.params.id);
 const isReadOnly = computed(() => isEditMode.value && route.query.mode === "view");
@@ -90,31 +100,6 @@ const canEditReadOnlyWorkOrder = computed(() =>
 const isPendingApproval = computed(() =>
 	["pending", "pendingapproval"].includes(normalizedStatus.value),
 );
-const canApprovePending = computed(() => {
-	const user = authStore.currentUser || authStore.user || {};
-	const permissions = [
-		...(user.permissions || []),
-		...(user.userGroups || user.groups || []).flatMap(
-			(group: any) => group.permissions || [],
-		),
-	].map((permission: any) =>
-		String(permission.code || permission.name || permission).toUpperCase(),
-	);
-	const role = String(
-		user.role ||
-			user.userGroupCode ||
-			user.userGroups?.[0]?.code ||
-			user.userGroups?.[0]?.name ||
-			user.groups?.[0]?.code ||
-			user.groups?.[0]?.name ||
-			"",
-	).toUpperCase();
-	return (
-		permissions.includes("WORK_ORDER_MANAGEMENT_APPROVE") ||
-		role.includes("ADMIN") ||
-		role.includes("MANAGER")
-	);
-});
 
 const now = new Date();
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -224,6 +209,29 @@ function onSiteInstructionsChange(e: Event) {
 	input.value = "";
 }
 
+const previewImageUrl = ref<string | null>(null);
+
+function openImageModal(url: string) {
+	previewImageUrl.value = url;
+}
+
+async function openSiteInstructionFile(file: { url: string; name: string; type: string }) {
+	if (!file.url) return;
+	try {
+		const response = await http.get(file.url, { responseType: "blob" });
+		const objectUrl = URL.createObjectURL(response.data);
+		const link = document.createElement("a");
+		link.href = objectUrl;
+		link.target = "_blank";
+		link.rel = "noopener";
+		link.click();
+		window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+	} catch (error) {
+		console.error("Failed to open Site Instruction file:", error);
+		snackbar.error(`Failed to open ${file.name}`);
+	}
+}
+
 function removeSiteInstruction(index: number) {
 	const item = formData.value.siteInstructionsFiles[index];
 	if (item?.url.startsWith("blob:")) URL.revokeObjectURL(item.url);
@@ -298,6 +306,7 @@ async function loadOptions() {
 			pageIndex: 0,
 			pageSize: 100,
 			timezone: "Asia/Kuala_Lumpur",
+			isActive: true,
 		});
 		if (custRes.data && custRes.data.data) {
 			customers.value = custRes.data.data.map((c: any) => ({
@@ -321,7 +330,11 @@ async function loadOptions() {
 		}
 
 		// Fetch Users
-		const userRes = await userApi.getUsers({ pageIndex: 0, pageSize: 1000, timezone: "Asia/Kuala_Lumpur" });
+		const userRes = await userApi.getUsers({
+			pageIndex: 0,
+			pageSize: 1000,
+			timezone: "Asia/Kuala_Lumpur",
+		});
 		if (userRes.data && userRes.data.data) {
 			users.value = userRes.data.data.map((u: any) => ({
 				code: u.code || u.guid,
@@ -394,132 +407,6 @@ onMounted(async () => {
 	if (!authStore.currentUser) void authStore.fetchMe();
 	await loadOptions();
 
-	// Fallback hardcoded data for UI testing
-	if (users.value.length === 0) {
-		users.value = [
-			{ code: "SAL-001", displayCode: "SAL-001", name: "David Tan", role: "sa" },
-			{ code: "SAL-002", displayCode: "SAL-002", name: "Jessica Lee", role: "sa" },
-			{ code: "MNG-001", displayCode: "MNG-001", name: "Ramasamy Kumar", role: "manager" },
-			{ code: "MNG-002", displayCode: "MNG-002", name: "Chen Wei Ming", role: "manager" },
-			{ code: "ENG-001", displayCode: "ENG-001", name: "Ahmad Faizi", role: "engineer" },
-			{ code: "ENG-002", displayCode: "ENG-002", name: "Nurul Ain", role: "engineer" },
-			{ code: "ENG-003", displayCode: "ENG-003", name: "Lim Wei Chen", role: "engineer" },
-			{ code: "ENG-004", displayCode: "ENG-004", name: "Siti Fatimah", role: "engineer" },
-			{ code: "ENG-005", displayCode: "ENG-005", name: "Kavitha Nair", role: "engineer" },
-		];
-	}
-	if (customers.value.length === 0) {
-		customers.value = [
-			{
-				code: "CUST-001",
-				name: "Petronas Carigali Sdn Bhd",
-				contracts: [
-					{
-						contractNo: "CTR-PET-2026-01",
-						contractName: "Offshore Equipment Maintenance 2026",
-						startDate: "2026-01-01",
-						endDate: "2027-12-31",
-					},
-					{
-						contractNo: "CTR-PET-2026-EXPIRE",
-						contractName: "Turbine Inspection & Overhaul",
-						startDate: "2025-08-01",
-						endDate: "2026-08-15",
-					},
-					{
-						contractNo: "CTR-PET-2025-OLD",
-						contractName: "Platform Safety Audit 2025",
-						startDate: "2025-01-01",
-						endDate: "2025-12-31",
-					},
-				],
-			},
-			{
-				code: "CUST-002",
-				name: "YTL Power Services Sdn Bhd",
-				contracts: [
-					{
-						contractNo: "CTR-YTL-2026-01",
-						contractName: "Power Plant Turbine Maintenance",
-						startDate: "2026-03-01",
-						endDate: "2027-02-28",
-					},
-					{
-						contractNo: "CTR-YTL-2025-OLD",
-						contractName: "Boiler Servicing Contract 2025",
-						startDate: "2024-06-01",
-						endDate: "2025-05-31",
-					},
-				],
-			},
-			{
-				code: "CUST-003",
-				name: "TNB Engineering Corporation",
-				contracts: [
-					{
-						contractNo: "CTR-TNB-2026-01",
-						contractName: "Substation Transformer Overhaul",
-						startDate: "2026-02-15",
-						endDate: "2026-08-10",
-					},
-					{
-						contractNo: "CTR-TNB-2025-OLD",
-						contractName: "Grid Line Survey 2025",
-						startDate: "2024-01-01",
-						endDate: "2025-01-01",
-					},
-				],
-			},
-		];
-	}
-	if (workTypeList.value.length === 0) {
-		workTypeList.value = [
-			{
-				guid: "wt-1",
-				code: "mechanical",
-				name: "Mechanical Maintenance",
-				withEquipmentForm: true,
-			},
-			{
-				guid: "wt-2",
-				code: "electrical",
-				name: "Electrical Maintenance",
-				withEquipmentForm: false,
-			},
-			{ guid: "wt-3", code: "hvac", name: "HVAC System", withEquipmentForm: true },
-			{
-				guid: "wt-4",
-				code: "general",
-				name: "General Maintenance",
-				withEquipmentForm: false,
-			},
-		];
-		if (!formData.value.workTypeGuid) {
-			const match =
-				workTypeList.value.find(
-					(wt) => wt.code.toLowerCase() === formData.value.orderTypeCode.toLowerCase(),
-				) || workTypeList.value[0];
-			formData.value.workTypeGuid = match.guid;
-			formData.value.withEquipmentForm = match.withEquipmentForm;
-		}
-	}
-	if (workTypeItems.value.length === 0) {
-		workTypeItems.value = [
-			{ code: "WT-001", name: "Preventive Maintenance" },
-			{ code: "WT-002", name: "Corrective Maintenance" },
-			{ code: "WT-003", name: "New Installation" },
-			{ code: "WT-004", name: "Inspection & Testing" },
-		];
-	}
-	if (sites.value.length === 0) {
-		sites.value = [
-			{ code: "HQ-KL", name: "Kuala Lumpur Headquarters" },
-			{ code: "WH-PJ", name: "Petaling Jaya Warehouse" },
-			{ code: "FAC-PG", name: "Penang Regional Facility" },
-			{ code: "PLT-JB", name: "Johor Bahru Plant" },
-		];
-	}
-
 	const id = route.params.id;
 	if (id && typeof id === "string") {
 		try {
@@ -527,7 +414,8 @@ onMounted(async () => {
 			const { data } = await workOrderApi.getWorkOrderByGuid(id);
 			const w = (data?.data || data) as any;
 			if (w && (w.guid || w.code)) {
-				workOrderCode.value = w.docNo || w.code || w.guid?.substring(0, 8).toUpperCase() || "";
+				workOrderCode.value =
+					w.docNo || w.code || w.guid?.substring(0, 8).toUpperCase() || "";
 				upsertUserOption(
 					w.salesAgentCode,
 					w.salesAgentName || w.salesAgentDisplayName || w.salesAgentProfileName,
@@ -547,15 +435,23 @@ onMounted(async () => {
 					"engineer",
 				);
 				upsertUserOption(
-					w.leaderIICode || w.leaderIiCode,
-					w.leaderIIName,
-					w.leaderIIDisplayCode,
+					w.leaderIICode || w.leaderIiCode || w.leaderIicode,
+					w.leaderIIName || w.leaderIiName || w.leaderIiname,
+					w.leaderIIDisplayCode || w.leaderIiDisplayCode || w.leaderIidisplayCode,
 					"engineer",
 				);
+				for (const technician of w.technicians || []) {
+					upsertUserOption(
+						technician.code,
+						technician.name,
+						technician.displayCode,
+						"engineer",
+					);
+				}
 				formData.value = {
 					status: normalizeWorkOrderStatus(w),
 					workType: w.workType || "Maintenance",
-					orderTypeCode: w.orderTypeCode || "mechanical",
+					orderTypeCode: w.orderTypeCode || "",
 					workTypeGuid: w.workTypeGuid || "",
 					withEquipmentForm: !!w.withEquipmentForm,
 					orderTypeItemCode: w.workTypeItem || "",
@@ -574,8 +470,12 @@ onMounted(async () => {
 						? w.estimatedEndDate.slice(0, 16)
 						: nextWeekDateStr,
 					leaderCode: w.leaderCode || w.leadEngineerCode || "",
-					leaderIICode: w.leaderIICode || w.leaderIiCode || "",
-					technicianCodes: w.technicianCodes || w.assistantEngineers || [],
+					leaderIICode: w.leaderIICode || w.leaderIiCode || w.leaderIicode || "",
+					technicianCodes:
+						w.technicianCodes ||
+						(w.technicians || []).map((technician: any) => technician.code) ||
+						w.assistantEngineers ||
+						[],
 					contractNo: w.contractNo || "",
 					contractStartDate: w.contractStartDate ? w.contractStartDate.slice(0, 10) : "",
 					contractEndDate: w.contractEndDate ? w.contractEndDate.slice(0, 10) : "",
@@ -627,19 +527,39 @@ onMounted(async () => {
 							: Array.isArray(filesData?.items)
 								? filesData.items
 								: [];
-				formData.value.siteInstructionsFiles = files
-					.filter(
-						(file: any) =>
-							file.category === "SiteInstructions" ||
-							file.category === "SiteInstruction" ||
-							file.category === "site_instructions",
-					)
-					.map((file: any) => ({
-						name: file.fileName || "Site instruction",
-						url: file.storageUrl || "",
-						type: file.mimeType || "",
-						guid: file.guid,
-					}));
+				const siteInstructionFiles = files.filter(
+					(file: any) =>
+						file.category === "SiteInstructions" ||
+						file.category === "SiteInstruction" ||
+						file.category === "site_instructions",
+				);
+				formData.value.siteInstructionsFiles = await Promise.all(
+					siteInstructionFiles.map(async (file: any) => {
+						const isImage =
+							(file.mimeType || "").startsWith("image/") ||
+							/\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(file.fileName || "");
+						let url = file.storageUrl || "";
+						if (url.startsWith("/work-order/")) url = `${API_BASE_URL}${url}`;
+
+						if (isImage && url) {
+							url = url.replace(/\/download$/, "/preview");
+							try {
+								const response = await http.get(url, { responseType: "blob" });
+								url = URL.createObjectURL(response.data);
+							} catch (error) {
+								console.error("Failed to load Site Instruction preview:", error);
+								url = "";
+							}
+						}
+
+						return {
+							name: file.fileName || "Site instruction",
+							url,
+							type: file.mimeType || (isImage ? "image/unknown" : ""),
+							guid: file.guid,
+						};
+					}),
+				);
 
 				// Trigger contract lookup if edit mode has customerCode & contractNo
 				if (formData.value.customerCode) {
@@ -719,25 +639,42 @@ const engineerUsers = computed(() => {
 });
 
 const leaderOptions = computed(() => {
-	return engineerUsers.value.filter(
+	const selected = users.value.find((u: any) => u.code === formData.value.leaderCode);
+	const candidates = selected ? [...engineerUsers.value, selected] : engineerUsers.value;
+	return Array.from(new Map(candidates.map((u: any) => [u.code, u])).values()).filter(
 		(u: any) =>
-			u.code !== formData.value.leaderIICode &&
-			!formData.value.technicianCodes.includes(u.code),
+			u.code === formData.value.leaderCode ||
+			(u.code !== formData.value.leaderIICode &&
+				!formData.value.technicianCodes.includes(u.code)),
 	);
 });
 
 const leaderIIOptions = computed(() => {
-	return engineerUsers.value.filter(
+	const selected = users.value.find((u: any) => u.code === formData.value.leaderIICode);
+	const candidates = selected ? [...engineerUsers.value, selected] : engineerUsers.value;
+	return Array.from(new Map(candidates.map((u: any) => [u.code, u])).values()).filter(
 		(u: any) =>
-			u.code !== formData.value.leaderCode &&
-			!formData.value.technicianCodes.includes(u.code),
+			u.code === formData.value.leaderIICode ||
+			(u.code !== formData.value.leaderCode &&
+				!formData.value.technicianCodes.includes(u.code)),
 	);
 });
 
 const technicianOptions = computed(() => {
-	return engineerUsers.value.filter(
-		(u: any) => u.code !== formData.value.leaderCode && u.code !== formData.value.leaderIICode,
-	);
+	const selected = formData.value.technicianCodes
+		.map((code) => users.value.find((u: any) => u.code === code))
+		.filter(Boolean);
+	const candidates = [...engineerUsers.value, ...selected];
+	return Array.from(new Map(candidates.map((u: any) => [u.code, u])).values())
+		.filter(
+			(u: any) =>
+				formData.value.technicianCodes.includes(u.code) ||
+				(u.code !== formData.value.leaderCode && u.code !== formData.value.leaderIICode),
+		)
+		.map((u: any) => ({
+			code: u.code,
+			name: userOptionDisplay(u),
+		}));
 });
 
 function getContractStatus(c: any): "Active" | "ExpiringSoon" | "Expired" {
@@ -804,7 +741,7 @@ const contractSelectOptions = computed<any[]>(() => {
 
 function redirectToCustomerRenew(contract: any) {
 	if (!formData.value.customerCode) {
-		alert("Please select a Customer first.");
+		snackbar.error("Please select a Customer first.");
 		return;
 	}
 	const cust = customers.value.find((c: any) => c.code === formData.value.customerCode);
@@ -821,17 +758,27 @@ function redirectToCustomerRenew(contract: any) {
 	});
 }
 
-const showEquipmentForm = computed(() => {
-	if (formData.value.withEquipmentForm) return true;
+const selectedWorkType = computed(() => {
+	const guid = formData.value.workTypeGuid;
 	const code = (formData.value.orderTypeCode || "").toLowerCase();
 	const name = (formData.value.workType || "").toLowerCase();
-	return code === "mechanical" || name === "mechanical";
+
+	return workTypeList.value.find(
+		(wt: any) =>
+			(guid && wt.guid === guid) ||
+			(code && wt.code?.toLowerCase() === code) ||
+			(name && wt.name?.toLowerCase() === name),
+	);
 });
 
+const showEquipmentForm = computed(
+	() => selectedWorkType.value?.withEquipmentForm ?? formData.value.withEquipmentForm,
+);
+
 const isMechanical = computed(() => {
-	const code = (formData.value.orderTypeCode || "").toLowerCase();
-	const name = (formData.value.workType || "").toLowerCase();
-	return code === "mechanical" || name === "mechanical";
+	const code = (selectedWorkType.value?.code || formData.value.orderTypeCode || "").toLowerCase();
+	const name = (selectedWorkType.value?.name || formData.value.workType || "").toLowerCase();
+	return code.includes("mechanical") || name.includes("mechanical");
 });
 
 const formErrors = ref<Record<string, string>>({});
@@ -1058,6 +1005,9 @@ function buildBody(): Record<string, any> {
 
 function buildPendingBody(): Record<string, any> {
 	return {
+		startDate: formData.value.startDate
+			? new Date(formData.value.startDate).toISOString()
+			: undefined,
 		estimatedEndDate: formData.value.estimatedEndDate
 			? new Date(formData.value.estimatedEndDate).toISOString()
 			: undefined,
@@ -1075,7 +1025,7 @@ function buildPendingBody(): Record<string, any> {
 }
 
 function goToWorkOrderReadOnly(workOrderGuid: string) {
-	router.push({
+	router.replace({
 		name: "Work Order Form",
 		params: { id: workOrderGuid },
 		query: { mode: "view" },
@@ -1096,16 +1046,16 @@ async function submitDraft() {
 		if (id && typeof id === "string") {
 			const { error } = await workOrderApi.updateDraft(id, body);
 			if (error) {
-				alert(`Failed to update draft: ${error.error?.message || error.message}`);
+				snackbar.error(`Failed to update draft: ${error.error?.message || error.message}`);
 				return;
 			}
 			await uploadSelectedSiteInstructions(id);
-			alert("Work order draft updated successfully!");
+			snackbar.success("Work order draft updated successfully!");
 		} else {
 			const result = await workOrderApi.createDraft(body as any);
 			const { error } = result;
 			if (error) {
-				alert(`Failed to save draft: ${error.error?.message || error.message}`);
+				snackbar.error(`Failed to save draft: ${error.error?.message || error.message}`);
 				return;
 			}
 			const workOrderGuid = extractWorkOrderGuid(result);
@@ -1116,12 +1066,12 @@ async function submitDraft() {
 			if (formData.value.siteInstructionsFiles.some((item) => item.file)) {
 				await uploadSelectedSiteInstructions(workOrderGuid);
 			}
-			alert("Work order draft created successfully!");
+			snackbar.success("Work order draft created successfully!");
 		}
 		if (savedWorkOrderGuid) goToWorkOrderReadOnly(savedWorkOrderGuid);
 	} catch (e) {
 		console.error(e);
-		alert(e instanceof Error ? e.message : "Failed to save work order draft");
+		snackbar.error(e instanceof Error ? e.message : "Failed to save work order draft");
 	} finally {
 		loading.value = false;
 	}
@@ -1141,7 +1091,9 @@ async function submitNew() {
 			if (formData.value.status === "Draft") {
 				const updateRes = await workOrderApi.updateDraft(id, body);
 				if (updateRes.error) {
-					alert(`Failed to update draft: ${updateRes.error.error?.message || updateRes.error.message}`);
+					snackbar.error(
+						`Failed to update draft: ${updateRes.error.error?.message || updateRes.error.message}`,
+					);
 					return;
 				}
 				await uploadSelectedSiteInstructions(id);
@@ -1149,23 +1101,29 @@ async function submitNew() {
 					estimatedEndDate: body.estimatedEndDate,
 				} as any);
 				if (error) {
-					alert(`Failed to submit work order: ${error.error?.message || error.message}`);
+					snackbar.error(
+						`Failed to submit work order: ${error.error?.message || error.message}`,
+					);
 					return;
 				}
 			} else {
 				const { error } = await workOrderApi.updateNew(id, body);
 				if (error) {
-					alert(`Failed to update work order: ${error.error?.message || error.message}`);
+					snackbar.error(
+						`Failed to update work order: ${error.error?.message || error.message}`,
+					);
 					return;
 				}
 				await uploadSelectedSiteInstructions(id);
 			}
-			alert("Work order submitted successfully (Status: New)!");
+			snackbar.success("Work order submitted successfully!");
 		} else {
 			const result = await workOrderApi.createNew(body as any);
 			const { error } = result;
 			if (error) {
-				alert(`Failed to submit work order: ${error.error?.message || error.message}`);
+				snackbar.error(
+					`Failed to submit work order: ${error.error?.message || error.message}`,
+				);
 				return;
 			}
 			const workOrderGuid = extractWorkOrderGuid(result);
@@ -1176,13 +1134,13 @@ async function submitNew() {
 			if (formData.value.siteInstructionsFiles.some((item) => item.file)) {
 				await uploadSelectedSiteInstructions(workOrderGuid);
 			}
-			alert("Work order submitted successfully (Status: New)!");
+			snackbar.success("Work order submitted successfully!");
 		}
 		formData.value.status = "New";
 		if (savedWorkOrderGuid) goToWorkOrderReadOnly(savedWorkOrderGuid);
 	} catch (e) {
 		console.error(e);
-		alert(e instanceof Error ? e.message : "Failed to submit work order");
+		snackbar.error(e instanceof Error ? e.message : "Failed to submit work order");
 	} finally {
 		loading.value = false;
 	}
@@ -1204,7 +1162,9 @@ async function submitAndRequestApproval() {
 			if (formData.value.status === "Draft") {
 				const updateRes = await workOrderApi.updateDraft(id, body);
 				if (updateRes.error) {
-					alert(`Failed to update draft: ${updateRes.error.error?.message || updateRes.error.message}`);
+					snackbar.error(
+						`Failed to update draft: ${updateRes.error.error?.message || updateRes.error.message}`,
+					);
 					return;
 				}
 				await uploadSelectedSiteInstructions(id);
@@ -1212,13 +1172,17 @@ async function submitAndRequestApproval() {
 					estimatedEndDate: body.estimatedEndDate,
 				} as any);
 				if (error) {
-					alert(`Failed to request approval: ${error.error?.message || error.message}`);
+					snackbar.error(
+						`Failed to request approval: ${error.error?.message || error.message}`,
+					);
 					return;
 				}
 			} else if (formData.value.status === "New") {
 				const updateRes = await workOrderApi.updateNew(id, body);
 				if (updateRes.error) {
-					alert(`Failed to update work order: ${updateRes.error.error?.message || updateRes.error.message}`);
+					snackbar.error(
+						`Failed to update work order: ${updateRes.error.error?.message || updateRes.error.message}`,
+					);
 					return;
 				}
 				await uploadSelectedSiteInstructions(id);
@@ -1226,37 +1190,45 @@ async function submitAndRequestApproval() {
 					estimatedEndDate: body.estimatedEndDate,
 				} as any);
 				if (error) {
-					alert(`Failed to request approval: ${error.error?.message || error.message}`);
+					snackbar.error(
+						`Failed to request approval: ${error.error?.message || error.message}`,
+					);
 					return;
 				}
 			} else {
 				const { error } = await workOrderApi.updatePending(id, body);
 				if (error) {
-					alert(`Failed to request approval: ${error.error?.message || error.message}`);
+					snackbar.error(
+						`Failed to request approval: ${error.error?.message || error.message}`,
+					);
 					return;
 				}
 			}
-			alert("Work order submitted for approval (Status: Pending Approval)!");
+			snackbar.success("Work order submitted for approval!");
 		} else {
 			const pendingResult = await workOrderApi.createPending(body as any);
 			const { error } = pendingResult;
 			if (error) {
-				alert(`Failed to request approval: ${error.error?.message || error.message}`);
+				snackbar.error(
+					`Failed to request approval: ${error.error?.message || error.message}`,
+				);
 				return;
 			}
 			const workOrderGuid = extractWorkOrderGuid(pendingResult);
 			savedWorkOrderGuid = workOrderGuid;
 			if (!workOrderGuid) {
-				throw new Error("Work Order submitted for approval, but the server did not return its GUID");
+				throw new Error(
+					"Work Order submitted for approval, but the server did not return its GUID",
+				);
 			}
 			await uploadSelectedSiteInstructions(workOrderGuid);
-			alert("Work order submitted for approval (Status: Pending Approval)!");
+			snackbar.success("Work order submitted for approval!");
 		}
 		formData.value.status = "PendingApproval";
 		if (savedWorkOrderGuid) goToWorkOrderReadOnly(savedWorkOrderGuid);
 	} catch (e) {
 		console.error(e);
-		alert(
+		snackbar.error(
 			`${e instanceof Error ? e.message : "Failed to request approval"}. The Work Order was not moved to Pending Approval, so you can retry.`,
 		);
 	} finally {
@@ -1275,16 +1247,18 @@ async function saveNew() {
 		if (id && typeof id === "string") {
 			const { error } = await workOrderApi.updateNew(id, buildBody());
 			if (error) {
-				alert(`Failed to save work order: ${error.error?.message || error.message}`);
+				snackbar.error(
+					`Failed to save work order: ${error.error?.message || error.message}`,
+				);
 				return;
 			}
 			await uploadSelectedSiteInstructions(id);
-			alert("Work order saved successfully (Status: New)!");
+			snackbar.success("Work order saved successfully (Status: New)!");
 			goToWorkOrderReadOnly(id);
 		}
 	} catch (e) {
 		console.error(e);
-		alert(e instanceof Error ? e.message : "Failed to save work order");
+		snackbar.error(e instanceof Error ? e.message : "Failed to save work order");
 	} finally {
 		loading.value = false;
 	}
@@ -1301,17 +1275,22 @@ async function updatePending(options: { stayInEdit?: boolean; silent?: boolean }
 		if (id && typeof id === "string") {
 			const { error } = await workOrderApi.updatePending(id, buildPendingBody());
 			if (error) {
-				alert(`Failed to update pending approval work order: ${error.error?.message || error.message}`);
+				alert(
+					`Failed to update pending approval work order: ${error.error?.message || error.message}`,
+				);
 				return false;
 			}
-			if (!options.silent) alert("Pending Approval work order updated successfully!");
+			if (!options.silent)
+				snackbar.success("Pending Approval work order updated successfully!");
 			if (!options.stayInEdit) goToWorkOrderReadOnly(id);
 			return true;
 		}
 		return false;
 	} catch (e) {
 		console.error(e);
-		alert(e instanceof Error ? e.message : "Failed to update pending approval work order");
+		snackbar.error(
+			e instanceof Error ? e.message : "Failed to update pending approval work order",
+		);
 		return false;
 	} finally {
 		loading.value = false;
@@ -1319,17 +1298,17 @@ async function updatePending(options: { stayInEdit?: boolean; silent?: boolean }
 }
 
 async function approvePendingFromEdit() {
-	if (!confirm("Save pending approval changes and approve this work order?")) return;
 	const id = route.params.id;
 	if (typeof id !== "string") return;
 	const updated = await updatePending({ stayInEdit: true, silent: true });
 	if (!updated) return;
 	const { error } = await workOrderApi.approve(id);
 	if (error) {
-		alert(`Failed to approve work order: ${error.error?.message || error.message}`);
+		snackbar.error(`Failed to approve work order: ${error.error?.message || error.message}`);
 		return;
 	}
-	alert("Work order approved successfully!");
+	snackbar.success("Work order approved successfully!");
+	showApproveDialog.value = false;
 	await router.replace({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
 	window.location.reload();
 }
@@ -1354,10 +1333,10 @@ async function submitChanges() {
 				res = await workOrderApi.updateProgress(id, buildBody());
 			}
 			if (res && res.error) {
-				alert(`Failed to save changes: ${res.error.error.message}`);
+				snackbar.error(`Failed to save changes: ${res.error.error.message}`);
 				return;
 			}
-			alert("Work order updated successfully!");
+			snackbar.success("Work order updated successfully!");
 		}
 		router.back();
 	} catch (e) {
@@ -1373,13 +1352,14 @@ function cancel() {
 
 async function approvePendingReadOnly() {
 	const id = route.params.id;
-	if (typeof id !== "string" || !confirm("Approve this work order?")) return;
+	if (typeof id !== "string") return;
 	const { error } = await workOrderApi.approve(id);
 	if (error) {
-		alert(`Failed to approve work order: ${error.error?.message || error.message}`);
+		snackbar.error(`Failed to approve work order: ${error.error?.message || error.message}`);
 		return;
 	}
-	alert("Work order approved successfully!");
+	snackbar.success("Work order approved successfully!");
+	showApproveDialog.value = false;
 	await router.replace({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
 	window.location.reload();
 }
@@ -1387,16 +1367,36 @@ async function approvePendingReadOnly() {
 async function rejectPendingReadOnly() {
 	const id = route.params.id;
 	if (typeof id !== "string") return;
-	const rejectedReason = window.prompt("Please enter the rejection reason:");
-	if (!rejectedReason?.trim()) return;
-	const { error } = await workOrderApi.reject(id, { rejectedReason: rejectedReason.trim() });
+	if (!rejectReason.value.trim()) return;
+	const { error } = await workOrderApi.reject(id, {
+		rejectedReason: rejectReason.value.trim(),
+	});
 	if (error) {
-		alert(`Failed to reject work order: ${error.error?.message || error.message}`);
+		snackbar.error(`Failed to reject work order: ${error.error?.message || error.message}`);
 		return;
 	}
-	alert("Work order rejected successfully!");
+	snackbar.success("Work order rejected successfully!");
+	showRejectDialog.value = false;
+	rejectReason.value = "";
 	await router.replace({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
 	window.location.reload();
+}
+
+function openApproveConfirmation() {
+	showApproveDialog.value = true;
+}
+
+function openRejectConfirmation() {
+	rejectReason.value = "";
+	showRejectDialog.value = true;
+}
+
+async function confirmPendingApproval() {
+	if (isReadOnly.value) {
+		await approvePendingReadOnly();
+	} else {
+		await approvePendingFromEdit();
+	}
 }
 
 const priorityColors: Record<string, string> = {
@@ -1414,20 +1414,27 @@ const priorityColors: Record<string, string> = {
 				<p>Set the work order details, assign the right schedule and resources.</p>
 			</div>
 			<div class="actions-area">
-				<Button variant="secondary" @click="cancel">{{ isReadOnly ? "Back" : "Cancel" }}</Button>
+				<Button variant="secondary" @click="cancel">{{
+					isReadOnly ? "Back" : "Cancel"
+				}}</Button>
 				<template v-if="isReadOnly">
 					<Button
 						v-if="canEditReadOnlyWorkOrder"
 						variant="primary"
-						@click="router.replace({ name: 'Work Order Form', params: { id: route.params.id } })"
+						@click="
+							router.replace({
+								name: 'Work Order Form',
+								params: { id: route.params.id },
+							})
+						"
 					>
 						<i class="mdi mdi-note-edit-outline"></i> Edit
 					</Button>
-					<template v-if="isPendingApproval && canApprovePending">
-						<Button variant="primary" @click="approvePendingReadOnly">
+					<template v-if="isPendingApproval">
+						<Button variant="primary" @click="openApproveConfirmation">
 							<i class="mdi mdi-check-circle-outline"></i> Approve
 						</Button>
-						<Button variant="danger" @click="rejectPendingReadOnly">
+						<Button variant="danger" @click="openRejectConfirmation">
 							<i class="mdi mdi-close-circle-outline"></i> Reject
 						</Button>
 					</template>
@@ -1445,20 +1452,20 @@ const priorityColors: Record<string, string> = {
 				</template>
 				<template v-else-if="isNewStatus">
 					<Button variant="outlined" @click="saveNew">
-						<i class="mdi mdi-content-save"></i> Save
+						<i class="mdi mdi-content-save"></i> Save New
 					</Button>
 					<Button variant="primary" @click="submitAndRequestApproval">
-						<i class="mdi mdi-check"></i> Save & Request Approval
+						<i class="mdi mdi-check"></i> Request For Approval
 					</Button>
 				</template>
 				<template v-else-if="isPendingApproval">
 					<Button variant="outlined" @click="() => updatePending()">
 						<i class="mdi mdi-content-save"></i> Update
 					</Button>
-					<Button v-if="canApprovePending" variant="primary" @click="approvePendingFromEdit">
+					<Button variant="primary" @click="openApproveConfirmation">
 						<i class="mdi mdi-check-circle-outline"></i> Approve
 					</Button>
-					<Button v-if="canApprovePending" variant="danger" @click="rejectPendingReadOnly">
+					<Button variant="danger" @click="openRejectConfirmation">
 						<i class="mdi mdi-close-circle-outline"></i> Reject
 					</Button>
 				</template>
@@ -1480,10 +1487,10 @@ const priorityColors: Record<string, string> = {
 					<span class="helper-bullet">-</span>
 					<span
 						><strong>Save as Draft</strong> creates a New editable work order.
-							<em
-								>(Required: Work Type Item, Title, Sales Agent, Customer,
-								Description)</em
-							></span
+						<em
+							>(Required: Work Type Item, Title, Sales Agent, Customer,
+							Description)</em
+						></span
 					>
 				</div>
 				<div class="helper-line">
@@ -1496,7 +1503,7 @@ const priorityColors: Record<string, string> = {
 				<div class="helper-line">
 					<span class="helper-bullet">-</span>
 					<span
-						><strong>Save & Request Approval</strong> submits the work order for
+						><strong>Request For Approval</strong> submits the work order for
 						approval with status <strong>Pending Approval</strong>.</span
 					>
 				</div>
@@ -1504,577 +1511,699 @@ const priorityColors: Record<string, string> = {
 		</div>
 
 		<fieldset class="read-only-fieldset" :disabled="isReadOnly">
-		<div class="form-grid">
-			<div class="form-grid__main">
-				<!-- Work Order Details -->
-				<Card>
-					<template #header>
-						<h2>Work Order Details</h2>
-						<div style="display: flex; gap: 8px; align-items: center">
-							<Badge type="primary" icon="mdi-tools">{{ formData.workType }}</Badge>
-							<Badge
-								v-if="formData.jobPriority"
-								:type="priorityColors[formData.jobPriority] as any"
-								:icon="
-									formData.jobPriority === 'High'
-										? 'mdi-alert-circle'
-										: formData.jobPriority === 'Medium'
-											? 'mdi-alert'
-											: 'mdi-information'
-								"
-							>
-								{{ formData.jobPriority }} Priority
-							</Badge>
-						</div>
-					</template>
-					<div class="grid-row">
-						<!-- Row 1: Job Priority + Work Type Item -->
-						<div class="col-6">
-							<Select v-model="formData.jobPriority" label="Job Priority">
-								<option value="">Select Priority</option>
-								<option v-for="p in JOB_PRIORITIES" :key="p.value" :value="p.value">
-									{{ p.label }}
-								</option>
-							</Select>
-						</div>
-						<div class="col-6">
-							<Autocomplete
-								v-model="formData.orderTypeItemCode"
-								:options="
-									workTypeItems.map((item) => ({
-										id: item.code,
-										name: item.name,
-										code: item.code,
-									}))
-								"
-								label="Work Type Item *"
-								placeholder="Search or select work type item..."
-								:error="formErrors.orderTypeItemCode"
-							/>
-						</div>
-						<div class="col-12">
-							<Textbox
-								v-model="formData.title"
-								label="Title *"
-								placeholder="Enter Title"
-								:error="formErrors.title"
-							/>
-						</div>
-
-						<!-- Row 2: Sales Agent + Person In Charge -->
-						<div class="col-6">
-							<Autocomplete
-								v-model="formData.salesAgentCode"
-								:options="
-									salesAgentUsers.map((u) => ({
-										id: u.code,
-										name: userOptionDisplay(u),
-										code: u.displayCode || u.code,
-									}))
-								"
-								label="Sales Agent *"
-								placeholder="Search or select Sales Agent..."
-								:error="formErrors.salesAgentCode"
-								:showCode="false"
-							/>
-						</div>
-						<div class="col-6">
-							<Autocomplete
-								v-model="formData.personInChargeCode"
-								:options="
-									projectPicUsers.map((u) => ({
-										id: u.code,
-										name: userOptionDisplay(u),
-										code: u.displayCode || u.code,
-									}))
-								"
-								label="Project PIC *"
-								placeholder="Search or select Project PIC..."
-								:error="formErrors.personInChargeCode"
-								:showCode="false"
-							/>
-						</div>
-
-						<!-- Row 3: Start Date + Estimated End Date -->
-						<div class="col-6">
-							<DatePicker
-								v-model="formData.startDate"
-								label="Start Date *"
-								:error="formErrors.startDate"
-								:enableTime="false"
-							/>
-						</div>
-						<div class="col-6">
-							<DatePicker
-								v-model="formData.estimatedEndDate"
-								label="Estimated Date of Completion *"
-								:min="formData.startDate"
-								:error="formErrors.estimatedEndDate"
-								:enableTime="false"
-							/>
-						</div>
-
-						<!-- Row 4: Leader + Leader II -->
-						<div class="col-6">
-							<Autocomplete
-								v-model="formData.leaderCode"
-								:options="
-									leaderOptions.map((u) => ({
-										id: u.code,
-										name: userOptionDisplay(u),
-										code: u.displayCode || u.code,
-									}))
-								"
-								label="Leader"
-								placeholder="Search or select Leader..."
-								:error="formErrors.leaderCode"
-								:showCode="false"
-							/>
-						</div>
-						<div class="col-6">
-							<Autocomplete
-								v-model="formData.leaderIICode"
-								:options="
-									leaderIIOptions.map((u) => ({
-										id: u.code,
-										name: userOptionDisplay(u),
-										code: u.displayCode || u.code,
-									}))
-								"
-								label="Leader II"
-								placeholder="Search or select Leader II..."
-								:showCode="false"
-							/>
-						</div>
-
-						<!-- Technicians -->
-						<div class="col-12 textbox-field">
-							<MultiSelect
-								v-model="formData.technicianCodes"
-								:options="technicianOptions"
-								label="Technicians"
-								placeholder="Search to add technicians..."
-							/>
-						</div>
-
-						<!-- Work Description -->
-						<div class="col-12 textbox-field" style="margin-top: 8px">
-							<label class="custom-label">Work Description *</label>
-							<textarea
-								v-model="formData.description"
-								class="custom-textarea"
-								:class="{ 'custom-textarea--error': formErrors.description }"
-								placeholder="Enter Description"
-								rows="4"
-							></textarea>
-							<div class="textbox-field__footer" v-if="formErrors.description">
-								<p class="textbox-field__error">
-									<i
-										class="mdi mdi-alert-circle-outline textbox-field__error-icon"
-									></i>
-									<span class="textbox-field__error-text">{{
-										formErrors.description
-									}}</span>
-								</p>
-							</div>
-						</div>
-					</div>
-				</Card>
-
-				<!-- Site Instructions Attachments -->
-				<Card style="margin-top: var(--spacing-lg)">
-					<template #header>
-						<h2>Site Instructions</h2>
-						<Badge type="info" icon="mdi-paperclip">
-							{{ formData.siteInstructionsFiles.length }}/3 Files
-						</Badge>
-					</template>
-					<p class="section-subtitle">
-						Attach site instruction documents (e.g. PO, WhatsApp images). Minimum 2,
-						maximum 3 files. <strong>Cannot be deleted once uploaded.</strong>
-					</p>
-
-					<div class="site-instructions-zone">
-						<div class="file-list" v-if="formData.siteInstructionsFiles.length > 0">
-							<div
-								v-for="(file, idx) in formData.siteInstructionsFiles"
-								:key="idx"
-								class="file-item"
-							>
-								<div class="file-item__preview">
-									<img
-										v-if="file.type.startsWith('image/')"
-										:src="file.url"
-										:alt="file.name"
-										class="file-item__thumb"
-									/>
-									<div v-else class="file-item__doc-icon">
-										<i class="mdi mdi-file-pdf-box"></i>
-									</div>
-								</div>
-								<div class="file-item__info">
-									<span class="file-item__name">{{ file.name }}</span>
-								</div>
-								<button
-									class="file-item__remove"
-									@click="removeSiteInstruction(idx)"
-									title="Remove file"
+			<div class="form-grid">
+				<div class="form-grid__main">
+					<!-- Work Order Details -->
+					<Card>
+						<template #header>
+							<h2>Work Order Details</h2>
+							<div style="display: flex; gap: 8px; align-items: center">
+								<Badge type="primary" icon="mdi-tools">{{
+									formData.workType
+								}}</Badge>
+								<Badge
+									v-if="formData.jobPriority"
+									:type="priorityColors[formData.jobPriority] as any"
+									:icon="
+										formData.jobPriority === 'High'
+											? 'mdi-alert-circle'
+											: formData.jobPriority === 'Medium'
+												? 'mdi-alert'
+												: 'mdi-information'
+									"
 								>
-									<i class="mdi mdi-close"></i>
-								</button>
+									{{ formData.jobPriority }} Priority
+								</Badge>
 							</div>
-						</div>
-
-						<button
-							v-if="formData.siteInstructionsFiles.length < 3"
-							class="upload-trigger"
-							@click="triggerSiteInstructionsUpload"
-						>
-							<i class="mdi mdi-cloud-upload-outline"></i>
-							<span
-								>Click to upload ({{
-									formData.siteInstructionsFiles.length
-								}}/3)</span
-							>
-							<small>Images, PDF, Word documents accepted</small>
-						</button>
-
-						<input
-							ref="siteInstructionsInput"
-							type="file"
-							accept="image/*,.pdf,.doc,.docx"
-							multiple
-							style="display: none"
-							@change="onSiteInstructionsChange"
-						/>
-
-						<div class="site-instructions__hint">
-							<i class="mdi mdi-information-outline"></i>
-							Minimum 2 files required when submitting for approval
-						</div>
-						<p v-if="siteInstructionsError" class="site-instructions__error">
-							<i class="mdi mdi-alert-circle-outline"></i>
-							{{ siteInstructionsError }}
-						</p>
-					</div>
-				</Card>
-
-				<!-- Equipment Information -->
-				<Card v-if="showEquipmentForm" style="margin-top: var(--spacing-lg)">
-					<template #header>
-						<h2>Equipment Information</h2>
-					</template>
-					<p class="section-subtitle">Capture equipment specifications.</p>
-					<div class="grid-row">
-						<div class="col-6">
-							<Textbox
-								v-model="formData.equipment.name"
-								label="Equipment Name *"
-								placeholder="Enter Equipment name"
-								:error="formErrors['equipment.name']"
-							/>
-						</div>
-						<div class="col-6">
-							<Textbox
-								v-model="formData.equipment.serialNo"
-								label="Equipment Serial No *"
-								placeholder="Enter Equipment Serial No"
-								:error="formErrors['equipment.serialNo']"
-							/>
-						</div>
-						<div class="col-4">
-							<Textbox
-								v-model="formData.equipment.brand"
-								label="Equipment Brand *"
-								placeholder="Enter Equipment Brand"
-								:error="formErrors['equipment.brand']"
-							/>
-						</div>
-						<div class="col-4">
-							<Textbox
-								v-model="formData.equipment.model"
-								label="Equipment Model *"
-								placeholder="Enter Equipment Model"
-								:error="formErrors['equipment.model']"
-							/>
-						</div>
-						<div class="col-4">
-							<Textbox
-								v-model="formData.equipment.equipmentType"
-								label="Equipment Type *"
-								placeholder="Enter Equipment Type"
-								:error="formErrors['equipment.equipmentType']"
-							/>
-						</div>
-					</div>
-				</Card>
-
-				<!-- Mechanical / Technical Information -->
-				<Card v-if="isMechanical" style="margin-top: var(--spacing-lg)">
-					<template #header>
-						<h2>Mechanical Information</h2>
-					</template>
-					<p class="section-subtitle">Capture Technical and Electrical specifications.</p>
-
-					<h3 class="subsection-title">Technical Data</h3>
-					<div class="grid-row">
-						<div class="col-12">
-							<Textbox
-								v-model="formData.technical.flowHead"
-								label="Flow & Head *"
-								placeholder="Enter Flow & Head"
-								:error="formErrors['technical.flowHead']"
-							/>
-						</div>
-					</div>
-
-					<hr class="divider" />
-
-					<h3 class="subsection-title">Electrical Data</h3>
-					<div class="grid-row">
-						<div class="col-6">
-							<Textbox
-								v-model="formData.technical.brandName"
-								label="Brand Name *"
-								placeholder="Enter Brand Name"
-								:error="formErrors['technical.brandName']"
-							/>
-						</div>
-						<div class="col-6">
-							<Textbox
-								v-model="formData.technical.serialNo"
-								label="Serial No *"
-								placeholder="Enter Serial No"
-								:error="formErrors['technical.serialNo']"
-							/>
-						</div>
-						<div class="col-4">
-							<Textbox
-								v-model="formData.technical.ratedVoltage"
-								label="Rated Voltage *"
-								placeholder="Enter Rated Voltage"
-								:error="formErrors['technical.ratedVoltage']"
-							/>
-						</div>
-						<div class="col-4">
-							<Textbox
-								v-model="formData.technical.ratedSpeed"
-								label="Rated Speed *"
-								placeholder="Enter Rated Speed"
-								:error="formErrors['technical.ratedSpeed']"
-							/>
-						</div>
-						<div class="col-4">
-							<Textbox
-								v-model="formData.technical.ratedCurrent"
-								label="Rated Current *"
-								placeholder="Enter Rated Current"
-								:error="formErrors['technical.ratedCurrent']"
-							/>
-						</div>
-						<div class="col-4">
-							<Textbox
-								v-model="formData.technical.ratedPower"
-								label="Rated Power *"
-								placeholder="Enter Rated Power"
-								:error="formErrors['technical.ratedPower']"
-							/>
-						</div>
-						<div class="col-4">
-							<Select
-								v-model="formData.technical.phase"
-								label="Phase *"
-								:error="formErrors['technical.phase']"
-							>
-								<option value="" disabled>Select Phase</option>
-								<option v-for="phase in phases" :key="phase.id" :value="phase.id">
-									{{ phase.name }}
-								</option>
-							</Select>
-						</div>
-						<div class="col-4">
-							<Textbox
-								v-model="formData.technical.frameSize"
-								label="Frame Size *"
-								placeholder="Enter Frame Size"
-								:error="formErrors['technical.frameSize']"
-							/>
-						</div>
-					</div>
-				</Card>
-			</div>
-
-			<!-- Sidebar -->
-			<div class="form-grid__sidebar">
-				<!-- Customer Card -->
-				<Card>
-					<template #header>
-						<h2>Customer</h2>
-					</template>
-					<div class="grid-row">
-						<div class="col-12">
-							<Select
-								v-model="formData.customerCode"
-								label="Customer *"
-								:error="formErrors.customerCode"
-								@change="onCustomerChange"
-							>
-								<option value="" disabled>Select Customer</option>
-								<option
-									v-for="cust in customers"
-									:key="cust.code"
-									:value="cust.code"
-								>
-									{{ cust.name }} ({{ cust.code }})
-								</option>
-							</Select>
-						</div>
-						<div class="col-12">
-							<Select
-								v-model="formData.contractNo"
-								:options="contractSelectOptions"
-								label="Contract No *"
-								placeholder="Select Contract"
-								:disabled="!formData.customerCode"
-								:error="formErrors.contractNo"
-								@change="(e: any) => onContractChange(e.target.value)"
-							>
-								<template #suffix>
-									<div
-										v-if="selectedContractInfo"
-										style="display: flex; align-items: center; gap: 4px"
+						</template>
+						<div class="grid-row">
+							<!-- Row 1: Job Priority + Work Type Item -->
+							<div class="col-6">
+								<Select v-model="formData.jobPriority" label="Job Priority">
+									<option value="">Select Priority</option>
+									<option
+										v-for="p in JOB_PRIORITIES"
+										:key="p.value"
+										:value="p.value"
 									>
-										<Badge
-											v-if="selectedContractInfo.status === 'Active'"
-											type="success"
-											icon="mdi-check-circle"
-											size="sm"
-										>
-											Active Contract
-										</Badge>
-										<template
-											v-else-if="
-												selectedContractInfo.status === 'ExpiringSoon'
+										{{ p.label }}
+									</option>
+								</Select>
+							</div>
+							<div class="col-6">
+								<Autocomplete
+									v-model="formData.orderTypeItemCode"
+									:options="
+										workTypeItems.map((item) => ({
+											id: item.code,
+											name: item.name,
+											code: item.code,
+										}))
+									"
+									label="Work Type Item *"
+									placeholder="Search or select work type item..."
+									:error="formErrors.orderTypeItemCode"
+								/>
+							</div>
+							<div class="col-12">
+								<Textbox
+									v-model="formData.title"
+									label="Title *"
+									placeholder="Enter Title"
+									:error="formErrors.title"
+								/>
+							</div>
+
+							<!-- Row 2: Sales Agent + Person In Charge -->
+							<div class="col-6">
+								<Autocomplete
+									v-model="formData.salesAgentCode"
+									:options="
+										salesAgentUsers.map((u) => ({
+											id: u.code,
+											name: userOptionDisplay(u),
+											code: u.displayCode || u.code,
+										}))
+									"
+									label="Sales Agent *"
+									placeholder="Search or select Sales Agent..."
+									:error="formErrors.salesAgentCode"
+									:showCode="false"
+								/>
+							</div>
+							<div class="col-6">
+								<Autocomplete
+									v-model="formData.personInChargeCode"
+									:options="
+										projectPicUsers.map((u) => ({
+											id: u.code,
+											name: userOptionDisplay(u),
+											code: u.displayCode || u.code,
+										}))
+									"
+									label="Project PIC *"
+									placeholder="Search or select Project PIC..."
+									:error="formErrors.personInChargeCode"
+									:showCode="false"
+								/>
+							</div>
+
+							<!-- Row 3: Start Date + Estimated End Date -->
+							<div class="col-6">
+								<DatePicker
+									v-model="formData.startDate"
+									label="Start Date *"
+									:error="formErrors.startDate"
+									:enableTime="false"
+								/>
+							</div>
+							<div class="col-6">
+								<DatePicker
+									v-model="formData.estimatedEndDate"
+									label="Estimated Date of Completion *"
+									:min="formData.startDate"
+									:error="formErrors.estimatedEndDate"
+									:enableTime="false"
+								/>
+							</div>
+
+							<!-- Row 4: Leader + Leader II -->
+							<div class="col-6">
+								<Autocomplete
+									v-model="formData.leaderCode"
+									:options="
+										leaderOptions.map((u) => ({
+											id: u.code,
+											name: userOptionDisplay(u),
+											code: u.displayCode || u.code,
+										}))
+									"
+									label="Leader"
+									placeholder="Search or select Leader..."
+									:error="formErrors.leaderCode"
+									:showCode="false"
+								/>
+							</div>
+							<div class="col-6">
+								<Autocomplete
+									v-model="formData.leaderIICode"
+									:options="
+										leaderIIOptions.map((u) => ({
+											id: u.code,
+											name: userOptionDisplay(u),
+											code: u.displayCode || u.code,
+										}))
+									"
+									label="Leader II"
+									placeholder="Search or select Leader II..."
+									:showCode="false"
+								/>
+							</div>
+
+							<!-- Technicians -->
+							<div class="col-12 textbox-field">
+								<MultiSelect
+									v-model="formData.technicianCodes"
+									:options="technicianOptions"
+									label="Technicians"
+									placeholder="Search to add technicians..."
+									:showCode="false"
+								/>
+							</div>
+
+							<!-- Work Description -->
+							<div class="col-12 textbox-field" style="margin-top: 8px">
+								<label class="custom-label">Work Description *</label>
+								<textarea
+									v-model="formData.description"
+									class="custom-textarea"
+									:class="{ 'custom-textarea--error': formErrors.description }"
+									placeholder="Enter Description"
+									rows="4"
+								></textarea>
+								<div class="textbox-field__footer" v-if="formErrors.description">
+									<p class="textbox-field__error">
+										<i
+											class="mdi mdi-alert-circle-outline textbox-field__error-icon"
+										></i>
+										<span class="textbox-field__error-text">{{
+											formErrors.description
+										}}</span>
+									</p>
+								</div>
+							</div>
+						</div>
+					</Card>
+
+					<!-- Site Instructions Attachments -->
+					<Card style="margin-top: var(--spacing-lg)">
+						<template #header>
+							<h2>Site Instructions</h2>
+							<Badge type="info" icon="mdi-paperclip">
+								{{ formData.siteInstructionsFiles.length }}/3 Files
+							</Badge>
+						</template>
+						<p class="section-subtitle">
+							Attach site instruction documents (e.g. PO, WhatsApp images). Minimum 2,
+							maximum 3 files. <strong>Cannot be deleted once uploaded.</strong>
+						</p>
+
+						<div class="site-instructions-zone">
+							<div class="file-list" v-if="formData.siteInstructionsFiles.length > 0">
+								<div
+									v-for="(file, idx) in formData.siteInstructionsFiles"
+									:key="idx"
+									class="file-item"
+								>
+									<div
+										class="file-item__preview"
+										:style="{
+											cursor:
+												isReadOnly &&
+												file.type.startsWith('image/') &&
+												file.url
+													? 'pointer'
+													: 'default',
+										}"
+										@click="
+											isReadOnly &&
+											file.type.startsWith('image/') &&
+											file.url &&
+											openImageModal(file.url)
+										"
+									>
+										<img
+											v-if="file.type.startsWith('image/') && file.url"
+											:src="file.url"
+											:alt="file.name"
+											class="file-item__thumb"
+										/>
+										<div v-else class="file-item__doc-icon">
+											<i class="mdi mdi-file-pdf-box"></i>
+										</div>
+									</div>
+									<div class="file-item__info">
+										<a
+											v-if="
+												isReadOnly &&
+												file.type.startsWith('image/') &&
+												file.url
 											"
+											href="javascript:void(0)"
+											@click="openImageModal(file.url)"
+											class="file-item__name-link"
+										>
+											{{ file.name }}
+										</a>
+										<a
+											v-else-if="!file.type.startsWith('image/') && file.url"
+											href="#"
+											@click.prevent="openSiteInstructionFile(file)"
+											class="file-item__name-link"
+										>
+											{{ file.name }}
+										</a>
+										<span v-else class="file-item__name">{{ file.name }}</span>
+									</div>
+									<button
+										class="file-item__remove"
+										@click="removeSiteInstruction(idx)"
+										title="Remove file"
+									>
+										<i class="mdi mdi-close"></i>
+									</button>
+								</div>
+							</div>
+
+							<button
+								v-if="formData.siteInstructionsFiles.length < 3"
+								class="upload-trigger"
+								@click="triggerSiteInstructionsUpload"
+							>
+								<i class="mdi mdi-cloud-upload-outline"></i>
+								<span
+									>Click to upload ({{
+										formData.siteInstructionsFiles.length
+									}}/3)</span
+								>
+								<small>Images, PDF, Word documents accepted</small>
+							</button>
+
+							<input
+								ref="siteInstructionsInput"
+								type="file"
+								accept="image/*,.pdf,.doc,.docx"
+								multiple
+								style="display: none"
+								@change="onSiteInstructionsChange"
+							/>
+
+							<div class="site-instructions__hint">
+								<i class="mdi mdi-information-outline"></i>
+								Minimum 2 files required when submitting for approval
+							</div>
+							<p v-if="siteInstructionsError" class="site-instructions__error">
+								<i class="mdi mdi-alert-circle-outline"></i>
+								{{ siteInstructionsError }}
+							</p>
+						</div>
+					</Card>
+
+					<!-- Equipment Information -->
+					<Card v-if="showEquipmentForm" style="margin-top: var(--spacing-lg)">
+						<template #header>
+							<h2>Equipment Information</h2>
+						</template>
+						<p class="section-subtitle">Capture equipment specifications.</p>
+						<div class="grid-row">
+							<div class="col-6">
+								<Textbox
+									v-model="formData.equipment.name"
+									label="Equipment Name *"
+									placeholder="Enter Equipment name"
+									:error="formErrors['equipment.name']"
+								/>
+							</div>
+							<div class="col-6">
+								<Textbox
+									v-model="formData.equipment.serialNo"
+									label="Equipment Serial No *"
+									placeholder="Enter Equipment Serial No"
+									:error="formErrors['equipment.serialNo']"
+								/>
+							</div>
+							<div class="col-4">
+								<Textbox
+									v-model="formData.equipment.brand"
+									label="Equipment Brand *"
+									placeholder="Enter Equipment Brand"
+									:error="formErrors['equipment.brand']"
+								/>
+							</div>
+							<div class="col-4">
+								<Textbox
+									v-model="formData.equipment.model"
+									label="Equipment Model *"
+									placeholder="Enter Equipment Model"
+									:error="formErrors['equipment.model']"
+								/>
+							</div>
+							<div class="col-4">
+								<Textbox
+									v-model="formData.equipment.equipmentType"
+									label="Equipment Type *"
+									placeholder="Enter Equipment Type"
+									:error="formErrors['equipment.equipmentType']"
+								/>
+							</div>
+						</div>
+					</Card>
+
+					<!-- Mechanical / Technical Information -->
+					<Card v-if="isMechanical" style="margin-top: var(--spacing-lg)">
+						<template #header>
+							<h2>Mechanical Information</h2>
+						</template>
+						<p class="section-subtitle">
+							Capture Technical and Electrical specifications.
+						</p>
+
+						<h3 class="subsection-title">Technical Data</h3>
+						<div class="grid-row">
+							<div class="col-12">
+								<Textbox
+									v-model="formData.technical.flowHead"
+									label="Flow & Head *"
+									placeholder="Enter Flow & Head"
+									:error="formErrors['technical.flowHead']"
+								/>
+							</div>
+						</div>
+
+						<hr class="divider" />
+
+						<h3 class="subsection-title">Electrical Data</h3>
+						<div class="grid-row">
+							<div class="col-6">
+								<Textbox
+									v-model="formData.technical.brandName"
+									label="Brand Name *"
+									placeholder="Enter Brand Name"
+									:error="formErrors['technical.brandName']"
+								/>
+							</div>
+							<div class="col-6">
+								<Textbox
+									v-model="formData.technical.serialNo"
+									label="Serial No *"
+									placeholder="Enter Serial No"
+									:error="formErrors['technical.serialNo']"
+								/>
+							</div>
+							<div class="col-4">
+								<Textbox
+									v-model="formData.technical.ratedVoltage"
+									label="Rated Voltage *"
+									placeholder="Enter Rated Voltage"
+									:error="formErrors['technical.ratedVoltage']"
+								/>
+							</div>
+							<div class="col-4">
+								<Textbox
+									v-model="formData.technical.ratedSpeed"
+									label="Rated Speed *"
+									placeholder="Enter Rated Speed"
+									:error="formErrors['technical.ratedSpeed']"
+								/>
+							</div>
+							<div class="col-4">
+								<Textbox
+									v-model="formData.technical.ratedCurrent"
+									label="Rated Current *"
+									placeholder="Enter Rated Current"
+									:error="formErrors['technical.ratedCurrent']"
+								/>
+							</div>
+							<div class="col-4">
+								<Textbox
+									v-model="formData.technical.ratedPower"
+									label="Rated Power *"
+									placeholder="Enter Rated Power"
+									:error="formErrors['technical.ratedPower']"
+								/>
+							</div>
+							<div class="col-4">
+								<Select
+									v-model="formData.technical.phase"
+									label="Phase *"
+									:error="formErrors['technical.phase']"
+								>
+									<option value="" disabled>Select Phase</option>
+									<option
+										v-for="phase in phases"
+										:key="phase.id"
+										:value="phase.id"
+									>
+										{{ phase.name }}
+									</option>
+								</Select>
+							</div>
+							<div class="col-4">
+								<Textbox
+									v-model="formData.technical.frameSize"
+									label="Frame Size *"
+									placeholder="Enter Frame Size"
+									:error="formErrors['technical.frameSize']"
+								/>
+							</div>
+						</div>
+					</Card>
+				</div>
+
+				<!-- Sidebar -->
+				<div class="form-grid__sidebar">
+					<!-- Customer Card -->
+					<Card>
+						<template #header>
+							<h2>Customer</h2>
+						</template>
+						<div class="grid-row">
+							<div class="col-12">
+								<Select
+									v-model="formData.customerCode"
+									label="Customer *"
+									:error="formErrors.customerCode"
+									@change="onCustomerChange"
+								>
+									<option value="" disabled>Select Customer</option>
+									<option
+										v-for="cust in customers"
+										:key="cust.code"
+										:value="cust.code"
+									>
+										{{ cust.name }} ({{ cust.code }})
+									</option>
+								</Select>
+							</div>
+							<div class="col-12">
+								<Select
+									v-model="formData.contractNo"
+									:options="contractSelectOptions"
+									label="Contract No *"
+									placeholder="Select Contract"
+									:disabled="!formData.customerCode"
+									:error="formErrors.contractNo"
+									@change="(e: any) => onContractChange(e.target.value)"
+								>
+									<template #suffix>
+										<div
+											v-if="selectedContractInfo"
+											style="display: flex; align-items: center; gap: 4px"
 										>
 											<Badge
-												type="warning"
-												icon="mdi-clock-alert-outline"
+												v-if="selectedContractInfo.status === 'Active'"
+												type="success"
+												icon="mdi-check-circle"
 												size="sm"
 											>
-												Expiring Soon
+												Active Contract
 											</Badge>
-											<button
-												type="button"
-												class="badge-action-btn badge-action-btn--primary"
-												title="Go to Customer Form to extend contract"
-												@click.stop="
-													redirectToCustomerRenew(selectedContractInfo)
+											<template
+												v-else-if="
+													selectedContractInfo.status === 'ExpiringSoon'
 												"
 											>
-												<i class="mdi mdi-open-in-new"></i> Extend
-											</button>
-										</template>
-										<template
-											v-else-if="selectedContractInfo.status === 'Expired'"
-										>
-											<Badge type="error" icon="mdi-alert-circle" size="sm">
-												Expired
-											</Badge>
-											<button
-												type="button"
-												class="badge-action-btn badge-action-btn--primary"
-												title="Go to Customer Form to renew contract"
-												@click.stop="
-													redirectToCustomerRenew(selectedContractInfo)
+												<Badge
+													type="warning"
+													icon="mdi-clock-alert-outline"
+													size="sm"
+												>
+													Expiring Soon
+												</Badge>
+												<button
+													type="button"
+													class="badge-action-btn badge-action-btn--primary"
+													title="Go to Customer Form to extend contract"
+													@click.stop="
+														redirectToCustomerRenew(
+															selectedContractInfo,
+														)
+													"
+												>
+													<i class="mdi mdi-open-in-new"></i> Extend
+												</button>
+											</template>
+											<template
+												v-else-if="
+													selectedContractInfo.status === 'Expired'
 												"
 											>
-												<i class="mdi mdi-open-in-new"></i> Renew
-											</button>
-										</template>
-									</div>
-								</template>
-							</Select>
+												<Badge
+													type="error"
+													icon="mdi-alert-circle"
+													size="sm"
+												>
+													Expired
+												</Badge>
+												<button
+													type="button"
+													class="badge-action-btn badge-action-btn--primary"
+													title="Go to Customer Form to renew contract"
+													@click.stop="
+														redirectToCustomerRenew(
+															selectedContractInfo,
+														)
+													"
+												>
+													<i class="mdi mdi-open-in-new"></i> Renew
+												</button>
+											</template>
+										</div>
+									</template>
+								</Select>
+							</div>
+							<div class="col-12">
+								<DatePicker
+									v-model="formData.contractStartDate"
+									label="Contract Start Date"
+									:disabled="true"
+									:enableTime="false"
+								/>
+							</div>
+							<div class="col-12">
+								<DatePicker
+									v-model="formData.contractEndDate"
+									label="Contract End Date"
+									:disabled="true"
+									:enableTime="false"
+								/>
+							</div>
+							<div class="col-12">
+								<Textbox
+									v-model="formData.customerPic"
+									label="Customer PIC"
+									placeholder="Enter Customer Person In Charge"
+								/>
+							</div>
+							<div class="col-12">
+								<Textbox
+									v-model="formData.customerPicPhone"
+									label="PIC Phone No."
+									placeholder="e.g. +60123456789"
+								/>
+							</div>
 						</div>
-						<div class="col-12">
-							<DatePicker
-								v-model="formData.contractStartDate"
-								label="Contract Start Date"
-								:disabled="true"
-								:enableTime="false"
-							/>
-						</div>
-						<div class="col-12">
-							<DatePicker
-								v-model="formData.contractEndDate"
-								label="Contract End Date"
-								:disabled="true"
-								:enableTime="false"
-							/>
-						</div>
-						<div class="col-12">
-							<Textbox
-								v-model="formData.customerPic"
-								label="Customer PIC"
-								placeholder="Enter Customer Person In Charge"
-							/>
-						</div>
-						<div class="col-12">
-							<Textbox
-								v-model="formData.customerPicPhone"
-								label="PIC Phone No."
-								placeholder="e.g. +60123456789"
-							/>
-						</div>
-					</div>
-				</Card>
+					</Card>
 
-				<!-- Site Card -->
-				<Card style="margin-top: var(--spacing-lg)">
-					<template #header>
-						<h2>Site</h2>
-					</template>
-					<p class="section-subtitle">
-						Assign an operational site from Maintenance site list.
-					</p>
-					<div class="grid-row">
-						<div class="col-12">
-							<Autocomplete
-								v-model="formData.siteCode"
-								:options="
-									sites.map((site) => ({
-										id: site.code,
-										name: site.name,
-										code: site.code,
-									}))
-								"
-								label="Site *"
-								placeholder="Search or select Site..."
-								:error="formErrors.siteCode"
-							/>
+					<!-- Site Card -->
+					<Card style="margin-top: var(--spacing-lg)">
+						<template #header>
+							<h2>Site</h2>
+						</template>
+						<p class="section-subtitle">
+							Assign an operational site from Maintenance site list.
+						</p>
+						<div class="grid-row">
+							<div class="col-12">
+								<Autocomplete
+									v-model="formData.siteCode"
+									:options="
+										sites.map((site) => ({
+											id: site.code,
+											name: site.name,
+											code: site.code,
+										}))
+									"
+									label="Site *"
+									placeholder="Search or select Site..."
+									:error="formErrors.siteCode"
+								/>
+							</div>
 						</div>
-					</div>
-				</Card>
+					</Card>
 
-				<!-- Location Card -->
-				<Card style="margin-top: var(--spacing-lg)">
-					<template #header>
-						<h2>Location & Map</h2>
-					</template>
-					<p class="section-subtitle">
-						Search address, pin location or drop marker on Google Map.
-					</p>
-					<GoogleMapPicker
-						v-model:location="formData.location"
-						v-model:latitude="formData.latitude"
-						v-model:longitude="formData.longitude"
-						height="320px"
-					/>
-				</Card>
+					<!-- Location Card -->
+					<Card style="margin-top: var(--spacing-lg)">
+						<template #header>
+							<h2>Location & Map</h2>
+						</template>
+						<p class="section-subtitle">
+							Search address, pin location or drop marker on Google Map.
+						</p>
+						<GoogleMapPicker
+							v-model:location="formData.location"
+							v-model:latitude="formData.latitude"
+							v-model:longitude="formData.longitude"
+							height="320px"
+						/>
+					</Card>
+				</div>
 			</div>
-		</div>
 		</fieldset>
 	</div>
+
+	<!-- Image Lightbox Modal -->
+	<div v-if="previewImageUrl" class="image-lightbox" @click="previewImageUrl = null">
+		<div class="image-lightbox__content" @click.stop>
+			<img :src="previewImageUrl" class="image-lightbox__img" />
+			<button class="image-lightbox__close" @click="previewImageUrl = null">
+				<i class="mdi mdi-close"></i>
+			</button>
+		</div>
+	</div>
+
+	<Dialog
+		v-model="showApproveDialog"
+		title="Approve Work Order"
+		confirmText="Approve"
+		cancelText="Cancel"
+		:loading="loading"
+		@confirm="confirmPendingApproval"
+	>
+		<p style="margin: 0">
+			Are you sure you want to approve
+			<strong>{{ workOrderCode || "this Work Order" }}</strong
+			>?
+			<span v-if="!isReadOnly">
+				Your editable Pending Approval fields will be saved first.
+			</span>
+		</p>
+	</Dialog>
+
+	<Dialog
+		v-model="showRejectDialog"
+		title="Reject Work Order"
+		confirmText="Reject"
+		cancelText="Cancel"
+		confirmVariant="danger"
+		:loading="loading"
+		@confirm="rejectPendingReadOnly"
+	>
+		<p style="margin: 0 0 16px">
+			Are you sure you want to reject
+			<strong>{{ workOrderCode || "this Work Order" }}</strong
+			>?
+		</p>
+		<Textbox
+			v-model="rejectReason"
+			label="Rejection Reason *"
+			placeholder="Enter the rejection reason"
+			hide-footer
+		/>
+		<template #footer>
+			<Button variant="secondary" :disabled="loading" @click="showRejectDialog = false">
+				Cancel
+			</Button>
+			<Button
+				variant="danger"
+				:loading="loading"
+				:disabled="!rejectReason.trim()"
+				@click="rejectPendingReadOnly"
+			>
+				Reject
+			</Button>
+		</template>
+	</Dialog>
 </template>
 
 <style lang="scss" scoped>
@@ -2087,6 +2216,10 @@ const priorityColors: Record<string, string> = {
 	&:disabled {
 		pointer-events: none;
 	}
+}
+
+.read-only-fieldset:disabled .site-instructions-zone {
+	pointer-events: auto;
 }
 
 .badge-action-btn {
@@ -2512,6 +2645,79 @@ const priorityColors: Record<string, string> = {
 	em {
 		font-style: normal;
 		color: #475569;
+	}
+}
+
+.file-item__name-link {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--colors-brand-primary);
+	text-decoration: none;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 250px;
+	cursor: pointer;
+
+	&:hover {
+		text-decoration: underline;
+		color: var(--colors-brand-hover);
+	}
+}
+
+.image-lightbox {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.75);
+	backdrop-filter: blur(4px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+	cursor: pointer;
+	pointer-events: auto !important; // override pointer-events: none in pending mode
+
+	&__content {
+		position: relative;
+		max-width: 90vw;
+		max-height: 90vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	&__img {
+		max-width: 100%;
+		max-height: 90vh;
+		border-radius: 8px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+		object-fit: contain;
+	}
+
+	&__close {
+		position: absolute;
+		top: -40px;
+		right: 0;
+		background: none;
+		border: none;
+		color: white;
+		font-size: 24px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.1);
+		transition: background 0.2s;
+
+		&:hover {
+			background: rgba(255, 255, 255, 0.25);
+		}
 	}
 }
 </style>

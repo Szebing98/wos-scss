@@ -23,10 +23,30 @@ import FinanceTab from "./tabs/FinanceTab.vue";
 import VerificationTab from "./tabs/VerificationTab.vue";
 import PaymentTab from "./tabs/PaymentTab.vue";
 import ReportTab from "./tabs/ReportTab.vue";
+import { useSnackbarStore } from "@/stores/snackbar.store.ts";
 
 const route = useRoute();
 const router = useRouter();
 const dateFormatStore = useDateFormatStore();
+const snackbar = useSnackbarStore();
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3707/api").replace(
+	/\/$/,
+	"",
+);
+
+function getFileUrl(storageUrl?: string | null, isImage?: boolean) {
+	if (!storageUrl) return "";
+	// Normalize URL: remove work order guid from /work-order/:guid/files/...
+	let url = storageUrl.replace(/\/work-order\/[^/]+\/files\//, "/work-order/files/");
+	if (isImage) {
+		url = url.replace(/\/download$/, "/preview");
+	}
+	if (url.startsWith("/work-order/")) {
+		url = `${API_BASE_URL}${url}`;
+	}
+	return url;
+}
 
 const woNumber = route.params.id as string;
 
@@ -45,20 +65,21 @@ if (fromStatus === "done") {
 
 const currentStepIndex = ref(initialStep);
 const isEditing = computed(() => currentStepIndex.value === 2);
+const isGeneralEditMode = ref(false);
 const normalizedWorkOrderStatus = computed(() =>
 	String(workOrder.value?.status || "")
 		.replace(/\s+/g, "")
 		.toLowerCase(),
 );
-const canEditGeneral = computed(() =>
+const canEnterGeneralEdit = computed(() =>
 	["inprogress", "progress"].includes(normalizedWorkOrderStatus.value),
 );
-const isDraftOrNew = computed(() =>
-	["draft", "new"].includes(normalizedWorkOrderStatus.value),
-);
+const canEditGeneral = computed(() => canEnterGeneralEdit.value && isGeneralEditMode.value);
+const isDraftOrNew = computed(() => ["draft", "new"].includes(normalizedWorkOrderStatus.value));
 const isPendingApproval = computed(() =>
 	["pendingapproval", "pending"].includes(normalizedWorkOrderStatus.value),
 );
+const isRejected = computed(() => normalizedWorkOrderStatus.value === "rejected");
 
 function normalizeWorkOrderStatusForUi(w: any) {
 	if (w?.isDraft) return "Draft";
@@ -81,6 +102,9 @@ function updateStepFromStatus(statusStr: string) {
 	} else if (s === "pendingapproval") {
 		currentStepIndex.value = 1;
 		breadcrumbStatus.value = "Pending Approval";
+	} else if (s === "rejected") {
+		currentStepIndex.value = 1;
+		breadcrumbStatus.value = "Rejected";
 	} else if (s === "inprogress") {
 		currentStepIndex.value = 2;
 		breadcrumbStatus.value = "In Progress";
@@ -234,12 +258,15 @@ const workOrder = ref<any>({
 	description: "",
 	location: "",
 	siteCode: "",
+	rawSiteCode: "",
+	siteName: "",
 	jobPriority: "Medium",
 	leaderCode: "",
 	leaderDisplay: "",
 	leaderIICode: "",
 	leaderIIDisplay: "",
 	technicianCodes: [] as string[],
+	technicians: [] as any[],
 	leadEngineer: "",
 	leadEngineerDisplay: "",
 	assistantEngineers: [] as string[],
@@ -272,6 +299,7 @@ const workOrder = ref<any>({
 	images: [] as ImageRecord[],
 	cusRefNo: "",
 	remarks: "",
+	rejectedReason: "",
 });
 
 const loading = ref(false);
@@ -279,8 +307,12 @@ const loading = ref(false);
 function formatUserDisplay(name?: string | null, code?: string | null) {
 	const cleanName = name?.trim();
 	const cleanCode = code?.trim();
-	if (cleanName && cleanCode && cleanName !== cleanCode) return `${cleanName} (${cleanCode})`;
-	return cleanName || cleanCode || "";
+	const isGuid =
+		cleanCode &&
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanCode);
+	if (cleanName && cleanCode && !isGuid && cleanName !== cleanCode)
+		return `${cleanName} (${cleanCode})`;
+	return cleanName || (isGuid ? "" : cleanCode) || "";
 }
 
 async function fetchWorkOrderDetails() {
@@ -316,7 +348,9 @@ async function fetchWorkOrderDetails() {
 				location: w.location || w.locationName || "",
 				latitude: w.latitude ?? null,
 				longitude: w.longitude ?? null,
-				siteCode: w.siteCode || "",
+				siteCode: w.siteName ? `${w.siteName} (${w.siteCode})` : w.siteCode || "",
+				rawSiteCode: w.siteCode || "",
+				siteName: w.siteName || "",
 				jobPriority: w.jobPriority || "Low",
 				leaderCode: w.leaderCode || w.leadEngineerCode || "",
 				leaderDisplay: formatUserDisplay(
@@ -332,6 +366,14 @@ async function fetchWorkOrderDetails() {
 					w.leaderIIDisplayCode || w.leaderIICode || w.leaderIiCode,
 				),
 				technicianCodes: w.technicianCodes || w.assistantEngineers || [],
+				technicians: (w.technicians || []).map((technician: any) => ({
+					...technician,
+					code: technician.code,
+					display: formatUserDisplay(
+						technician.name || technician.displayName,
+						technician.displayCode || technician.code,
+					),
+				})),
 				leadEngineer: w.leaderCode || w.leadEngineerCode || "",
 				leadEngineerDisplay: formatUserDisplay(
 					w.leaderName || w.leadEngineerName,
@@ -388,6 +430,7 @@ async function fetchWorkOrderDetails() {
 				images: w.images || [],
 				cusRefNo: w.cusRefNo || "",
 				remarks: w.remarks || "",
+				rejectedReason: w.rejectedReason || "",
 				extendedCount: w.extendedCount || 0,
 				originalEstimatedEndDate: w.originalEstimatedEndDate || "",
 				requestApprovalDate: w.requestApprovalDate || "",
@@ -398,12 +441,12 @@ async function fetchWorkOrderDetails() {
 				createdAt: w.createdAt || "",
 			};
 		} else {
-			alert("Work Order not found");
+			snackbar.error("Work Order not found");
 			router.push("/work-order");
 		}
 	} catch (e) {
 		console.error("Failed to fetch work order details:", e);
-		alert("Error loading work order details");
+		snackbar.error("Error loading work order details");
 		router.push("/work-order");
 	} finally {
 		if (workOrder.value?.status) {
@@ -426,7 +469,7 @@ const contractStatus = computed(() => {
 const users = ref<any[]>([]);
 const workTypes = ref<any[]>([]);
 
-const tabs = [
+const allTabs = [
 	{ id: "general", label: "General" },
 	{ id: "partInfo", label: "Part Info" },
 	{ id: "supplierInvoices", label: "Supplier Invoices" },
@@ -437,6 +480,17 @@ const tabs = [
 	{ id: "payment", label: "Payment" },
 	{ id: "report", label: "Report" },
 ];
+const visibleTabs = computed(() => {
+	const status = normalizedWorkOrderStatus.value;
+	const throughFinance = allTabs.slice(0, 6);
+	if (["inprogress", "progress"].includes(status)) return throughFinance;
+	if (status === "done") return [...throughFinance, allTabs[6], allTabs[8]];
+	if (status === "completed") {
+		return [...throughFinance, allTabs[6], allTabs[7], allTabs[8]];
+	}
+	if (["claimed", "closed"].includes(status)) return allTabs;
+	return [allTabs[0]];
+});
 
 const activeTab = ref<string>("general");
 
@@ -466,9 +520,9 @@ async function submitExtend() {
 			extensionReason: extendForm.value.extensionReason || undefined,
 		});
 		if (error) {
-			alert(`Failed to extend: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(`Failed to extend: ${error.error?.message || "Unknown error"}`);
 		} else {
-			alert("Estimated end date extended successfully!");
+			snackbar.success("Estimated end date extended successfully!");
 			isExtendDialogOpen.value = false;
 			extendForm.value = { newEstimatedEndDate: "", extensionReason: "" };
 			await fetchWorkOrderDetails();
@@ -479,6 +533,14 @@ async function submitExtend() {
 	} finally {
 		isExtending.value = false;
 	}
+}
+
+function formatActivityType(value?: string | null) {
+	if (!value) return "";
+	return value
+		.replace(/[_-]+/g, " ")
+		.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+		.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 // Repeat Work Order Dialog
@@ -500,9 +562,9 @@ async function submitRepeat() {
 				: undefined,
 		});
 		if (error) {
-			alert(`Failed to repeat: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(`Failed to repeat: ${error.error?.message || "Unknown error"}`);
 		} else {
-			alert("Work order repeated successfully! A new sub-order has been created.");
+			snackbar.success("Work order repeated successfully! A new sub-order has been created.");
 			isRepeatDialogOpen.value = false;
 		}
 	} catch (e) {
@@ -531,9 +593,11 @@ async function submitTransfer() {
 				: undefined,
 		});
 		if (error) {
-			alert(`Failed to transfer: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(`Failed to transfer: ${error.error?.message || "Unknown error"}`);
 		} else {
-			alert("Work order transferred successfully! A new work order has been created.");
+			snackbar.success(
+				"Work order transferred successfully! A new work order has been created.",
+			);
 			isTransferDialogOpen.value = false;
 		}
 	} catch (e) {
@@ -572,9 +636,9 @@ async function markAsDone() {
 	try {
 		const { error } = await workOrderApi.complete(woNumber);
 		if (error) {
-			alert(`Failed to mark as done: ${error.error.message}`);
+			snackbar.error(`Failed to mark as done: ${error.error.message}`);
 		} else {
-			alert("Work order marked as done!");
+			snackbar.success("Work order marked as done!");
 			fetchWorkOrderDetails();
 		}
 	} catch (e) {
@@ -661,6 +725,7 @@ function openEditQuotation(guid: string) {
 	isEditQuotationDialogOpen.value = true;
 }
 
+/*
 async function saveEditQuotation() {
 	loading.value = true;
 	try {
@@ -686,6 +751,7 @@ async function saveEditQuotation() {
 		loading.value = false;
 	}
 }
+*/
 
 const totalQuotationAmount = computed(() => quotations.value.reduce((sum, q) => sum + q.amount, 0));
 
@@ -743,6 +809,7 @@ function openEditInvoice(guid: string) {
 	isEditInvoiceDialogOpen.value = true;
 }
 
+/*
 async function saveEditInvoice() {
 	loading.value = true;
 	try {
@@ -768,6 +835,7 @@ async function saveEditInvoice() {
 		loading.value = false;
 	}
 }
+*/
 
 async function markAsClaimed() {
 	if (!isFullyPaid.value) return;
@@ -776,9 +844,9 @@ async function markAsClaimed() {
 			invoiceAmount: totalInvoiceIssued.value,
 		});
 		if (error) {
-			alert(`Failed to mark as claimed: ${error.error.message}`);
+			snackbar.error(`Failed to mark as claimed: ${error.error.message}`);
 		} else {
-			alert("Work order marked as claimed!");
+			snackbar.success("Work order marked as claimed!");
 			fetchWorkOrderDetails();
 		}
 	} catch (e) {
@@ -808,7 +876,7 @@ const computedSteps = computed(() => {
 	return [
 		{ label: "New Request", date: w?.createdAt ? formatDateString(w.createdAt) : "" },
 		{
-			label: "Pending Approval",
+			label: isRejected.value ? "Rejected" : "Pending Approval",
 			date: w?.requestApprovalDate ? formatDateString(w.requestApprovalDate) : "",
 		},
 		{ label: "In Progress", date: w?.approvedDate ? formatDateString(w.approvedDate) : "" },
@@ -858,14 +926,21 @@ async function fetchWorkOrderFiles() {
 					(f: any) =>
 						f.category === "SiteInstructions" || f.category === "site_instructions",
 				)
-				.map((f: any) => ({
-					id: f.id,
-					guid: f.guid,
-					category: f.category,
-					url: f.storageUrl,
-					name: f.fileName,
-					type: f.mimeType || "",
-				}));
+				.map((f: any) => {
+					const isImage =
+						(f.mimeType || "").startsWith("image/") ||
+						/\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.fileName || "");
+					const isPdf =
+						f.mimeType === "application/pdf" || /\.(pdf)$/i.test(f.fileName || "");
+					return {
+						id: f.id,
+						guid: f.guid,
+						category: f.category,
+						url: getFileUrl(f.storageUrl, isImage || isPdf),
+						name: f.fileName,
+						type: f.mimeType || "",
+					};
+				});
 
 			partInfoPhotos.value = items
 				.filter((f: any) => f.category === "PartInfo" || f.category === "part_info")
@@ -873,7 +948,7 @@ async function fetchWorkOrderFiles() {
 					id: f.id,
 					guid: f.guid,
 					category: f.category,
-					url: f.storageUrl,
+					url: getFileUrl(f.storageUrl, true),
 					name: f.fileName,
 				}));
 
@@ -886,7 +961,7 @@ async function fetchWorkOrderFiles() {
 					id: f.id,
 					guid: f.guid,
 					category: f.category,
-					url: f.storageUrl,
+					url: getFileUrl(f.storageUrl, true),
 					name: f.fileName,
 				}));
 
@@ -896,7 +971,7 @@ async function fetchWorkOrderFiles() {
 					id: f.id,
 					guid: f.guid,
 					category: f.subcategory || "Before",
-					url: f.storageUrl,
+					url: getFileUrl(f.storageUrl, true),
 					name: f.fileName,
 				}));
 
@@ -968,7 +1043,7 @@ async function saveGeneralFormChanges() {
 			technicianCodes: workOrder.value.technicianCodes,
 			jobPriority: workOrder.value.jobPriority,
 			estimatedEndDate,
-			siteCode: workOrder.value.siteCode,
+			siteCode: workOrder.value.rawSiteCode || workOrder.value.siteCode,
 			location: workOrder.value.location,
 			latitude: workOrder.value.latitude,
 			longitude: workOrder.value.longitude,
@@ -991,9 +1066,10 @@ async function saveGeneralFormChanges() {
 		}
 		const { error } = res;
 		if (error) {
-			alert(`Failed to save changes: ${error.error.message}`);
+			snackbar.error(`Failed to save changes: ${error.error.message}`);
 		} else {
-			alert("Changes saved successfully!");
+			snackbar.success("Changes saved successfully!");
+			isGeneralEditMode.value = false;
 			await fetchWorkOrderDetails();
 		}
 	} catch (e) {
@@ -1015,9 +1091,9 @@ async function approveDoneWorkOrder() {
 	try {
 		const { error } = await workOrderApi.complete(woNumber);
 		if (error) {
-			alert(`Failed to approve work order: ${error.error.message}`);
+			snackbar.error(`Failed to approve work order: ${error.error.message}`);
 		} else {
-			alert("Work order approved successfully!");
+			snackbar.success("Work order approved successfully!");
 			await fetchWorkOrderDetails();
 			await fetchActivityLogs();
 		}
@@ -1034,10 +1110,12 @@ async function approvePendingWorkOrder() {
 	try {
 		const { error } = await workOrderApi.approve(woNumber);
 		if (error) {
-			alert(`Failed to approve work order: ${error.error?.message || error.message}`);
+			snackbar.error(
+				`Failed to approve work order: ${error.error?.message || error.message}`,
+			);
 			return;
 		}
-		alert("Work order approved successfully!");
+		snackbar.success("Work order approved successfully!");
 		await fetchWorkOrderDetails();
 		await fetchActivityLogs();
 	} catch (e) {
@@ -1070,9 +1148,9 @@ async function submitReject() {
 			rejectedReason: rejectForm.value.rejectedReason,
 		});
 		if (error) {
-			alert(`Failed to reject work order: ${error.error.message}`);
+			snackbar.error(`Failed to reject work order: ${error.error.message}`);
 		} else {
-			alert(
+			snackbar.success(
 				isPendingApproval.value
 					? "Work order rejected successfully!"
 					: "Work order rejected and sent back to In Progress!",
@@ -1141,9 +1219,9 @@ async function submitWorkNote() {
 		}
 
 		if (error) {
-			alert(`Failed to save note: ${error.error.message}`);
+			snackbar.error(`Failed to save note: ${error.error.message}`);
 		} else {
-			alert("Note saved successfully!");
+			snackbar.success("Note saved successfully!");
 			isNoteDialogOpen.value = false;
 			await fetchWorkNotes();
 		}
@@ -1160,9 +1238,9 @@ async function deleteWorkNote(noteGuid: string) {
 	try {
 		const { error } = await workOrderApi.deleteNote(noteGuid);
 		if (error) {
-			alert(`Failed to delete note: ${error.error.message}`);
+			snackbar.error(`Failed to delete note: ${error.error.message}`);
 		} else {
-			alert("Note deleted successfully!");
+			snackbar.success("Note deleted successfully!");
 			await fetchWorkNotes();
 		}
 	} catch (e) {
@@ -1202,15 +1280,15 @@ async function handleFileUpload(
 		const response = await workOrderApi.uploadFile(workOrder.value.guid, fd);
 		const resData = await response.json();
 		if (resData.error) {
-			alert(`Upload failed: ${resData.error.message || "Unknown error"}`);
+			snackbar.error(`Upload failed: ${resData.error.message || "Unknown error"}`);
 		} else {
-			alert("File uploaded successfully!");
+			snackbar.success("File uploaded successfully!");
 			await fetchWorkOrderFiles();
-			await fetchWorkOrderDetails(); // To update finance totals
+			await fetchWorkOrderDetails();
 		}
 	} catch (e) {
 		console.error("Upload error:", e);
-		alert("Upload error");
+		snackbar.error("Upload error");
 	} finally {
 		loading.value = false;
 		target.value = ""; // Reset file input
@@ -1223,9 +1301,9 @@ async function handleDeleteFile(fileGuid: string) {
 	try {
 		const { error } = await workOrderApi.deleteFile(fileGuid);
 		if (error) {
-			alert(`Failed to delete file: ${error.error.message}`);
+			snackbar.error(`Failed to delete file: ${error.error.message}`);
 		} else {
-			alert("File deleted successfully!");
+			snackbar.success("File deleted successfully!");
 			await fetchWorkOrderFiles();
 			await fetchWorkOrderDetails();
 		}
@@ -1316,7 +1394,7 @@ onUnmounted(() => {
 				</div>
 			</div>
 			<div class="header-actions">
-				<Button variant="outlined" @click="router.push('/work-order')">
+				<Button variant="outlined" @click="router.back()">
 					<i class="mdi mdi-chevron-left" style="margin-right: 4px"></i> Back
 				</Button>
 				<Button
@@ -1346,16 +1424,7 @@ onUnmounted(() => {
 						Reject
 					</Button>
 				</template>
-				<!-- Save Changes for InProgress state -->
-				<Button
-					variant="outlined"
-					@click="saveGeneralFormChanges"
-					v-if="workOrder?.status === 'InProgress'"
-					title="Save changes to General Information"
-				>
-					<i class="mdi mdi-content-save-outline" style="margin-right: 4px"></i> Save
-					Changes
-				</Button>
+
 				<!-- Approve / Reject for Done state -->
 				<template v-if="workOrder?.status === 'Done' && isManager">
 					<Button
@@ -1413,7 +1482,7 @@ onUnmounted(() => {
 			</button>
 			<div class="tabs-wrapper" ref="tabsWrapperRef">
 				<div
-					v-for="tab in tabs"
+					v-for="tab in visibleTabs"
 					:key="tab.id"
 					class="tab-item"
 					:class="{ 'is-active': activeTab === tab.id }"
@@ -1432,10 +1501,10 @@ onUnmounted(() => {
 			<!-- Alert -->
 			<div class="alert-box alert-info" v-if="isEditing">
 				<i class="mdi mdi-information"></i>
-				<span
-					>Services, parts, images, work notes, and quotation tab are opened. Mark the
-					work order as done if ready.</span
-				>
+				<span>
+					Part Info, Supplier Invoices, Images, Work Notes, and Finance tab are opened.
+					Mark the work order as done if ready.
+				</span>
 			</div>
 
 			<!-- Warning Alert for Rejection Reason if state is InProgress -->
@@ -1444,10 +1513,18 @@ onUnmounted(() => {
 				v-if="workOrder?.status === 'InProgress' && workOrder?.rejectedReason"
 			>
 				<i class="mdi mdi-alert-circle"></i>
-				<span
-					>This work order was rejected back to In Progress. Reason:
-					<strong>{{ workOrder.rejectedReason }}</strong></span
-				>
+				<span>
+					This work order was rejected back to In Progress. Reason:
+					<strong>{{ workOrder.rejectedReason }}</strong>
+				</span>
+			</div>
+
+			<div class="alert-box alert-error" v-if="isRejected">
+				<i class="mdi mdi-alert-circle"></i>
+				<span>
+					<strong>Work Order Rejected.</strong>
+					Reason: {{ workOrder.rejectedReason || "No rejection reason provided." }}
+				</span>
 			</div>
 
 			<!-- Stepper -->
@@ -1459,6 +1536,7 @@ onUnmounted(() => {
 					:class="{
 						'is-active': index === currentStepIndex,
 						'is-completed': index < currentStepIndex,
+						'is-rejected': isRejected && index === currentStepIndex,
 					}"
 				>
 					<div class="step-icon-container">
@@ -1466,7 +1544,14 @@ onUnmounted(() => {
 							class="step-circle"
 							:class="{ 'step-circle-completed': index < currentStepIndex }"
 						>
-							<i v-if="index === currentStepIndex" class="mdi mdi-clock-outline"></i>
+							<i
+								v-if="isRejected && index === currentStepIndex"
+								class="mdi mdi-close-circle-outline"
+							></i>
+							<i
+								v-else-if="index === currentStepIndex"
+								class="mdi mdi-clock-outline"
+							></i>
 							<i v-else-if="index === 0" class="mdi mdi-file-document-outline"></i>
 							<i v-else-if="index === 1" class="mdi mdi-check-decagram-outline"></i>
 							<i v-else-if="index === 2" class="mdi mdi-progress-wrench"></i>
@@ -1493,12 +1578,15 @@ onUnmounted(() => {
 						:users="users"
 						:workTypes="workTypes"
 						:isEditing="canEditGeneral"
+						:canEnterEdit="canEnterGeneralEdit"
 						:contractStatus="contractStatus"
 						:siteInstructionsFiles="siteInstructionsFiles"
 						:phases="phases"
 						:showEquipmentForm="showEquipmentForm"
 						:isMechanical="isMechanical"
 						@save="saveGeneralFormChanges"
+						@edit="isGeneralEditMode = true"
+						@cancelEdit="isGeneralEditMode = false"
 						@extend="openExtendDialog"
 						@openMap="isMapDialogOpen = true"
 					/>
@@ -1613,7 +1701,9 @@ onUnmounted(() => {
 									<i class="mdi mdi-record-circle-outline"></i>
 								</div>
 								<div class="timeline-item__content">
-									<div class="timeline-item__type">{{ log.activityType }}</div>
+									<div class="timeline-item__type">
+										{{ formatActivityType(log.activityType) }}
+									</div>
 									<div class="timeline-item__remarks">{{ log.remarks }}</div>
 									<div class="timeline-item__meta">
 										<span class="timeline-item__date">{{
@@ -1765,11 +1855,43 @@ onUnmounted(() => {
 			</template>
 		</Dialog>
 
-		<Dialog
-			v-model="isMapDialogOpen"
-			title="Work Order Location"
-			maxWidth="760px"
-		>
+		<Dialog v-model="isExtendDialogOpen" title="Extend Estimated End Date" maxWidth="520px">
+			<div class="extend-dialog-form">
+				<DatePicker
+					v-model="extendForm.newEstimatedEndDate"
+					label="New Estimated End Date *"
+					:enableTime="false"
+				/>
+				<div class="textbox-field">
+					<label class="custom-label">Extension Reason</label>
+					<textarea
+						v-model="extendForm.extensionReason"
+						class="custom-textarea"
+						rows="4"
+						placeholder="Enter the reason for extending the work order"
+					></textarea>
+				</div>
+			</div>
+			<template #footer>
+				<Button
+					variant="secondary"
+					:disabled="isExtending"
+					@click="isExtendDialogOpen = false"
+				>
+					Cancel
+				</Button>
+				<Button
+					variant="primary"
+					:loading="isExtending"
+					:disabled="!extendForm.newEstimatedEndDate"
+					@click="submitExtend"
+				>
+					Confirm Extension
+				</Button>
+			</template>
+		</Dialog>
+
+		<Dialog v-model="isMapDialogOpen" title="Work Order Location" maxWidth="760px">
 			<GoogleMapPicker
 				v-model:location="workOrder.location"
 				v-model:latitude="workOrder.latitude"
@@ -1779,11 +1901,7 @@ onUnmounted(() => {
 			/>
 			<template #footer>
 				<Button variant="secondary" @click="isMapDialogOpen = false">Close</Button>
-				<Button
-					v-if="canEditGeneral"
-					variant="primary"
-					@click="isMapDialogOpen = false"
-				>
+				<Button v-if="canEditGeneral" variant="primary" @click="isMapDialogOpen = false">
 					Done
 				</Button>
 			</template>
@@ -1979,15 +2097,12 @@ onUnmounted(() => {
 	flex-direction: column;
 	gap: 32px;
 }
-.alert-info {
+.alert-box {
 	display: flex;
 	align-items: flex-start;
 	gap: 12px;
-	background-color: #ebf5ff;
-	color: #1e40af;
 	padding: 16px 20px;
 	border-radius: 8px;
-	border: 1px solid #bfdbfe;
 	i {
 		font-size: 20px;
 		margin-top: -2px;
@@ -1996,6 +2111,21 @@ onUnmounted(() => {
 		font-size: 14px;
 		line-height: 1.5;
 	}
+}
+.alert-info {
+	background-color: #ebf5ff;
+	color: #1e40af;
+	border: 1px solid #bfdbfe;
+}
+.alert-warning {
+	background-color: #fffbeb;
+	color: #92400e;
+	border: 1px solid #fde68a;
+}
+.alert-error {
+	background-color: #fef2f2;
+	color: var(--colors-error, #b91c1c);
+	border: 1px solid #fecaca;
 }
 .stepper-horizontal {
 	display: flex;
@@ -2071,6 +2201,18 @@ onUnmounted(() => {
 			font-weight: 600;
 		}
 	}
+	&.is-rejected {
+		.step-circle {
+			background: var(--colors-error, #dc2626);
+			border-color: var(--colors-error, #dc2626);
+			color: white;
+			box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.12);
+		}
+		.step-label {
+			color: var(--colors-error, #b91c1c);
+			font-weight: 700;
+		}
+	}
 	&.is-completed {
 		.step-line {
 			background: var(--status-completed);
@@ -2109,10 +2251,41 @@ onUnmounted(() => {
 	align-items: start;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1180px) {
 	.detail-columns-grid {
 		grid-template-columns: 1fr;
 	}
+
+	.timeline-sidebar .timeline-sidebar__body {
+		max-height: 380px;
+	}
+}
+
+@media (max-width: 768px) {
+	.workspace-area {
+		padding: 16px;
+		gap: 20px;
+	}
+
+	.content-card {
+		padding: 20px 16px;
+	}
+
+	.stepper-horizontal {
+		overflow-x: auto;
+		justify-content: flex-start;
+		padding-bottom: 12px;
+	}
+
+	.step {
+		min-width: 112px;
+	}
+}
+
+.extend-dialog-form {
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
 }
 
 /* Activity sidebar */

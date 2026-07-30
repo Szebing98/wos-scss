@@ -14,30 +14,43 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 </script>
 
 <template>
-	<div class="card-header" style="display: flex; justify-content: space-between; align-items: center">
-		<div>
-			<h3>Part Info</h3>
-			<p class="text-muted">Upload up to 12 photos of parts, components, and job-related materials.</p>
+	<div
+		class="card-header"
+		style="display: flex; justify-content: space-between; align-items: center"
+	>
+		<div style="display: block">
+			<div style="display: flex; align-items: center; gap: 12px">
+				<h3>Part Info</h3>
+				<span class="photo-counter-badge">{{ partInfoPhotos.length }}/12 Photos</span>
+			</div>
+			<p class="text-muted" style="margin: 0px">
+				Upload up to 12 photos of parts, components, and job-related materials.
+			</p>
 		</div>
-		<div style="display: flex; align-items: center; gap: 12px">
-			<span class="photo-counter-badge">{{ partInfoPhotos.length }}/12 Photos</span>
-			<input type="file" ref="partInfoInput" style="display: none;" @change="emit('upload', $event)" accept="image/*" />
-			<Button
-				v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
-				variant="primary"
-				@click="partInfoInput?.click()"
-				:disabled="partInfoPhotos.length >= 12"
-			>
-				<i class="mdi mdi-camera-plus" style="margin-right: 4px"></i> Add Photo
-			</Button>
-		</div>
-	</div>
-	<div class="photo-grid-12">
-		<div
-			v-for="photo in partInfoPhotos"
-			:key="photo.id"
-			class="photo-slot"
+
+		<input
+			type="file"
+			ref="partInfoInput"
+			style="display: none"
+			@change="emit('upload', $event)"
+			accept="image/*"
+		/>
+
+		<Button
+			v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
+			variant="primary"
+			@click="partInfoInput?.click()"
+			:disabled="partInfoPhotos.length >= 12"
 		>
+			<i class="mdi mdi-camera-plus" style="margin-right: 4px"></i>
+			Add Photo
+		</Button>
+	</div>
+
+	<hr style="margin: 8px" />
+
+	<div class="photo-grid-12">
+		<div v-for="photo in partInfoPhotos" :key="photo.id" class="photo-slot">
 			<div class="photo-slot__img-wrap">
 				<img :src="photo.url" :alt="photo.name" class="photo-slot__img" />
 				<button
@@ -51,14 +64,20 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 			<div class="photo-slot__name">{{ photo.name }}</div>
 		</div>
 		<div
-			v-if="(isEditing || (isManager && workOrderStatus === 'Claimed')) && partInfoPhotos.length < 12"
+			v-if="
+				(isEditing || (isManager && workOrderStatus === 'Claimed')) &&
+				partInfoPhotos.length < 12
+			"
 			class="photo-slot photo-slot--add"
 			@click="partInfoInput?.click()"
 		>
 			<i class="mdi mdi-camera-plus"></i>
 			<span>Upload Photo</span>
 		</div>
-		<div v-if="partInfoPhotos.length === 0 && !isEditing && workOrderStatus !== 'Claimed'" class="photo-grid-empty">
+		<div
+			v-if="partInfoPhotos.length === 0 && !isEditing && workOrderStatus !== 'Claimed'"
+			class="photo-grid-empty"
+		>
 			<i class="mdi mdi-image-off"></i>
 			<p>No part info photos uploaded yet.</p>
 		</div>
@@ -121,7 +140,9 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 		justify-content: center;
 		cursor: pointer;
 		font-size: 14px;
-		transition: transform 0.2s, background-color 0.2s;
+		transition:
+			transform 0.2s,
+			background-color 0.2s;
 
 		&:hover {
 			background: #dc2626;
