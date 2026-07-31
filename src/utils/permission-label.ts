@@ -30,6 +30,10 @@ const actionLabels: Record<string, string> = {
 	mark_as_closed: "Mark as Closed",
 	mark_as_completed: "Mark as Completed",
 	mark_as_done: "Mark as Done",
+	reopen: "Reopen",
+	approve: "Approve",
+	reject: "Reject",
+	cancel: "Cancel",
 };
 
 export interface PermissionCatalogItem {

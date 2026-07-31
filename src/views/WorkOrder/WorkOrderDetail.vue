@@ -885,7 +885,7 @@ const isFullyPaid = computed(() => invoices.value.length > 0 && balanceRemaining
 const canMarkAsClosed = computed(() => {
 	const invoiceCents = Math.round(totalInvoiceIssued.value * 100);
 	const paymentCents = Math.round(totalPaymentReceived.value * 100);
-	return invoiceCents > 0 && paymentCents === invoiceCents;
+	return paymentCents >= invoiceCents;
 });
 
 const editingInvoiceGuid = ref("");
@@ -1956,7 +1956,7 @@ onUnmounted(() => {
 				<Button
 					v-if="
 						normalizedWorkOrderStatus === 'done' &&
-						authStore.can('mark_as_done', 'WorkOrder')
+						authStore.can('reopen', 'WorkOrder')
 					"
 					variant="primary"
 					@click="reopenWorkOrder"

@@ -57,6 +57,10 @@ const defaultSystemPermissions: PermissionModel[] = [
 	{ code: "mark_as_completed:WorkOrder", subject: "WorkOrder", action: "mark_as_completed" },
 	{ code: "mark_as_claimed:WorkOrder", subject: "WorkOrder", action: "mark_as_claimed" },
 	{ code: "mark_as_closed:WorkOrder", subject: "WorkOrder", action: "mark_as_closed" },
+	{ code: "reopen:WorkOrder", subject: "WorkOrder", action: "reopen" },
+	{ code: "approve:WorkOrder", subject: "WorkOrder", action: "approve" },
+	{ code: "reject:WorkOrder", subject: "WorkOrder", action: "reject" },
+	{ code: "cancel:WorkOrder", subject: "WorkOrder", action: "cancel" },
 	{ code: "delete:WorkOrder", subject: "WorkOrder", action: "delete" },
 	{ code: "list:WorkOrder", subject: "WorkOrder", action: "list" },
 

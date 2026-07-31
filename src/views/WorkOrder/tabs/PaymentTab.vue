@@ -2,6 +2,9 @@
 import { ref } from "vue";
 import Button from "@/components/Button.vue";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
+import { useAuthStore } from "@/stores/auth.store";
+
+const authStore = useAuthStore();
 
 const props = defineProps<{
 	workOrder: any;
@@ -117,7 +120,7 @@ const dateFormatStore = useDateFormatStore();
 			<Button
 				variant="primary"
 				@click="invoiceInput?.click()"
-				v-if="workOrder?.status === 'Completed'"
+				v-if="workOrder?.status === 'Completed' && authStore.can('create', 'WorkOrderInvoice')"
 			>
 				<i class="mdi mdi-plus" style="margin-right: 4px"></i> Add Invoice
 			</Button>
@@ -166,7 +169,10 @@ const dateFormatStore = useDateFormatStore();
 						<i class="mdi mdi-eye-outline" style="font-size: 19px"></i>
 					</button>
 					<button
-						v-if="workOrder?.status === 'Completed' || workOrder?.status === 'Claimed'"
+						v-if="
+							(workOrder?.status === 'Completed' || workOrder?.status === 'Claimed') &&
+							authStore.can('update', 'WorkOrderInvoice')
+						"
 						class="btn-icon"
 						@click.stop="emit('editInvoice', inv.guid || '')"
 						title="Edit Details"
@@ -174,7 +180,10 @@ const dateFormatStore = useDateFormatStore();
 						<i class="mdi mdi-pencil" style="font-size: 18px"></i>
 					</button>
 					<button
-						v-if="workOrder?.status === 'Completed' || workOrder?.status === 'Claimed'"
+						v-if="
+							(workOrder?.status === 'Completed' || workOrder?.status === 'Claimed') &&
+							authStore.can('delete', 'WorkOrderInvoice')
+						"
 						class="btn-icon"
 						@click.stop="emit('deleteFile', inv.guid || '')"
 						title="Remove Invoice"
@@ -211,7 +220,7 @@ const dateFormatStore = useDateFormatStore();
 			<Button
 				variant="primary"
 				@click="paymentInput?.click()"
-				v-if="workOrder?.status === 'Claimed'"
+				v-if="workOrder?.status === 'Claimed' && authStore.can('create', 'Payment')"
 				:disabled="invoices.length === 0"
 				:title="invoices.length === 0 ? 'Please add an invoice first' : 'Add Payment'"
 			>
@@ -265,7 +274,7 @@ const dateFormatStore = useDateFormatStore();
 									<i class="mdi mdi-eye-outline"></i>
 								</button>
 								<button
-									v-if="workOrder?.status === 'Claimed'"
+									v-if="workOrder?.status === 'Claimed' && authStore.can('update', 'Payment')"
 									class="btn-icon-sm"
 									@click.stop="emit('editPayment', pay.guid || '')"
 									title="Edit Payment Details"
@@ -273,7 +282,7 @@ const dateFormatStore = useDateFormatStore();
 									<i class="mdi mdi-pencil-outline"></i>
 								</button>
 								<button
-									v-if="workOrder?.status === 'Claimed'"
+									v-if="workOrder?.status === 'Claimed' && authStore.can('delete', 'Payment')"
 									class="btn-icon-sm btn-icon-sm--danger"
 									@click.stop="emit('deletePayment', pay.guid || '')"
 									title="Remove Payment"

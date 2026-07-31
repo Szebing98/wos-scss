@@ -920,7 +920,7 @@ function canUseWorkOrderAction(button: (typeof buttonList)[number], item: WorkOr
 	};
 	const action =
 		button.tooltip === "Edit"
-			? updatePermissionForStatus(item.status)
+			? updatePermissionForStatus(item.status as WorkOrderStatus)
 			: permissionByTooltip[button.tooltip] || "read";
 	const requiresAssignedEditor = button.tooltip === "Edit" || button.tooltip === "Mark As Done";
 	return Boolean(

@@ -93,6 +93,12 @@ function handleFileChange(event: Event) {
 					<i class="mdi mdi-camera"></i>
 					<span>Take Photo</span>
 				</div>
+				<div
+					v-if="images.filter((i: any) => i.category === cat).length === 0 && !isEditing"
+					class="no-image-text"
+				>
+					No image uploaded
+				</div>
 			</div>
 		</div>
 	</div>
@@ -213,5 +219,11 @@ function handleFileChange(event: Event) {
 			display: none !important;
 		}
 	}
+}
+.no-image-text {
+	color: var(--colors-text-muted);
+	font-size: 13px;
+	font-style: italic;
+	padding: 4px 0;
 }
 </style>
