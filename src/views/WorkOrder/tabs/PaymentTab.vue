@@ -13,7 +13,15 @@ const props = defineProps<{
 	isFullyPaid: boolean;
 }>();
 
-const emit = defineEmits(["uploadInvoice", "editInvoice", "deleteFile", "uploadPayment", "deletePayment"]);
+const emit = defineEmits([
+	"uploadInvoice",
+	"editInvoice",
+	"deleteFile",
+	"uploadPayment",
+	"deletePayment",
+	"preview",
+	"editPayment",
+]);
 
 const invoiceInput = ref<HTMLInputElement | null>(null);
 const paymentInput = ref<HTMLInputElement | null>(null);
@@ -44,16 +52,34 @@ const dateFormatStore = useDateFormatStore();
 		</div>
 	</div>
 
+	
+	
+	<div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px;">
+<!-- Payment Status Alert -->
+	<div
+		v-if="invoices.length > 0"
+		class="payment-status-alert"
+		:class="isFullyPaid ? 'alert-success' : 'alert-pending'"
+	>
+		<i :class="isFullyPaid ? 'mdi mdi-check-decagram' : 'mdi mdi-information-outline'"></i>
+		<span v-if="isFullyPaid">
+			All invoices are fully paid. The payment balance is RM 0.00.
+		</span>
+		<span v-else>
+			Payment is pending. Remaining balance:
+			<strong>RM {{ Math.max(0, balanceRemaining).toFixed(2) }}</strong>
+		</span>
+	</div>
 	<!-- Payment Summary Bar -->
 	<div class="payment-summary-bar" v-if="invoices.length > 0">
 		<div class="psum-item">
 			<span class="psum-label">Total Invoice Issued</span>
-			<span class="psum-value">${{ totalInvoiceIssued.toFixed(2) }}</span>
+			<span class="psum-value">RM {{ totalInvoiceIssued.toFixed(2) }}</span>
 		</div>
 		<div class="psum-divider"></div>
 		<div class="psum-item">
 			<span class="psum-label">Total Payment Received</span>
-			<span class="psum-value psum-value--paid">${{ totalPaymentReceived.toFixed(2) }}</span>
+			<span class="psum-value psum-value--paid">RM {{ totalPaymentReceived.toFixed(2) }}</span>
 		</div>
 		<div class="psum-divider"></div>
 		<div class="psum-item">
@@ -62,9 +88,10 @@ const dateFormatStore = useDateFormatStore();
 				class="psum-value"
 				:class="balanceRemaining <= 0 ? 'psum-value--zero' : 'psum-value--due'"
 			>
-				${{ Math.max(0, balanceRemaining).toFixed(2) }}
+				RM {{ Math.max(0, balanceRemaining).toFixed(2) }}
 			</span>
 		</div>
+	</div>
 	</div>
 
 	<!-- Invoices Section -->
@@ -75,7 +102,7 @@ const dateFormatStore = useDateFormatStore();
 					<i class="mdi mdi-file-document-multiple"></i> Invoices Issued
 				</h4>
 				<p class="text-muted" style="font-size: 13px; margin: 4px 0 0 0">
-					{{ invoices.length }} invoice(s) totalling ${{ totalInvoiceIssued.toFixed(2) }}
+					{{ invoices.length }} invoice(s) totalling RM {{ totalInvoiceIssued.toFixed(2) }}
 				</p>
 			</div>
 			<input
@@ -88,7 +115,7 @@ const dateFormatStore = useDateFormatStore();
 			<Button
 				variant="primary"
 				@click="invoiceInput?.click()"
-				v-if="workOrder?.status === 'Completed' || workOrder?.status === 'Claimed'"
+				v-if="workOrder?.status === 'Claimed'"
 			>
 				<i class="mdi mdi-plus" style="margin-right: 4px"></i> Add Invoice
 			</Button>
@@ -100,7 +127,12 @@ const dateFormatStore = useDateFormatStore();
 		</div>
 
 		<div class="invoice-list" v-else>
-			<div v-for="inv in invoices" :key="inv.id" class="document-card">
+			<div
+				v-for="inv in invoices"
+				:key="inv.id"
+				class="document-card"
+				@click="emit('preview', inv)"
+			>
 				<div class="doc-icon">
 					<i class="mdi mdi-file-pdf-box text-danger" style="font-size: 32px"></i>
 				</div>
@@ -118,19 +150,29 @@ const dateFormatStore = useDateFormatStore();
 						<div class="ocr-field">
 							<span class="label">Amount:</span>
 							<span class="value text-primary font-weight-bold"
-								>${{ inv.amount.toFixed(2) }}</span
+								>RM {{ inv.amount.toFixed(2) }}</span
 							>
 						</div>
 					</div>
 				</div>
-				<div
-					class="doc-actions"
-					v-if="workOrder?.status === 'Completed' || workOrder?.status === 'Claimed'"
-				>
-					<button class="btn-icon" @click="emit('editInvoice', inv.guid || '')" title="Edit Details">
+				<div class="doc-actions">
+					<button class="btn-icon" @click.stop="emit('preview', inv)" title="View Invoice">
+						<i class="mdi mdi-eye-outline" style="font-size: 19px"></i>
+					</button>
+					<button
+						v-if="workOrder?.status === 'Completed' || workOrder?.status === 'Claimed'"
+						class="btn-icon"
+						@click.stop="emit('editInvoice', inv.guid || '')"
+						title="Edit Details"
+					>
 						<i class="mdi mdi-pencil" style="font-size: 18px"></i>
 					</button>
-					<button class="btn-icon" @click="emit('deleteFile', inv.guid || '')" title="Remove Invoice">
+					<button
+						v-if="workOrder?.status === 'Completed' || workOrder?.status === 'Claimed'"
+						class="btn-icon"
+						@click.stop="emit('deleteFile', inv.guid || '')"
+						title="Remove Invoice"
+					>
 						<i class="mdi mdi-delete" style="font-size: 20px"></i>
 					</button>
 				</div>
@@ -146,7 +188,7 @@ const dateFormatStore = useDateFormatStore();
 					<i class="mdi mdi-cash-multiple"></i> Payments Received
 				</h4>
 				<p class="text-muted" style="font-size: 13px; margin: 4px 0 0 0">
-					{{ payments.length }} payment(s) totalling ${{ totalPaymentReceived.toFixed(2) }}
+					{{ payments.length }} payment(s) totalling RM {{ totalPaymentReceived.toFixed(2) }}
 				</p>
 			</div>
 			<input
@@ -159,7 +201,7 @@ const dateFormatStore = useDateFormatStore();
 			<Button
 				variant="primary"
 				@click="paymentInput?.click()"
-				v-if="workOrder?.status === 'Claimed'"
+				v-if="workOrder?.status === 'Completed' || workOrder?.status === 'Claimed'"
 				:disabled="invoices.length === 0"
 				:title="invoices.length === 0 ? 'Please add an invoice first' : 'Add Payment'"
 			>
@@ -176,37 +218,46 @@ const dateFormatStore = useDateFormatStore();
 			<table class="pay-table">
 				<thead>
 					<tr>
+						<th>Payment File</th>
 						<th>Date</th>
-						<th>Payment Method</th>
 						<th>Reference</th>
 						<th style="text-align: right">Amount</th>
-						<th style="width: 60px"></th>
+						<th style="width: 132px; text-align: right">Actions</th>
 					</tr>
 				</thead>
 				<tbody>
-					<tr v-for="pay in payments" :key="pay.id">
-						<td>{{ dateFormatStore.formatDate(pay.date) }}</td>
+					<tr
+						v-for="pay in payments"
+						:key="pay.id"
+						class="pay-table__clickable-row"
+						@click="emit('preview', pay)"
+					>
 						<td>
-							<span class="method-badge">
-								<i class="mdi mdi-bank" v-if="pay.method === 'Bank Transfer'"></i>
-								<i class="mdi mdi-credit-card" v-else-if="pay.method === 'Credit Card'"></i>
-								<i class="mdi mdi-cash" v-else></i>
-								{{ pay.method }}
-							</span>
+							<div class="payment-file-cell">
+								<div class="payment-file-icon"><i class="mdi mdi-file-pdf-box"></i></div>
+								<div>
+									<div class="payment-file-name">{{ pay.fileName }}</div>
+									<div class="payment-file-type">PDF document</div>
+								</div>
+							</div>
 						</td>
+						<td>{{ dateFormatStore.formatDate(pay.date) }}</td>
 						<td class="text-muted">{{ pay.reference || "—" }}</td>
 						<td style="text-align: right; font-weight: 600; color: #10b981">
-							${{ pay.amount.toFixed(2) }}
+							RM {{ pay.amount.toFixed(2) }}
 						</td>
 						<td>
-							<button
-								v-if="workOrder?.status === 'Claimed'"
-								class="btn-icon-sm"
-								@click="emit('deletePayment', pay.guid || '')"
-								title="Remove"
-							>
-								<i class="mdi mdi-delete-outline"></i>
-							</button>
+							<div class="payment-row-actions">
+								<button class="btn-icon-sm" @click.stop="emit('preview', pay)" title="View Payment File">
+									<i class="mdi mdi-eye-outline"></i>
+								</button>
+								<button v-if="workOrder?.status === 'Claimed'" class="btn-icon-sm" @click.stop="emit('editPayment', pay.guid || '')" title="Edit Payment Details">
+									<i class="mdi mdi-pencil-outline"></i>
+								</button>
+								<button v-if="workOrder?.status === 'Claimed'" class="btn-icon-sm btn-icon-sm--danger" @click.stop="emit('deletePayment', pay.guid || '')" title="Remove Payment">
+									<i class="mdi mdi-delete-outline"></i>
+								</button>
+							</div>
 						</td>
 					</tr>
 				</tbody>
@@ -214,7 +265,7 @@ const dateFormatStore = useDateFormatStore();
 					<tr>
 						<td colspan="3" style="text-align: right; font-weight: 600">Total Received:</td>
 						<td style="text-align: right; font-weight: 700; font-size: 16px; color: #10b981">
-							${{ totalPaymentReceived.toFixed(2) }}
+							RM {{ totalPaymentReceived.toFixed(2) }}
 						</td>
 						<td></td>
 					</tr>
@@ -223,25 +274,63 @@ const dateFormatStore = useDateFormatStore();
 		</div>
 	</div>
 
-	<!-- Payment Status Alert -->
-	<div
-		v-if="invoices.length > 0"
-		class="payment-status-alert"
-		:class="isFullyPaid ? 'alert-success' : 'alert-pending'"
-	>
-		<i :class="isFullyPaid ? 'mdi mdi-check-decagram' : 'mdi mdi-information-outline'"></i>
-		<span v-if="isFullyPaid">
-			All invoices are fully paid. Use the
-			<strong>Mark as Claimed</strong> button at the top right to proceed.
-		</span>
-		<span v-else>
-			Payment is pending. Remaining balance:
-			<strong>${{ Math.max(0, balanceRemaining).toFixed(2) }}</strong>
-		</span>
-	</div>
+	
 </template>
 
 <style scoped lang="scss">
+.pay-table__clickable-row {
+	cursor: pointer;
+}
+
+.payments-table {
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 12px;
+	overflow: hidden;
+	background: var(--colors-surface-background);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.payment-file-cell {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.payment-file-icon {
+	width: 38px;
+	height: 38px;
+	border-radius: 9px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(239, 68, 68, 0.1);
+	color: #ef4444;
+	font-size: 23px;
+	flex-shrink: 0;
+}
+
+.payment-file-name {
+	max-width: 240px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--colors-text-primary);
+}
+
+.payment-file-type {
+	margin-top: 2px;
+	font-size: 11px;
+	color: var(--colors-text-muted);
+}
+
+.payment-row-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+}
+
 .payment-status-badge {
 	display: inline-flex;
 	align-items: center;
@@ -456,6 +545,12 @@ const dateFormatStore = useDateFormatStore();
 	tr:last-child td {
 		border-bottom: none;
 	}
+	tbody tr {
+		transition: background-color 0.18s ease;
+	}
+	tbody tr:hover {
+		background: rgba(80, 88, 242, 0.035);
+	}
 }
 
 .method-badge {
@@ -479,6 +574,10 @@ const dateFormatStore = useDateFormatStore();
 	font-size: 16px;
 	transition: all 0.2s;
 	&:hover {
+		color: var(--colors-brand-primary);
+		background: rgba(80, 88, 242, 0.09);
+	}
+	&--danger:hover {
 		color: var(--colors-danger);
 		background: rgba(239, 68, 68, 0.1);
 	}

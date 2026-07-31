@@ -1,4 +1,5 @@
 import MainLayout from "@/layouts/MainLayout.vue";
+import { useAuthStore } from "@/stores/auth.store";
 import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [
@@ -38,7 +39,7 @@ const routes = [
 				path: "dashboard",
 				name: "Dashboard",
 				component: () => import("@/views/Dashboard/index.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "Audit"] },
 			},
 			{
 				path: "audit-log",
@@ -69,19 +70,19 @@ const routes = [
 				path: "list",
 				name: "Customer List",
 				component: () => import("@/views/Customer/CustomerList.vue"),
-				meta: { requiresAuth: true, breadcrumb: "Customer List" },
+				meta: { requiresAuth: true, breadcrumb: "Customer List", permission: ["read", "Customer"] },
 			},
 			{
 				path: "profile",
 				name: "Customer Profile",
 				component: () => import("@/views/Customer/CustomerProfile.vue"),
-				meta: { requiresAuth: true, breadcrumb: "Customer Profile" },
+				meta: { requiresAuth: true, breadcrumb: "Customer Profile", permission: ["read", "Customer"] },
 			},
 			{
 				path: "form",
 				name: "Customer Form",
 				component: () => import("@/views/Customer/CustomerForm.vue"),
-				meta: { requiresAuth: true, breadcrumb: "Customer Form" },
+				meta: { requiresAuth: true, breadcrumb: "Customer Form", permission: ["read", "Customer"] },
 			},
 		],
 	},
@@ -93,19 +94,19 @@ const routes = [
 				path: "work-types",
 				name: "Work Types",
 				component: () => import("@/views/Maintenance/WorkType.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "WorkType"] },
 			},
 			{
 				path: "location",
 				name: "Location",
 				component: () => import("@/views/Maintenance/Location.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "Location"] },
 			},
 			{
 				path: "site",
 				name: "Site",
 				component: () => import("@/views/Maintenance/Site.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "Site"] },
 			},
 			// {
 			// 	path: "parts",
@@ -123,19 +124,19 @@ const routes = [
 				path: "doc-no-format",
 				name: "Document No. Format",
 				component: () => import("@/views/Maintenance/DocNoFormat.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "DocNoFormat"] },
 			},
 			{
 				path: "role-permission",
 				name: "Role Permission",
 				component: () => import("@/views/Maintenance/RolePermission.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "Permission"] },
 			},
 			{
 				path: "user-permission",
 				name: "User Permission",
 				component: () => import("@/views/Maintenance/UserPermission.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "Permission"] },
 			},
 		],
 	},
@@ -148,19 +149,19 @@ const routes = [
 				path: "list",
 				name: "User List",
 				component: () => import("@/views/User/UserList.vue"),
-				meta: { requiresAuth: true, breadcrumb: "Employee List" },
+				meta: { requiresAuth: true, breadcrumb: "Employee List", permission: ["read", "User"] },
 			},
 			{
 				path: "profile",
 				name: "User Profile",
 				component: () => import("@/views/User/UserProfile.vue"),
-				meta: { requiresAuth: true, breadcrumb: "User Profile" },
+				meta: { requiresAuth: true, breadcrumb: "User Profile", permission: ["read", "User"] },
 			},
 			{
 				path: "form",
 				name: "User Form",
 				component: () => import("@/views/User/UserProfile.vue"),
-				meta: { requiresAuth: true, breadcrumb: "User Form" },
+				meta: { requiresAuth: true, breadcrumb: "User Form", permission: ["read", "User"] },
 			},
 		],
 	},
@@ -172,19 +173,19 @@ const routes = [
 				path: "",
 				name: "Work Orders",
 				component: () => import("@/views/WorkOrder/WorkOrderList.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "WorkOrder"] },
 			},
 			{
 				path: "form/:id?",
 				name: "Work Order Form",
 				component: () => import("@/views/WorkOrder/WorkOrderForm.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "WorkOrder"] },
 			},
 			{
 				path: "detail/:id",
 				name: "Work Order Detail",
 				component: () => import("@/views/WorkOrder/WorkOrderDetail.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "WorkOrder"] },
 			},
 		],
 	},
@@ -197,7 +198,7 @@ const router = createRouter({
 
 // auth guard
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
 	const token = localStorage.getItem("authToken");
 
 	const publicPaths = [
@@ -211,6 +212,13 @@ router.beforeEach((to) => {
 
 	if (!isPublic && !token) {
 		return "/account/login";
+	}
+
+	const permission = to.meta.permission as [string, string] | undefined;
+	if (token && permission) {
+		const authStore = useAuthStore();
+		if (!authStore.currentUser) await authStore.fetchMe();
+		if (!authStore.can(permission[0], permission[1])) return "/dashboard";
 	}
 });
 

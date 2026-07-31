@@ -5,14 +5,18 @@ import { workOrderApi } from "@/api/work-order/work-order.api";
 import { useThemeStore } from "@/stores/theme.store";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
 import WorkOrderList from "@/views/WorkOrder/WorkOrderList.vue";
+import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
+import { useSnackbarStore } from "@/stores/snackbar.store";
 
 const themeStore = useThemeStore();
 const dateFormatStore = useDateFormatStore();
 const router = useRouter();
+const snackbar = useSnackbarStore();
 const workOrderListRef = ref<InstanceType<typeof WorkOrderList> | null>(null);
 
 const lastUpdatedTime = ref("-");
 const loadingCounts = ref(false);
+const totalWorkOrders = ref(0);
 
 enum WorkOrderStatus {
 	Draft = "draft",
@@ -34,7 +38,7 @@ const cardList = ref([
 		status: WorkOrderStatus.Draft,
 		icon: "mdi-archive-clock-outline",
 		countQuery: { orderStatus: WorkOrderStatus.New, isDraft: "true" },
-		query: { orderStatus: WorkOrderStatus.New },
+		query: { orderStatus: WorkOrderStatus.New, isDraft: "true" },
 		baseColor: "#80858f",
 	},
 	{
@@ -43,7 +47,7 @@ const cardList = ref([
 		status: WorkOrderStatus.New,
 		icon: "mdi-plus-circle-outline",
 		countQuery: { orderStatus: WorkOrderStatus.New, isDraft: "false" },
-		query: { orderStatus: WorkOrderStatus.New },
+		query: { orderStatus: WorkOrderStatus.New, isDraft: "false" },
 		baseColor: "#3B82F6",
 	},
 	{
@@ -164,6 +168,8 @@ function getNumberStyle(item: any) {
 
 function getTotalCount(responseData: any) {
 	if (typeof responseData?.total === "number") return responseData.total;
+	if (typeof responseData?.totalCount === "number") return responseData.totalCount;
+	if (typeof responseData?.count === "number") return responseData.count;
 	if (Array.isArray(responseData?.data)) return responseData.data.length;
 	return 0;
 }
@@ -192,11 +198,39 @@ async function fetchCardCounts() {
 			...card,
 			count: results[index] ?? 0,
 		}));
+		totalWorkOrders.value = results.reduce((sum, count) => sum + (count ?? 0), 0);
 		updateLastUpdatedTime();
 	} catch (error) {
 		console.error("Failed to fetch dashboard work order counts:", error);
 	} finally {
 		loadingCounts.value = false;
+	}
+}
+
+function exportCountReport(format: "CSV" | "PDF") {
+	try {
+		const generatedAt = new Date().toISOString();
+		const rows = [
+			{ status: "All Work Orders", count: totalWorkOrders.value, generatedAt },
+			...cardList.value.map((card) => ({
+				status: card.label,
+				count: card.count,
+				generatedAt,
+			})),
+		];
+		const columns = [
+			{ key: "status", label: "Work Order Status" },
+			{ key: "count", label: "Count" },
+			{ key: "generatedAt", label: "Generated Date" },
+		];
+		if (format === "CSV") {
+			downloadCsv(`work-order-count-report-${generatedAt.slice(0, 10)}.csv`, rows, columns);
+		} else {
+			printRowsAsPdf("Work Order Count Report", rows, columns);
+		}
+		snackbar.success("Work order count report exported.");
+	} catch (error) {
+		snackbar.error(error instanceof Error ? error.message : "Failed to export count report.");
 	}
 }
 
@@ -228,11 +262,20 @@ onMounted(() => {
 		<div class="dashboard__header">
 			<div class="dashboard__header-title">
 				<h1>Dashboard</h1>
+				<p class="dashboard__updated-time">All Work Orders: {{ totalWorkOrders }}</p>
 				<p class="dashboard__updated-time">Last updated: {{ lastUpdatedTime }}</p>
 			</div>
-			<button class="btn btn--icon" :disabled="loadingCounts" @click="refreshData">
-				<i class="mdi mdi-refresh"></i>
-			</button>
+			<div style="display: flex; gap: 8px">
+				<button class="btn btn--outlined" :disabled="loadingCounts" @click="exportCountReport('CSV')">
+					<i class="mdi mdi-file-delimited-outline"></i> Count CSV
+				</button>
+				<button class="btn btn--outlined" :disabled="loadingCounts" @click="exportCountReport('PDF')">
+					<i class="mdi mdi-file-pdf-box"></i> Count PDF
+				</button>
+				<button class="btn btn--icon" :disabled="loadingCounts" @click="refreshData">
+					<i class="mdi mdi-refresh"></i>
+				</button>
+			</div>
 		</div>
 
 		<div class="dashboard__cards-grid">

@@ -18,6 +18,7 @@ import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
 import { workOrderApi } from "@/api/work-order/work-order.api";
 import http from "@/utils/http";
 import { useSnackbarStore } from "@/stores/snackbar.store";
+import { userDisplayCode } from "@/utils/user-display";
 
 const router = useRouter();
 const route = useRoute();
@@ -52,12 +53,7 @@ function normalizeWorkOrderStatus(w: any) {
 }
 
 function userOptionDisplay(user: any) {
-	const name = user?.name?.trim();
-	const displayCode = user?.displayCode?.trim();
-	if (name && displayCode && name.includes(displayCode)) return name;
-	if (displayCode?.toUpperCase().startsWith("USR-")) return name || "";
-	if (name && displayCode) return `${name} (${displayCode})`;
-	return name || displayCode || user?.code || "";
+	return userDisplayCode(user?.displayCode, user?.code, "");
 }
 
 function upsertUserOption(
@@ -94,9 +90,44 @@ const normalizedStatus = computed(() =>
 );
 const isDraftStatus = computed(() => normalizedStatus.value === "draft");
 const isNewStatus = computed(() => normalizedStatus.value === "new");
-const canEditReadOnlyWorkOrder = computed(() =>
-	["draft", "new", "pending", "pendingapproval"].includes(normalizedStatus.value),
+const workOrderOwnerCode = ref("");
+const isSuperadmin = computed(() =>
+	(authStore.currentUser?.userGroups || []).some(
+		(group: any) => String(group.code || "").toUpperCase() === "SA",
+	),
 );
+const canEditForCurrentAssignment = computed(() => {
+	if (isSuperadmin.value) return true;
+	const userCode = authStore.currentUser?.code;
+	if (!userCode) return false;
+	if (["draft", "new"].includes(normalizedStatus.value)) {
+		return workOrderOwnerCode.value === userCode;
+	}
+	if (["pending", "pendingapproval"].includes(normalizedStatus.value)) {
+		return formData.value.personInChargeCode === userCode;
+	}
+	if (["progress", "inprogress"].includes(normalizedStatus.value)) {
+		return (
+			formData.value.personInChargeCode === userCode ||
+			formData.value.leaderCode === userCode
+		);
+	}
+	return false;
+});
+const canEditReadOnlyWorkOrder = computed(() => {
+	const actionByStatus: Record<string, string> = {
+		draft: "update_draft",
+		new: "update_new",
+		pending: "update_pending",
+		pendingapproval: "update_pending",
+	};
+	const action = actionByStatus[normalizedStatus.value];
+	return Boolean(
+		action &&
+			authStore.can(action, "WorkOrder") &&
+			canEditForCurrentAssignment.value,
+	);
+});
 const isPendingApproval = computed(() =>
 	["pending", "pendingapproval"].includes(normalizedStatus.value),
 );
@@ -414,6 +445,7 @@ onMounted(async () => {
 			const { data } = await workOrderApi.getWorkOrderByGuid(id);
 			const w = (data?.data || data) as any;
 			if (w && (w.guid || w.code)) {
+				workOrderOwnerCode.value = w.createdBy || w.createdByCode || "";
 				workOrderCode.value =
 					w.docNo || w.code || w.guid?.substring(0, 8).toUpperCase() || "";
 				upsertUserOption(
@@ -1431,10 +1463,18 @@ const priorityColors: Record<string, string> = {
 						<i class="mdi mdi-note-edit-outline"></i> Edit
 					</Button>
 					<template v-if="isPendingApproval">
-						<Button variant="primary" @click="openApproveConfirmation">
+						<Button
+							v-if="authStore.can('approve', 'WorkOrder')"
+							variant="primary"
+							@click="openApproveConfirmation"
+						>
 							<i class="mdi mdi-check-circle-outline"></i> Approve
 						</Button>
-						<Button variant="danger" @click="openRejectConfirmation">
+						<Button
+							v-if="authStore.can('reject', 'WorkOrder')"
+							variant="danger"
+							@click="openRejectConfirmation"
+						>
 							<i class="mdi mdi-close-circle-outline"></i> Reject
 						</Button>
 					</template>
@@ -1462,10 +1502,18 @@ const priorityColors: Record<string, string> = {
 					<Button variant="outlined" @click="() => updatePending()">
 						<i class="mdi mdi-content-save"></i> Update
 					</Button>
-					<Button variant="primary" @click="openApproveConfirmation">
+					<Button
+						v-if="authStore.can('approve', 'WorkOrder')"
+						variant="primary"
+						@click="openApproveConfirmation"
+					>
 						<i class="mdi mdi-check-circle-outline"></i> Approve
 					</Button>
-					<Button variant="danger" @click="openRejectConfirmation">
+					<Button
+						v-if="authStore.can('reject', 'WorkOrder')"
+						variant="danger"
+						@click="openRejectConfirmation"
+					>
 						<i class="mdi mdi-close-circle-outline"></i> Reject
 					</Button>
 				</template>
@@ -2020,18 +2068,6 @@ const priorityColors: Record<string, string> = {
 												>
 													Expiring Soon
 												</Badge>
-												<button
-													type="button"
-													class="badge-action-btn badge-action-btn--primary"
-													title="Go to Customer Form to extend contract"
-													@click.stop="
-														redirectToCustomerRenew(
-															selectedContractInfo,
-														)
-													"
-												>
-													<i class="mdi mdi-open-in-new"></i> Extend
-												</button>
 											</template>
 											<template
 												v-else-if="
@@ -2045,18 +2081,6 @@ const priorityColors: Record<string, string> = {
 												>
 													Expired
 												</Badge>
-												<button
-													type="button"
-													class="badge-action-btn badge-action-btn--primary"
-													title="Go to Customer Form to renew contract"
-													@click.stop="
-														redirectToCustomerRenew(
-															selectedContractInfo,
-														)
-													"
-												>
-													<i class="mdi mdi-open-in-new"></i> Renew
-												</button>
 											</template>
 										</div>
 									</template>
@@ -2071,12 +2095,41 @@ const priorityColors: Record<string, string> = {
 								/>
 							</div>
 							<div class="col-12">
-								<DatePicker
-									v-model="formData.contractEndDate"
-									label="Contract End Date"
-									:disabled="true"
-									:enableTime="false"
-								/>
+								<div class="contract-end-row">
+									<div class="contract-end-row__date">
+										<DatePicker
+											v-model="formData.contractEndDate"
+											label="Contract End Date"
+											:disabled="true"
+											:enableTime="false"
+										/>
+									</div>
+									<button
+										v-if="
+											selectedContractInfo &&
+											['ExpiringSoon', 'Expired'].includes(
+												selectedContractInfo.status,
+											)
+										"
+										type="button"
+										class="contract-end-row__action"
+										:title="
+											selectedContractInfo.status === 'Expired'
+												? 'Go to Customer Form to renew contract'
+												: 'Go to Customer Form to extend contract'
+										"
+										@click="
+											redirectToCustomerRenew(selectedContractInfo)
+										"
+									>
+										<i class="mdi mdi-open-in-new"></i>
+										{{
+											selectedContractInfo.status === "Expired"
+												? "Renew"
+												: "Extend"
+										}}
+									</button>
+								</div>
 							</div>
 							<div class="col-12">
 								<Textbox
@@ -2095,50 +2148,64 @@ const priorityColors: Record<string, string> = {
 						</div>
 					</Card>
 
-					<!-- Site Card -->
-					<Card style="margin-top: var(--spacing-lg)">
-						<template #header>
-							<h2>Site</h2>
-						</template>
-						<p class="section-subtitle">
-							Assign an operational site from Maintenance site list.
-						</p>
-						<div class="grid-row">
-							<div class="col-12">
-								<Autocomplete
-									v-model="formData.siteCode"
-									:options="
-										sites.map((site) => ({
-											id: site.code,
-											name: site.name,
-											code: site.code,
-										}))
-									"
-									label="Site *"
-									placeholder="Search or select Site..."
-									:error="formErrors.siteCode"
-								/>
+				</div>
+			</div>
+
+			<!-- Site and address belong to the same service-location context. -->
+			<Card class="service-location-card">
+				<template #header>
+					<div class="service-location-card__heading">
+						<span class="service-location-card__icon">
+							<i class="mdi mdi-map-marker-outline"></i>
+						</span>
+						<div>
+							<h2>Service Location</h2>
+							<p>Select the site and confirm its exact address on the map.</p>
+						</div>
+					</div>
+				</template>
+
+				<div class="service-location-group">
+					<div class="service-location-group__site">
+						<div class="location-section-label">
+							<span>01</span>
+							<div>
+								<strong>Site</strong>
+								<small>Choose an operational site</small>
 							</div>
 						</div>
-					</Card>
+						<Autocomplete
+							v-model="formData.siteCode"
+							:options="
+								sites.map((site) => ({
+									id: site.code,
+									name: site.name,
+									code: site.code,
+								}))
+							"
+							label="Site *"
+							placeholder="Search or select Site..."
+							:error="formErrors.siteCode"
+						/>
+					</div>
 
-					<!-- Location Card -->
-					<Card style="margin-top: var(--spacing-lg)">
-						<template #header>
-							<h2>Location & Map</h2>
-						</template>
-						<p class="section-subtitle">
-							Search address, pin location or drop marker on Google Map.
-						</p>
+					<div class="service-location-group__map">
+						<div class="location-section-label">
+							<span>02</span>
+							<div>
+								<strong>Location</strong>
+								<small>Search an address or place the map marker</small>
+							</div>
+						</div>
 						<GoogleMapPicker
 							v-model:location="formData.location"
 							v-model:latitude="formData.latitude"
 							v-model:longitude="formData.longitude"
 							height="320px"
 						/>
-					</Card>
+					</div>
 				</div>
-			</div>
+			</Card>
 		</fieldset>
 	</div>
 
@@ -2220,40 +2287,6 @@ const priorityColors: Record<string, string> = {
 
 .read-only-fieldset:disabled .site-instructions-zone {
 	pointer-events: auto;
-}
-
-.badge-action-btn {
-	display: inline-flex;
-	align-items: center;
-	gap: 3px;
-	padding: 2px 7px;
-	border-radius: 4px;
-	font-size: 11px;
-	font-weight: 600;
-	cursor: pointer;
-	border: none;
-	transition: all 0.15s ease;
-	line-height: 1.2;
-
-	&--warning {
-		background: #fef3c7;
-		color: #d97706;
-
-		&:hover {
-			background: #fde68a;
-			color: #b45309;
-		}
-	}
-
-	&--error {
-		background: #fee2e2;
-		color: #dc2626;
-
-		&:hover {
-			background: #fca5a5;
-			color: #b91c1c;
-		}
-	}
 }
 
 .workorder-form-view {
@@ -2340,6 +2373,157 @@ const priorityColors: Record<string, string> = {
 	font-size: 13px;
 	color: var(--colors-text-muted);
 	margin: -10px 0 16px;
+}
+
+.contract-end-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+
+	&__date {
+		flex: 1;
+		min-width: 0;
+	}
+
+	&__action {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 5px;
+		min-height: 38px;
+		margin-top: 19px;
+		padding: 0 12px;
+		border: 1px solid var(--colors-brand-primary);
+		border-radius: 6px;
+		background: rgba(80, 88, 242, 0.08);
+		color: var(--colors-brand-primary);
+		font: inherit;
+		font-size: 12px;
+		font-weight: 700;
+		white-space: nowrap;
+		cursor: pointer;
+		transition:
+			background-color 0.2s,
+			color 0.2s;
+
+		&:hover {
+			background: var(--colors-brand-primary);
+			color: #fff;
+		}
+	}
+}
+
+.service-location-card {
+	margin-top: var(--spacing-lg);
+
+	&__heading {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+
+		p {
+			margin: 3px 0 0;
+			color: var(--colors-text-muted);
+			font-size: 12px;
+			font-weight: 400;
+		}
+	}
+
+	&__icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 38px;
+		height: 38px;
+		flex: 0 0 38px;
+		border-radius: 10px;
+		background: rgba(80, 88, 242, 0.1);
+		color: var(--colors-brand-primary);
+		font-size: 21px;
+	}
+}
+
+.service-location-group {
+	display: grid;
+	grid-template-columns: minmax(240px, 0.8fr) minmax(0, 2fr);
+	gap: 0;
+	overflow: hidden;
+	border: 1px solid var(--colors-surface-border);
+	border-radius: 10px;
+	background: var(--colors-surface-background);
+
+	&__site,
+	&__map {
+		padding: 18px;
+	}
+
+	&__site {
+		border-right: 1px solid var(--colors-surface-border);
+	}
+
+	&__map {
+		background: var(--colors-surface-card);
+	}
+}
+
+.location-section-label {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	margin-bottom: 14px;
+
+	> span {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 25px;
+		height: 25px;
+		border-radius: 50%;
+		background: var(--colors-brand-primary);
+		color: #fff;
+		font-size: 10px;
+		font-weight: 700;
+	}
+
+	div {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+	}
+
+	strong {
+		color: var(--colors-text-primary);
+		font-size: 13px;
+	}
+
+	small {
+		color: var(--colors-text-muted);
+		font-size: 11px;
+	}
+}
+
+@media (max-width: 767px) {
+	.contract-end-row {
+		flex-direction: column;
+
+		&__date,
+		&__action {
+			width: 100%;
+		}
+
+		&__action {
+			margin-top: 0;
+		}
+	}
+
+	.service-location-group {
+		grid-template-columns: 1fr;
+
+		&__site {
+			border-right: 0;
+			border-bottom: 1px solid var(--colors-surface-border);
+		}
+	}
 }
 
 .subsection-title {

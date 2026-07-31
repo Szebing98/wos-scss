@@ -9,6 +9,10 @@ import FilterPanel from "@/components/FilterPanel.vue";
 import Badge from "@/components/Badge.vue";
 import HighlightText from "@/components/HighlightText.vue";
 import { customerApi } from "@/api/customer/customer.api";
+import { reportApi } from "@/api/report/report.api";
+import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useAuthStore } from "@/stores/auth.store";
 
 const headers: TableHeader[] = [
 	{ key: "status", label: "Status", width: "110px", minWidth: "100px" },
@@ -35,6 +39,9 @@ function resetFilters() {
 
 const customers = ref<any[]>([]);
 const loading = ref(false);
+const exporting = ref(false);
+const snackbar = useSnackbarStore();
+const authStore = useAuthStore();
 
 async function fetchCustomers() {
 	loading.value = true;
@@ -140,6 +147,27 @@ function handleCreateCustomer() {
 	router.push("/customer/form");
 }
 
+async function handleExport(format: "CSV" | "PDF") {
+	if (exporting.value) return;
+	exporting.value = true;
+	try {
+		const { data, error } = await reportApi.exportCustomers({
+			format,
+			type: "list",
+		});
+		if (error) throw new Error((error as any).error?.message || "Export request failed.");
+		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
+		const date = new Date().toISOString().slice(0, 10);
+		if (format === "CSV") downloadCsv(`customers-${date}.csv`, rows);
+		else printRowsAsPdf("Customer Report", rows);
+		snackbar.success(`${rows.length} customer(s) exported.`);
+	} catch (error) {
+		snackbar.error(error instanceof Error ? error.message : "Failed to export customers.");
+	} finally {
+		exporting.value = false;
+	}
+}
+
 function handleEditCustomer(customer: any) {
 	const targetId = customer.guid;
 	router.push(`/customer/form?guid=${targetId}`);
@@ -172,9 +200,22 @@ function countryFormatAccount(acc: string) {
 					MyInvois profiles
 				</p>
 			</div>
-			<button class="btn btn--primary" @click="handleCreateCustomer">
-				<i class="mdi mdi-plus"></i> Add Customer
-			</button>
+			<div style="display: flex; gap: 8px">
+				<button class="btn btn--outlined" :disabled="exporting" @click="handleExport('CSV')">
+					<i class="mdi mdi-file-delimited-outline"></i>
+					{{ exporting ? "Exporting..." : "CSV" }}
+				</button>
+				<button class="btn btn--outlined" :disabled="exporting" @click="handleExport('PDF')">
+					<i class="mdi mdi-file-pdf-box"></i> PDF
+				</button>
+				<button
+					v-if="authStore.can('create', 'Customer')"
+					class="btn btn--primary"
+					@click="handleCreateCustomer"
+				>
+					<i class="mdi mdi-plus"></i> Add Customer
+				</button>
+			</div>
 		</div>
 
 		<!-- KPI Metric Cards -->

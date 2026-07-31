@@ -317,7 +317,7 @@
 			right: 4px;
 			min-width: 16px;
 			height: 16px;
-			padding: 0 4px;
+			padding: 0 5px;
 			border-radius: 999px;
 			background: var(--colors-state-error);
 			color: #ffffff;
@@ -325,6 +325,7 @@
 			font-size: 10px;
 			font-weight: 700;
 			line-height: 13px;
+			white-space: nowrap;
 			box-sizing: border-box;
 		}
 	}

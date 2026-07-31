@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "@/components/Button.vue";
 import Card from "@/components/Card.vue";
@@ -12,6 +12,7 @@ import { workOrderApi } from "@/api/work-order/work-order.api";
 import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
+import { useAuthStore } from "@/stores/auth.store";
 
 // Sub-tab Components
 import GeneralTab from "./tabs/GeneralTab.vue";
@@ -24,11 +25,14 @@ import VerificationTab from "./tabs/VerificationTab.vue";
 import PaymentTab from "./tabs/PaymentTab.vue";
 import ReportTab from "./tabs/ReportTab.vue";
 import { useSnackbarStore } from "@/stores/snackbar.store.ts";
+import http from "@/utils/http";
+import { userDisplayCode } from "@/utils/user-display";
 
 const route = useRoute();
 const router = useRouter();
 const dateFormatStore = useDateFormatStore();
 const snackbar = useSnackbarStore();
+const authStore = useAuthStore();
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3707/api").replace(
 	/\/$/,
@@ -46,6 +50,25 @@ function getFileUrl(storageUrl?: string | null, isImage?: boolean) {
 		url = `${API_BASE_URL}${url}`;
 	}
 	return url;
+}
+
+async function loadFileBlobUrl(rawUrl: string, isImageOrPdf: boolean): Promise<string> {
+	if (!rawUrl) return "";
+	if (isImageOrPdf) {
+		try {
+			if (rawUrl.startsWith("blob:")) return rawUrl;
+			let urlPath = rawUrl;
+			if (urlPath.startsWith(API_BASE_URL)) {
+				urlPath = urlPath.replace(API_BASE_URL, "");
+			}
+			const response = await http.get(urlPath, { responseType: "blob" });
+			return URL.createObjectURL(response.data);
+		} catch (error) {
+			console.error("Failed to load file blob preview:", error, rawUrl);
+			return rawUrl;
+		}
+	}
+	return rawUrl;
 }
 
 const woNumber = route.params.id as string;
@@ -71,8 +94,33 @@ const normalizedWorkOrderStatus = computed(() =>
 		.replace(/\s+/g, "")
 		.toLowerCase(),
 );
+const isSuperadmin = computed(() =>
+	(authStore.currentUser?.userGroups || []).some(
+		(group: any) => String(group.code || "").toUpperCase() === "SA",
+	),
+);
+const canEditForCurrentAssignment = computed(() => {
+	if (isSuperadmin.value) return true;
+	const userCode = authStore.currentUser?.code;
+	if (!userCode) return false;
+	if (["draft", "new"].includes(normalizedWorkOrderStatus.value)) {
+		return workOrder.value?.createdByCode === userCode;
+	}
+	if (["pending", "pendingapproval"].includes(normalizedWorkOrderStatus.value)) {
+		return workOrder.value?.projectPersonInCharge === userCode;
+	}
+	if (["progress", "inprogress"].includes(normalizedWorkOrderStatus.value)) {
+		return (
+			workOrder.value?.projectPersonInCharge === userCode ||
+			workOrder.value?.leaderCode === userCode
+		);
+	}
+	return false;
+});
 const canEnterGeneralEdit = computed(() =>
-	["inprogress", "progress"].includes(normalizedWorkOrderStatus.value),
+	["inprogress", "progress"].includes(normalizedWorkOrderStatus.value) &&
+	authStore.can("update_progress", "WorkOrder") &&
+	canEditForCurrentAssignment.value,
 );
 const canEditGeneral = computed(() => canEnterGeneralEdit.value && isGeneralEditMode.value);
 const isDraftOrNew = computed(() => ["draft", "new"].includes(normalizedWorkOrderStatus.value));
@@ -87,6 +135,12 @@ function normalizeWorkOrderStatusForUi(w: any) {
 	if (status === "new") return "New";
 	if (status === "pending") return "PendingApproval";
 	if (status === "progress") return "InProgress";
+	if (status === "done") return "Done";
+	if (status === "completed") return "Completed";
+	if (status === "claimed") return "Claimed";
+	if (status === "closed") return "Closed";
+	if (status === "cancelled") return "Cancelled";
+	if (status === "rejected") return "Rejected";
 	return w?.status || w?.orderStatus || "InProgress";
 }
 
@@ -238,7 +292,6 @@ interface PaymentRecord {
 	guid?: string;
 	date: string;
 	amount: number;
-	method: string;
 	reference: string;
 	fileName: string;
 }
@@ -262,6 +315,7 @@ const workOrder = ref<any>({
 	siteName: "",
 	jobPriority: "Medium",
 	leaderCode: "",
+	createdByCode: "",
 	leaderDisplay: "",
 	leaderIICode: "",
 	leaderIIDisplay: "",
@@ -304,15 +358,8 @@ const workOrder = ref<any>({
 
 const loading = ref(false);
 
-function formatUserDisplay(name?: string | null, code?: string | null) {
-	const cleanName = name?.trim();
-	const cleanCode = code?.trim();
-	const isGuid =
-		cleanCode &&
-		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanCode);
-	if (cleanName && cleanCode && !isGuid && cleanName !== cleanCode)
-		return `${cleanName} (${cleanCode})`;
-	return cleanName || (isGuid ? "" : cleanCode) || "";
+function formatUserDisplay(_name?: string | null, code?: string | null) {
+	return userDisplayCode(code, null, "");
 }
 
 async function fetchWorkOrderDetails() {
@@ -326,6 +373,7 @@ async function fetchWorkOrderDetails() {
 				guid: w.guid,
 				woNumber: w.docNo || w.code || w.guid.substring(0, 8).toUpperCase(),
 				title: w.title || "",
+				createdByCode: w.createdBy || w.createdByCode || "",
 				status: normalizeWorkOrderStatusForUi(w),
 				workType: w.workType || "",
 				workTypeItem: w.workTypeItem || "",
@@ -671,6 +719,7 @@ function scrollTabs(direction: "left" | "right") {
 const quotations = ref<QuotationRecord[]>([]);
 // const isAddQuotationDialogOpen = ref(false);
 const isEditQuotationDialogOpen = ref(false);
+const isSavingQuotation = ref(false);
 // const isUploadingQuotation = ref(false);
 // const editingQuotationId = ref<number | null>(null);
 const quotationForm = ref({ refNo: "", date: "", amount: 0, name: "" });
@@ -725,33 +774,34 @@ function openEditQuotation(guid: string) {
 	isEditQuotationDialogOpen.value = true;
 }
 
-/*
 async function saveEditQuotation() {
-	loading.value = true;
+	if (!editingQuotationGuid.value || !quotationForm.value.name.trim()) return;
+	isSavingQuotation.value = true;
 	try {
 		const docDate = quotationForm.value.date
 			? new Date(quotationForm.value.date).toISOString()
-			: undefined;
+			: null;
 		const { error } = await workOrderApi.updateFile(editingQuotationGuid.value, {
-			docNo: quotationForm.value.refNo,
-			docAmount: quotationForm.value.amount,
+			fileName: quotationForm.value.name.trim(),
+			docNo: quotationForm.value.refNo.trim() || null,
+			docAmount: quotationForm.value.amount ?? null,
 			docDate,
 		});
 		if (error) {
-			alert(`Failed to save changes: ${error.error.message}`);
+			snackbar.error(`Failed to update quotation: ${error.error?.message || "Unknown error"}`);
 		} else {
-			alert("Quotation details updated successfully!");
+			snackbar.success("Quotation details updated successfully!");
 			isEditQuotationDialogOpen.value = false;
 			await fetchWorkOrderFiles();
 			await fetchWorkOrderDetails();
 		}
 	} catch (e) {
 		console.error(e);
+		snackbar.error("Failed to update quotation");
 	} finally {
-		loading.value = false;
+		isSavingQuotation.value = false;
 	}
 }
-*/
 
 const totalQuotationAmount = computed(() => quotations.value.reduce((sum, q) => sum + q.amount, 0));
 
@@ -761,18 +811,15 @@ const payments = ref<PaymentRecord[]>([]);
 
 // const isAddInvoiceDialogOpen = ref(false);
 const isEditInvoiceDialogOpen = ref(false);
+const isSavingInvoice = ref(false);
+const isEditPaymentDialogOpen = ref(false);
+const isSavingPayment = ref(false);
 // const isAddPaymentDialogOpen = ref(false);
 // const isUploadingNewInvoice = ref(false);
 // const editingInvoiceId = ref<number | null>(null);
 
 const invoiceForm = ref({ refNo: "", date: "", amount: 0, name: "" });
-// const paymentForm = ref({
-// 	date: "",
-// 	amount: 0,
-// 	method: "Bank Transfer",
-// 	reference: "",
-// 	fileName: "",
-// });
+const paymentForm = ref({ reference: "", date: "", amount: 0, fileName: "" });
 
 const totalInvoiceIssued = computed(() => invoices.value.reduce((sum, inv) => sum + inv.amount, 0));
 const totalPaymentReceived = computed(() =>
@@ -780,6 +827,11 @@ const totalPaymentReceived = computed(() =>
 );
 const balanceRemaining = computed(() => totalInvoiceIssued.value - totalPaymentReceived.value);
 const isFullyPaid = computed(() => invoices.value.length > 0 && balanceRemaining.value <= 0);
+const canMarkAsComplete = computed(() => {
+	const invoiceCents = Math.round(totalInvoiceIssued.value * 100);
+	const paymentCents = Math.round(totalPaymentReceived.value * 100);
+	return invoiceCents > 0 && invoiceCents === paymentCents;
+});
 
 // function addInvoice() {
 // 	if (!invoiceForm.value.refNo || !invoiceForm.value.amount) return;
@@ -809,36 +861,81 @@ function openEditInvoice(guid: string) {
 	isEditInvoiceDialogOpen.value = true;
 }
 
-/*
 async function saveEditInvoice() {
-	loading.value = true;
+	if (!editingInvoiceGuid.value || !invoiceForm.value.name.trim()) return;
+	isSavingInvoice.value = true;
 	try {
 		const docDate = invoiceForm.value.date
 			? new Date(invoiceForm.value.date).toISOString()
-			: undefined;
+			: null;
 		const { error } = await workOrderApi.updateFile(editingInvoiceGuid.value, {
-			docNo: invoiceForm.value.refNo,
-			docAmount: invoiceForm.value.amount,
+			fileName: invoiceForm.value.name.trim(),
+			docNo: invoiceForm.value.refNo.trim() || null,
+			docAmount: invoiceForm.value.amount ?? null,
 			docDate,
 		});
 		if (error) {
-			alert(`Failed to save changes: ${error.error.message}`);
+			snackbar.error(`Failed to update invoice: ${error.error?.message || "Unknown error"}`);
 		} else {
-			alert("Invoice details updated successfully!");
+			snackbar.success("Invoice details updated successfully!");
 			isEditInvoiceDialogOpen.value = false;
 			await fetchWorkOrderFiles();
 			await fetchWorkOrderDetails();
 		}
 	} catch (e) {
 		console.error(e);
+		snackbar.error("Failed to update invoice");
 	} finally {
-		loading.value = false;
+		isSavingInvoice.value = false;
 	}
 }
-*/
+
+const editingPaymentGuid = ref("");
+
+function openEditPayment(guid: string) {
+	const found = payments.value.find((payment) => payment.guid === guid);
+	if (!found) return;
+	editingPaymentGuid.value = guid;
+	paymentForm.value = {
+		reference: found.reference,
+		date: found.date,
+		amount: found.amount,
+		fileName: found.fileName,
+	};
+	isEditPaymentDialogOpen.value = true;
+}
+
+async function saveEditPayment() {
+	if (!editingPaymentGuid.value || !paymentForm.value.fileName.trim()) return;
+	isSavingPayment.value = true;
+	try {
+		const docDate = paymentForm.value.date
+			? new Date(paymentForm.value.date).toISOString()
+			: null;
+		const { error } = await workOrderApi.updateFile(editingPaymentGuid.value, {
+			fileName: paymentForm.value.fileName.trim(),
+			docNo: paymentForm.value.reference.trim() || null,
+			docAmount: paymentForm.value.amount ?? null,
+			docDate,
+		});
+		if (error) {
+			snackbar.error(`Failed to update payment: ${error.error?.message || "Unknown error"}`);
+		} else {
+			snackbar.success("Payment details updated successfully!");
+			isEditPaymentDialogOpen.value = false;
+			await fetchWorkOrderFiles();
+			await fetchWorkOrderDetails();
+		}
+	} catch (e) {
+		console.error(e);
+		snackbar.error("Failed to update payment");
+	} finally {
+		isSavingPayment.value = false;
+	}
+}
 
 async function markAsClaimed() {
-	if (!isFullyPaid.value) return;
+	if (totalInvoiceIssued.value <= 0) return;
 	try {
 		const { error } = await workOrderApi.claim(woNumber, {
 			invoiceAmount: totalInvoiceIssued.value,
@@ -854,6 +951,33 @@ async function markAsClaimed() {
 	}
 }
 
+function markAsComplete() {
+	if (!canMarkAsComplete.value) return;
+	triggerConfirmation({
+		title: "Complete Work Order",
+		message: "Invoice and payment totals match. Mark this work order as complete?",
+		confirmText: "Mark as Complete",
+		action: async () => {
+			loading.value = true;
+			try {
+				const { error } = await workOrderApi.close(woNumber);
+				if (error) {
+					snackbar.error(`Failed to complete work order: ${error.error?.message || error.message}`);
+					return;
+				}
+				snackbar.success("Work order completed successfully!");
+				await fetchWorkOrderDetails();
+				await fetchActivityLogs();
+			} catch (e) {
+				console.error(e);
+				snackbar.error("Failed to complete work order");
+			} finally {
+				loading.value = false;
+			}
+		},
+	});
+}
+
 function printReport() {
 	window.print();
 }
@@ -862,7 +986,6 @@ function printReport() {
 const activityLogs = ref<any[]>([]);
 const workNotes = ref<any[]>([]);
 const images = ref<any[]>([]);
-const partsReplaced = computed(() => workOrder.value?.partsReplaced || []);
 
 // Date format helper
 function formatDateString(dateStr: string | Date | null) {
@@ -921,59 +1044,99 @@ async function fetchWorkOrderFiles() {
 					: Array.isArray(data.items)
 						? data.items
 						: [];
-			siteInstructionsFiles.value = items
-				.filter(
-					(f: any) =>
-						f.category === "SiteInstructions" || f.category === "site_instructions",
-				)
-				.map((f: any) => {
+			// Revoke previous blob URLs to avoid memory leaks
+			siteInstructionsFiles.value.forEach((f: any) => {
+				if (f.url && f.url.startsWith("blob:")) {
+					URL.revokeObjectURL(f.url);
+				}
+			});
+			partInfoPhotos.value.forEach((f: any) => {
+				if (f.url && f.url.startsWith("blob:")) {
+					URL.revokeObjectURL(f.url);
+				}
+			});
+			supplierInvoicePhotos.value.forEach((f: any) => {
+				if (f.url && f.url.startsWith("blob:")) {
+					URL.revokeObjectURL(f.url);
+				}
+			});
+			images.value.forEach((f: any) => {
+				if (f.url && f.url.startsWith("blob:")) {
+					URL.revokeObjectURL(f.url);
+				}
+			});
+
+			const siteInstructionsList = items.filter(
+				(f: any) =>
+					f.category === "SiteInstructions" || f.category === "site_instructions",
+			);
+			siteInstructionsFiles.value = await Promise.all(
+				siteInstructionsList.map(async (f: any) => {
 					const isImage =
 						(f.mimeType || "").startsWith("image/") ||
 						/\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.fileName || "");
 					const isPdf =
 						f.mimeType === "application/pdf" || /\.(pdf)$/i.test(f.fileName || "");
+					const rawUrl = getFileUrl(f.storageUrl, isImage || isPdf);
+					const url = await loadFileBlobUrl(rawUrl, isImage || isPdf);
 					return {
 						id: f.id,
 						guid: f.guid,
 						category: f.category,
-						url: getFileUrl(f.storageUrl, isImage || isPdf),
+						url,
 						name: f.fileName,
 						type: f.mimeType || "",
 					};
-				});
+				})
+			);
 
-			partInfoPhotos.value = items
-				.filter((f: any) => f.category === "PartInfo" || f.category === "part_info")
-				.map((f: any) => ({
-					id: f.id,
-					guid: f.guid,
-					category: f.category,
-					url: getFileUrl(f.storageUrl, true),
-					name: f.fileName,
-				}));
+			const partInfoList = items.filter((f: any) => f.category === "PartInfo" || f.category === "part_info");
+			partInfoPhotos.value = await Promise.all(
+				partInfoList.map(async (f: any) => {
+					const rawUrl = getFileUrl(f.storageUrl, true);
+					const url = await loadFileBlobUrl(rawUrl, true);
+					return {
+						id: f.id,
+						guid: f.guid,
+						category: f.category,
+						url,
+						name: f.fileName,
+					};
+				})
+			);
 
-			supplierInvoicePhotos.value = items
-				.filter(
-					(f: any) =>
-						f.category === "SupplierInvoice" || f.category === "supplier_invoices",
-				)
-				.map((f: any) => ({
-					id: f.id,
-					guid: f.guid,
-					category: f.category,
-					url: getFileUrl(f.storageUrl, true),
-					name: f.fileName,
-				}));
+			const supplierInvoiceList = items.filter(
+				(f: any) =>
+					f.category === "SupplierInvoice" || f.category === "supplier_invoices",
+			);
+			supplierInvoicePhotos.value = await Promise.all(
+				supplierInvoiceList.map(async (f: any) => {
+					const rawUrl = getFileUrl(f.storageUrl, true);
+					const url = await loadFileBlobUrl(rawUrl, true);
+					return {
+						id: f.id,
+						guid: f.guid,
+						category: f.category,
+						url,
+						name: f.fileName,
+					};
+				})
+			);
 
-			images.value = items
-				.filter((f: any) => f.category === "Image")
-				.map((f: any) => ({
-					id: f.id,
-					guid: f.guid,
-					category: f.subcategory || "Before",
-					url: getFileUrl(f.storageUrl, true),
-					name: f.fileName,
-				}));
+			const imagesList = items.filter((f: any) => f.category === "Image");
+			images.value = await Promise.all(
+				imagesList.map(async (f: any) => {
+					const rawUrl = getFileUrl(f.storageUrl, true);
+					const url = await loadFileBlobUrl(rawUrl, true);
+					return {
+						id: f.id,
+						guid: f.guid,
+						category: f.subcategory || "Before",
+						url,
+						name: f.fileName,
+					};
+				})
+			);
 
 			quotations.value = items
 				.filter((f: any) => f.category === "Quotation")
@@ -1004,7 +1167,6 @@ async function fetchWorkOrderFiles() {
 					guid: f.guid,
 					date: f.docDate ? formatDateString(f.docDate) : "",
 					amount: f.docAmount || 0,
-					method: f.notes || "Bank Transfer",
 					reference: f.docNo || "",
 					fileName: f.fileName,
 				}));
@@ -1080,49 +1242,56 @@ async function saveGeneralFormChanges() {
 }
 
 // approveDoneWorkOrder
-async function approveDoneWorkOrder() {
-	if (
-		!confirm(
-			"Are you sure you want to approve this work order? This will transition it to Completed state.",
-		)
-	)
-		return;
-	loading.value = true;
-	try {
-		const { error } = await workOrderApi.complete(woNumber);
-		if (error) {
-			snackbar.error(`Failed to approve work order: ${error.error.message}`);
-		} else {
-			snackbar.success("Work order approved successfully!");
-			await fetchWorkOrderDetails();
-			await fetchActivityLogs();
+function approveDoneWorkOrder() {
+	triggerConfirmation({
+		title: "Approve Work Order",
+		message: "Are you sure you want to approve this work order? This will transition it to Completed state.",
+		confirmText: "Approve",
+		action: async () => {
+			loading.value = true;
+			try {
+				const { error } = await workOrderApi.complete(woNumber);
+				if (error) {
+					snackbar.error(`Failed to approve work order: ${error.error.message}`);
+				} else {
+					snackbar.success("Work order approved successfully!");
+					await fetchWorkOrderDetails();
+					await fetchActivityLogs();
+				}
+			} catch (e) {
+				console.error(e);
+			} finally {
+				loading.value = false;
+			}
 		}
-	} catch (e) {
-		console.error(e);
-	} finally {
-		loading.value = false;
-	}
+	});
 }
 
-async function approvePendingWorkOrder() {
-	if (!confirm("Are you sure you want to approve this work order?")) return;
-	loading.value = true;
-	try {
-		const { error } = await workOrderApi.approve(woNumber);
-		if (error) {
-			snackbar.error(
-				`Failed to approve work order: ${error.error?.message || error.message}`,
-			);
-			return;
+function approvePendingWorkOrder() {
+	triggerConfirmation({
+		title: "Approve Work Order",
+		message: "Are you sure you want to approve this work order?",
+		confirmText: "Approve",
+		action: async () => {
+			loading.value = true;
+			try {
+				const { error } = await workOrderApi.approve(woNumber);
+				if (error) {
+					snackbar.error(
+						`Failed to approve work order: ${error.error?.message || error.message}`,
+					);
+					return;
+				}
+				snackbar.success("Work order approved successfully!");
+				await fetchWorkOrderDetails();
+				await fetchActivityLogs();
+			} catch (e) {
+				console.error(e);
+			} finally {
+				loading.value = false;
+			}
 		}
-		snackbar.success("Work order approved successfully!");
-		await fetchWorkOrderDetails();
-		await fetchActivityLogs();
-	} catch (e) {
-		console.error(e);
-	} finally {
-		loading.value = false;
-	}
+	});
 }
 
 // Reject dialog triggers & handlers
@@ -1172,7 +1341,7 @@ const isEditingNote = ref(false);
 const editingNoteGuid = ref("");
 const noteForm = ref({
 	content: "",
-	viewLevel: "external",
+	viewLevel: "customer",
 });
 
 function openAddNoteDialog() {
@@ -1180,7 +1349,7 @@ function openAddNoteDialog() {
 	editingNoteGuid.value = "";
 	noteForm.value = {
 		content: "",
-		viewLevel: "external",
+		viewLevel: "customer",
 	};
 	isNoteDialogOpen.value = true;
 }
@@ -1190,7 +1359,7 @@ function openEditNoteDialog(note: any) {
 	editingNoteGuid.value = note.guid;
 	noteForm.value = {
 		content: note.content || "",
-		viewLevel: note.viewLevel || "external",
+		viewLevel: note.viewLevel || "customer",
 	};
 	isNoteDialogOpen.value = true;
 }
@@ -1232,55 +1401,141 @@ async function submitWorkNote() {
 	}
 }
 
-async function deleteWorkNote(noteGuid: string) {
-	if (!confirm("Are you sure you want to delete this note?")) return;
-	loading.value = true;
-	try {
-		const { error } = await workOrderApi.deleteNote(noteGuid);
-		if (error) {
-			snackbar.error(`Failed to delete note: ${error.error.message}`);
-		} else {
-			snackbar.success("Note deleted successfully!");
-			await fetchWorkNotes();
+function deleteWorkNote(noteGuid: string) {
+	triggerConfirmation({
+		title: "Delete Work Note",
+		message: "Are you sure you want to delete this note?",
+		variant: "danger",
+		confirmText: "Delete",
+		action: async () => {
+			loading.value = true;
+			try {
+				const { error } = await workOrderApi.deleteNote(noteGuid);
+				if (error) {
+					snackbar.error(`Failed to delete note: ${error.error.message}`);
+				} else {
+					snackbar.success("Note deleted successfully!");
+					await fetchWorkNotes();
+				}
+			} catch (e) {
+				console.error(e);
+			} finally {
+				loading.value = false;
+			}
 		}
-	} catch (e) {
-		console.error(e);
-	} finally {
-		loading.value = false;
+	});
+}
+
+// Generic Confirmation Dialog State
+const isConfirmDialogOpen = ref(false);
+const confirmTitle = ref("");
+const confirmMessage = ref("");
+const confirmAction = ref<(() => void) | null>(null);
+const confirmVariant = ref<"primary" | "secondary" | "outlined" | "danger">("primary");
+const confirmButtonText = ref("");
+
+function triggerConfirmation(options: {
+	title: string;
+	message: string;
+	action: () => void;
+	variant?: "primary" | "secondary" | "outlined" | "danger";
+	confirmText?: string;
+}) {
+	confirmTitle.value = options.title;
+	confirmMessage.value = options.message;
+	confirmAction.value = options.action;
+	confirmVariant.value = options.variant || "primary";
+	confirmButtonText.value = options.confirmText || "Confirm";
+	isConfirmDialogOpen.value = true;
+}
+
+function handleConfirmDialog() {
+	if (confirmAction.value) {
+		confirmAction.value();
 	}
+	isConfirmDialogOpen.value = false;
+	confirmAction.value = null;
 }
 
 // File Upload & Deletion handlers
-async function handleFileUpload(
-	event: Event,
-	category: string,
-	subcategory?: string,
-	extra?: Record<string, any>,
-) {
-	const target = event.target as HTMLInputElement;
-	if (!target.files || target.files.length === 0) return;
-	const file = target.files[0];
+function isPdfFile(fileName: string) {
+	return /\.(pdf)$/i.test(fileName || "");
+}
+
+// File Upload Dialog State
+const isUploadConfirmOpen = ref(false);
+const uploadTargetFile = ref<File | null>(null);
+const uploadTargetCategory = ref("");
+const uploadTargetSubcategory = ref("");
+const uploadTargetEvent = ref<Event | null>(null);
+const uploadCustomFileName = ref("");
+const uploadPreviewUrl = ref("");
+
+// Image Preview & Rename Dialog State
+const isPreviewDialogOpen = ref(false);
+const previewTargetFile = ref<any | null>(null);
+const previewCustomFileName = ref("");
+const isLoadingFilePreview = ref(false);
+const filePreviewError = ref("");
+const previewObjectUrl = ref("");
+
+function cancelFileUpload() {
+	isUploadConfirmOpen.value = false;
+	if (uploadPreviewUrl.value) {
+		URL.revokeObjectURL(uploadPreviewUrl.value);
+		uploadPreviewUrl.value = "";
+	}
+	if (uploadTargetEvent.value) {
+		const target = uploadTargetEvent.value.target as HTMLInputElement;
+		target.value = ""; // Reset file input
+	}
+	uploadTargetFile.value = null;
+	uploadTargetEvent.value = null;
+}
+
+async function confirmFileUpload() {
+	if (!uploadTargetFile.value) return;
+	const file = uploadTargetFile.value;
+	const category = uploadTargetCategory.value;
+	const subcategory = uploadTargetSubcategory.value;
+	const event = uploadTargetEvent.value;
+
+	// Construct the final filename with extension
+	const lastDot = file.name.lastIndexOf(".");
+	const extension = lastDot !== -1 ? file.name.substring(lastDot) : "";
+	const finalName = uploadCustomFileName.value.trim() + extension;
+
+	// Create renamed File object
+	const renamedFile = new File([file], finalName, { type: file.type });
 
 	loading.value = true;
+	isUploadConfirmOpen.value = false;
 	try {
 		const fd = new FormData();
-		fd.append("file", file);
+		fd.append("file", renamedFile);
 		fd.append("category", category);
 		if (subcategory) {
 			fd.append("subcategory", subcategory);
 		}
-		if (extra) {
-			Object.entries(extra).forEach(([k, v]) => {
-				if (v !== undefined && v !== null) {
-					fd.append(k, String(v));
-				}
-			});
-		}
 
 		const response = await workOrderApi.uploadFile(workOrder.value.guid, fd);
-		const resData = await response.json();
-		if (resData.error) {
-			snackbar.error(`Upload failed: ${resData.error.message || "Unknown error"}`);
+		const resData = await response.json().catch(() => null);
+		if (!response.ok) {
+			const message = resData?.error?.message || resData?.message || `Upload failed (${response.status})`;
+			console.error(
+				`File upload failed: ${JSON.stringify({ status: response.status, message, response: resData })}`,
+			);
+			snackbar.error(message);
+			return;
+		}
+
+		if (resData?.error) {
+			const errMsg = resData.error.message || "";
+			if (errMsg.toLowerCase().includes("internal server error")) {
+				snackbar.error("Upload failed: Invalid File Format");
+			} else {
+				snackbar.error(`Upload failed: ${errMsg}`);
+			}
 		} else {
 			snackbar.success("File uploaded successfully!");
 			await fetchWorkOrderFiles();
@@ -1288,43 +1543,160 @@ async function handleFileUpload(
 		}
 	} catch (e) {
 		console.error("Upload error:", e);
-		snackbar.error("Upload error");
+		snackbar.error("Upload failed: Invalid File Format");
 	} finally {
 		loading.value = false;
-		target.value = ""; // Reset file input
+		if (event) {
+			const target = event.target as HTMLInputElement;
+			target.value = ""; // Reset file input
+		}
+		if (uploadPreviewUrl.value) {
+			URL.revokeObjectURL(uploadPreviewUrl.value);
+			uploadPreviewUrl.value = "";
+		}
+		uploadTargetFile.value = null;
+		uploadTargetEvent.value = null;
 	}
 }
 
-async function handleDeleteFile(fileGuid: string) {
-	if (!confirm("Are you sure you want to delete this file?")) return;
+async function openFilePreview(file: any) {
+	const fileName = file.name || file.fileName || "File";
+	previewTargetFile.value = { ...file, name: fileName, url: file.url || "" };
+	const lastDot = fileName.lastIndexOf(".");
+	const baseName = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
+	previewCustomFileName.value = baseName;
+	filePreviewError.value = "";
+	isPreviewDialogOpen.value = true;
+
+	if (file.url || !file.guid) return;
+
+	isLoadingFilePreview.value = true;
+	try {
+		const response = await http.get(`/work-order/files/${file.guid}/preview`, {
+			responseType: "blob",
+		});
+		previewObjectUrl.value = URL.createObjectURL(response.data);
+		if (previewTargetFile.value?.guid === file.guid) {
+			previewTargetFile.value = { ...file, url: previewObjectUrl.value };
+		}
+	} catch (error) {
+		console.error("Failed to load file preview:", error);
+		filePreviewError.value = "Unable to load this file. Please try again.";
+	} finally {
+		isLoadingFilePreview.value = false;
+	}
+}
+
+watch(isPreviewDialogOpen, (isOpen) => {
+	if (isOpen) return;
+	if (previewObjectUrl.value) {
+		URL.revokeObjectURL(previewObjectUrl.value);
+		previewObjectUrl.value = "";
+	}
+	previewTargetFile.value = null;
+	filePreviewError.value = "";
+});
+
+async function savePreviewFileRename() {
+	if (!previewTargetFile.value || !previewCustomFileName.value.trim()) return;
+	const file = previewTargetFile.value;
+
+	const lastDot = file.name.lastIndexOf(".");
+	const extension = lastDot !== -1 ? file.name.substring(lastDot) : "";
+	const finalName = previewCustomFileName.value.trim() + extension;
+
 	loading.value = true;
 	try {
-		const { error } = await workOrderApi.deleteFile(fileGuid);
-		if (error) {
-			snackbar.error(`Failed to delete file: ${error.error.message}`);
-		} else {
-			snackbar.success("File deleted successfully!");
-			await fetchWorkOrderFiles();
-			await fetchWorkOrderDetails();
-		}
+		await workOrderApi.updateFile(file.guid, { fileName: finalName });
+		snackbar.success("File renamed successfully!");
+		await fetchWorkOrderFiles();
+		await fetchWorkOrderDetails();
 	} catch (e) {
-		console.error(e);
+		console.error("Failed to rename file:", e);
+		snackbar.error("Failed to rename file");
 	} finally {
 		loading.value = false;
+		isPreviewDialogOpen.value = false;
+		previewTargetFile.value = null;
 	}
+}
+
+async function handleFileUpload(
+	event: Event,
+	category: string,
+	subcategory?: string,
+) {
+	const target = event.target as HTMLInputElement;
+	if (!target.files || target.files.length === 0) return;
+	const file = target.files[0];
+
+	// Validate file type
+	const imageExtensions = /\.(jpg|jpeg|png|gif|webp|heic)$/i;
+	const pdfExtensions = /\.(pdf)$/i;
+	const fileName = file.name;
+
+	if (category === "PartInfo" || category === "Image") {
+		if (!imageExtensions.test(fileName) && !file.type.startsWith("image/")) {
+			snackbar.error("Invalid File Type. Only image files are allowed.");
+			target.value = "";
+			return;
+		}
+	} else if (category === "SupplierInvoice" || category === "Quotation" || category === "Invoice" || category === "Payment") {
+		const isImg = imageExtensions.test(fileName) || file.type.startsWith("image/");
+		const isPdf = pdfExtensions.test(fileName) || file.type === "application/pdf";
+		if (!isImg && !isPdf) {
+			snackbar.error("Invalid File Type. Only PDF and image files are allowed.");
+			target.value = "";
+			return;
+		}
+	}
+
+	uploadTargetFile.value = file;
+	uploadTargetCategory.value = category;
+	uploadTargetSubcategory.value = subcategory || "";
+	uploadTargetEvent.value = event;
+
+	const lastDot = file.name.lastIndexOf(".");
+	const baseName = lastDot !== -1 ? file.name.substring(0, lastDot) : file.name;
+	uploadCustomFileName.value = baseName;
+
+	if (file.type.startsWith("image/")) {
+		uploadPreviewUrl.value = URL.createObjectURL(file);
+	} else {
+		uploadPreviewUrl.value = "";
+	}
+
+	isUploadConfirmOpen.value = true;
+}
+
+function handleDeleteFile(fileGuid: string) {
+	triggerConfirmation({
+		title: "Delete File",
+		message: "Are you sure you want to delete this file?",
+		variant: "danger",
+		confirmText: "Delete",
+		action: async () => {
+			loading.value = true;
+			try {
+				const { error } = await workOrderApi.deleteFile(fileGuid);
+				if (error) {
+					snackbar.error(`Failed to delete file: ${error.error.message}`);
+				} else {
+					snackbar.success("File deleted successfully!");
+					await fetchWorkOrderFiles();
+					await fetchWorkOrderDetails();
+				}
+			} catch (e) {
+				console.error(e);
+			} finally {
+				loading.value = false;
+			}
+		}
+	});
 }
 
 function uploadJobImage(data: { event: Event; category: string }) {
 	handleFileUpload(data.event, "Image", data.category);
-}
-
-async function renameFile(img: any) {
-	if (!img.guid || !img.name) return;
-	try {
-		await workOrderApi.updateFile(img.guid, { fileName: img.name });
-	} catch (e) {
-		console.error("Failed to rename file:", e);
-	}
 }
 
 onMounted(async () => {
@@ -1370,11 +1742,35 @@ onMounted(async () => {
 	}
 });
 
+function revokeAllFileUrls() {
+	siteInstructionsFiles.value.forEach((f: any) => {
+		if (f.url && f.url.startsWith("blob:")) {
+			URL.revokeObjectURL(f.url);
+		}
+	});
+	partInfoPhotos.value.forEach((f: any) => {
+		if (f.url && f.url.startsWith("blob:")) {
+			URL.revokeObjectURL(f.url);
+		}
+	});
+	supplierInvoicePhotos.value.forEach((f: any) => {
+		if (f.url && f.url.startsWith("blob:")) {
+			URL.revokeObjectURL(f.url);
+		}
+	});
+	images.value.forEach((f: any) => {
+		if (f.url && f.url.startsWith("blob:")) {
+			URL.revokeObjectURL(f.url);
+		}
+	});
+}
+
 onUnmounted(() => {
 	window.removeEventListener("resize", updateTabArrows);
 	if (tabsWrapperRef.value) {
 		tabsWrapperRef.value.removeEventListener("scroll", updateTabArrows);
 	}
+	revokeAllFileUrls();
 });
 </script>
 
@@ -1398,7 +1794,16 @@ onUnmounted(() => {
 					<i class="mdi mdi-chevron-left" style="margin-right: 4px"></i> Back
 				</Button>
 				<Button
-					v-if="isDraftOrNew"
+					v-if="
+						(isDraftOrNew &&
+							normalizedWorkOrderStatus === 'draft' &&
+							authStore.can('update_draft', 'WorkOrder') &&
+							canEditForCurrentAssignment) ||
+						(isDraftOrNew &&
+							normalizedWorkOrderStatus === 'new' &&
+							authStore.can('update_new', 'WorkOrder') &&
+							canEditForCurrentAssignment)
+					"
 					variant="primary"
 					@click="
 						router.push({
@@ -1410,12 +1815,24 @@ onUnmounted(() => {
 					<i class="mdi mdi-note-edit-outline" style="margin-right: 4px"></i>
 					Edit
 				</Button>
-				<template v-if="isPendingApproval && isManager">
-					<Button variant="primary" @click="approvePendingWorkOrder">
+				<template
+					v-if="
+						isPendingApproval &&
+						isManager &&
+						(authStore.can('approve', 'WorkOrder') ||
+							authStore.can('reject', 'WorkOrder'))
+					"
+				>
+					<Button
+						v-if="authStore.can('approve', 'WorkOrder')"
+						variant="primary"
+						@click="approvePendingWorkOrder"
+					>
 						<i class="mdi mdi-check-circle-outline" style="margin-right: 4px"></i>
 						Approve
 					</Button>
 					<Button
+						v-if="authStore.can('reject', 'WorkOrder')"
 						variant="outlined"
 						style="color: var(--colors-error); border-color: var(--colors-error)"
 						@click="openRejectDoneDialog"
@@ -1426,8 +1843,16 @@ onUnmounted(() => {
 				</template>
 
 				<!-- Approve / Reject for Done state -->
-				<template v-if="workOrder?.status === 'Done' && isManager">
+				<template
+					v-if="
+						workOrder?.status === 'Done' &&
+						isManager &&
+						(authStore.can('mark_as_completed', 'WorkOrder') ||
+							authStore.can('reject', 'WorkOrder'))
+					"
+				>
 					<Button
+						v-if="authStore.can('mark_as_completed', 'WorkOrder')"
 						variant="primary"
 						style="
 							background-color: var(--colors-success);
@@ -1439,6 +1864,7 @@ onUnmounted(() => {
 						Approve
 					</Button>
 					<Button
+						v-if="authStore.can('reject', 'WorkOrder')"
 						variant="outlined"
 						style="color: var(--colors-error); border-color: var(--colors-error)"
 						@click="openRejectDoneDialog"
@@ -1456,21 +1882,51 @@ onUnmounted(() => {
 					<i class="mdi mdi-transfer" style="margin-right: 4px"></i> Transfer
 				</Button>
 				-->
-				<Button variant="primary" @click="markAsDone" v-if="isEditing">Mark as Done</Button>
+				<Button
+					v-if="
+						isEditing &&
+						authStore.can('mark_as_done', 'WorkOrder') &&
+						canEditForCurrentAssignment
+					"
+					variant="primary"
+					@click="markAsDone"
+				>
+					Mark as Done
+				</Button>
 				<Button
 					v-slot:default
-					v-if="workOrder?.status === 'Completed'"
+					v-if="
+						workOrder?.status === 'Completed' &&
+						authStore.can('mark_as_claimed', 'WorkOrder')
+					"
 					variant="primary"
-					:disabled="!isFullyPaid"
+					:disabled="totalInvoiceIssued <= 0"
 					:title="
-						isFullyPaid
+						totalInvoiceIssued > 0
 							? 'Mark as Claimed'
-							: 'Total payment received must equal total invoice issued'
+							: 'Upload an invoice with an amount before marking as claimed'
 					"
 					@click="markAsClaimed"
 					style="display: flex; align-items: center; gap: 6px"
 				>
 					<i class="mdi mdi-cash-check"></i> Mark as Claimed
+				</Button>
+				<Button
+					v-if="
+						workOrder?.status === 'Claimed' &&
+						authStore.can('mark_as_closed', 'WorkOrder')
+					"
+					variant="primary"
+					:disabled="!canMarkAsComplete"
+					:title="
+						canMarkAsComplete
+							? 'Mark as Complete'
+							: 'Invoice total must equal payment total before completing'
+					"
+					@click="markAsComplete"
+					style="display: flex; align-items: center; gap: 6px"
+				>
+					<i class="mdi mdi-check-decagram-outline"></i> Mark as Complete
 				</Button>
 			</div>
 		</div>
@@ -1600,6 +2056,7 @@ onUnmounted(() => {
 						:workOrderStatus="workOrder?.status"
 						@upload="handleFileUpload($event, 'PartInfo')"
 						@delete="handleDeleteFile"
+						@preview="openFilePreview"
 					/>
 
 					<!-- SUPPLIER INVOICES TAB (12 photos) -->
@@ -1611,6 +2068,7 @@ onUnmounted(() => {
 						:workOrderStatus="workOrder?.status"
 						@upload="handleFileUpload($event, 'SupplierInvoice')"
 						@delete="handleDeleteFile"
+						@preview="openFilePreview"
 					/>
 
 					<!-- IMAGES -->
@@ -1622,13 +2080,14 @@ onUnmounted(() => {
 						:workOrderStatus="workOrder?.status"
 						@upload="uploadJobImage"
 						@delete="handleDeleteFile"
-						@rename="renameFile"
+						@preview="openFilePreview"
 					/>
 
 					<!-- WORK NOTES -->
 					<NotesTab
 						v-if="activeTab === 'notes'"
 						:workNotes="workNotes"
+						:users="users"
 						:workOrderStatus="workOrder?.status"
 						@addNote="openAddNoteDialog"
 						@editNote="openEditNoteDialog"
@@ -1641,9 +2100,12 @@ onUnmounted(() => {
 						:quotations="quotations"
 						:totalQuotationAmount="totalQuotationAmount"
 						:workOrderStatus="workOrder?.status"
+						:isEditing="isEditing"
+						:isManager="isManager"
 						@upload="handleFileUpload($event, 'Quotation')"
 						@delete="handleDeleteFile"
 						@edit="openEditQuotation"
+						@preview="openFilePreview"
 					/>
 
 					<!-- VERIFICATION -->
@@ -1673,13 +2135,15 @@ onUnmounted(() => {
 						@deleteFile="handleDeleteFile"
 						@uploadPayment="handleFileUpload($event, 'Payment')"
 						@deletePayment="handleDeleteFile"
+						@preview="openFilePreview"
+						@editPayment="openEditPayment"
 					/>
 
 					<!-- REPORT -->
 					<ReportTab
 						v-if="activeTab === 'report'"
 						:workOrder="workOrder"
-						:partsReplaced="partsReplaced"
+						:partReplacedImages="partInfoPhotos"
 						:images="images"
 						@print="printReport"
 					/>
@@ -1717,6 +2181,182 @@ onUnmounted(() => {
 				</Card>
 			</div>
 		</div>
+
+		<!-- Edit Quotation Dialog -->
+		<Dialog v-model="isEditQuotationDialogOpen" title="Edit Quotation Details" maxWidth="580px">
+			<div style="display: flex; flex-direction: column; gap: 18px">
+				<div
+					style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--colors-surface-secondary, #f6f7fb); color: var(--colors-text-secondary, #5f6472)"
+				>
+					<i class="mdi mdi-text-recognition" style="font-size: 22px; color: var(--colors-brand-primary)"></i>
+					<p style="margin: 0; font-size: 13px; line-height: 1.5">
+						Review and correct any details that were read incorrectly from the quotation.
+						The original uploaded file will not be changed.
+					</p>
+				</div>
+
+				<Textbox
+					v-model="quotationForm.name"
+					label="File Name *"
+					placeholder="e.g. Quotation_QT-2026-001.pdf"
+					hide-footer
+				/>
+
+				<Textbox
+					v-model="quotationForm.refNo"
+					label="Quotation No."
+					placeholder="Enter quotation number"
+					hide-footer
+				/>
+
+				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px">
+					<DatePicker
+						v-model="quotationForm.date"
+						label="Quotation Date"
+						:enableTime="false"
+					/>
+					<Textbox
+						v-model="quotationForm.amount"
+						label="Amount (RM)"
+						type="number"
+						placeholder="0.00"
+						hide-footer
+					>
+						<template #prefix><span style="font-size: 13px; color: var(--colors-text-muted)">RM</span></template>
+					</Textbox>
+				</div>
+			</div>
+
+			<template #footer>
+				<Button variant="secondary" :disabled="isSavingQuotation" @click="isEditQuotationDialogOpen = false">
+					Cancel
+				</Button>
+				<Button
+					variant="primary"
+					:loading="isSavingQuotation"
+					:disabled="!quotationForm.name.trim() || isSavingQuotation"
+					@click="saveEditQuotation"
+				>
+					Save Changes
+				</Button>
+			</template>
+		</Dialog>
+
+		<!-- Edit Invoice Dialog -->
+		<Dialog v-model="isEditInvoiceDialogOpen" title="Edit Invoice Details" maxWidth="580px">
+			<div style="display: flex; flex-direction: column; gap: 18px">
+				<div
+					style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--colors-surface-secondary, #f6f7fb); color: var(--colors-text-secondary, #5f6472)"
+				>
+					<i class="mdi mdi-text-recognition" style="font-size: 22px; color: var(--colors-brand-primary)"></i>
+					<p style="margin: 0; font-size: 13px; line-height: 1.5">
+						Review and correct any details that were read incorrectly from the invoice.
+						The original uploaded file will not be changed.
+					</p>
+				</div>
+
+				<Textbox
+					v-model="invoiceForm.name"
+					label="File Name *"
+					placeholder="e.g. Invoice_I-000008.pdf"
+					hide-footer
+				/>
+				<Textbox
+					v-model="invoiceForm.refNo"
+					label="Invoice No."
+					placeholder="Enter invoice number"
+					hide-footer
+				/>
+				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px">
+					<DatePicker
+						v-model="invoiceForm.date"
+						label="Invoice Date"
+						:enableTime="false"
+					/>
+					<Textbox
+						v-model="invoiceForm.amount"
+						label="Amount (RM)"
+						type="number"
+						placeholder="0.00"
+						hide-footer
+					>
+						<template #prefix><span style="font-size: 13px; color: var(--colors-text-muted)">RM</span></template>
+					</Textbox>
+				</div>
+			</div>
+
+			<template #footer>
+				<Button variant="secondary" :disabled="isSavingInvoice" @click="isEditInvoiceDialogOpen = false">
+					Cancel
+				</Button>
+				<Button
+					variant="primary"
+					:loading="isSavingInvoice"
+					:disabled="!invoiceForm.name.trim() || isSavingInvoice"
+					@click="saveEditInvoice"
+				>
+					Save Changes
+				</Button>
+			</template>
+		</Dialog>
+
+		<!-- Edit Payment Dialog -->
+		<Dialog v-model="isEditPaymentDialogOpen" title="Edit Payment Details" maxWidth="580px">
+			<div style="display: flex; flex-direction: column; gap: 18px">
+				<div
+					style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--colors-surface-secondary, #f6f7fb); color: var(--colors-text-secondary, #5f6472)"
+				>
+					<i class="mdi mdi-text-recognition" style="font-size: 22px; color: var(--colors-brand-primary)"></i>
+					<p style="margin: 0; font-size: 13px; line-height: 1.5">
+						Review and correct any details that were read incorrectly from the payment file.
+						The original uploaded file will not be changed.
+					</p>
+				</div>
+
+				<Textbox
+					v-model="paymentForm.fileName"
+					label="File Name *"
+					placeholder="e.g. Payment_Receipt.pdf"
+					hide-footer
+				/>
+				<Textbox
+					v-model="paymentForm.reference"
+					label="Payment Reference"
+					placeholder="Enter payment reference"
+					hide-footer
+				/>
+				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px">
+					<DatePicker
+						v-model="paymentForm.date"
+						label="Payment Date"
+						:enableTime="false"
+					/>
+					<Textbox
+						v-model="paymentForm.amount"
+						label="Amount (RM)"
+						type="number"
+						placeholder="0.00"
+						hide-footer
+					>
+						<template #prefix><span style="font-size: 13px; color: var(--colors-text-muted)">RM</span></template>
+					</Textbox>
+				</div>
+			</div>
+
+			<template #footer>
+				<Button variant="secondary" :disabled="isSavingPayment" @click="isEditPaymentDialogOpen = false">
+					Cancel
+				</Button>
+				<Button
+					variant="primary"
+					:loading="isSavingPayment"
+					:disabled="!paymentForm.fileName.trim() || isSavingPayment"
+					@click="saveEditPayment"
+				>
+					Save Changes
+				</Button>
+			</template>
+		</Dialog>
 
 		<!-- Repeat Work Order Dialog -->
 		<Dialog v-model="isRepeatDialogOpen" title="Repeat Work Order" maxWidth="520px">
@@ -1929,14 +2569,7 @@ onUnmounted(() => {
 					<label class="custom-label">View Level *</label>
 					<select
 						v-model="noteForm.viewLevel"
-						style="
-							width: 100%;
-							padding: 10px;
-							border-radius: 6px;
-							border: 1px solid var(--colors-border);
-							background-color: var(--colors-bg-card);
-							color: var(--colors-text-primary);
-						"
+						class="custom-select"
 					>
 						<option value="internal">Internal (Team Only)</option>
 						<option value="customer">External (Customer Viewable)</option>
@@ -1953,7 +2586,190 @@ onUnmounted(() => {
 				>
 					Save Note
 				</Button>
+				</template>
+		</Dialog>
+		
+
+		<!-- Upload Confirmation & Rename Dialog -->
+		<Dialog
+			v-model="isUploadConfirmOpen"
+			title="Upload File"
+			maxWidth="500px"
+		>
+			<div style="display: flex; flex-direction: column; gap: 16px; align-items: center">
+				<!-- Small Preview -->
+				<div
+					v-if="uploadPreviewUrl"
+					style="
+						width: 120px;
+						height: 120px;
+						border-radius: 8px;
+						overflow: hidden;
+						border: 1px solid var(--colors-surface-border);
+					"
+				>
+					<img :src="uploadPreviewUrl" style="width: 100%; height: 100%; object-fit: cover" />
+				</div>
+				<div
+					v-else-if="uploadTargetFile"
+					style="
+						width: 120px;
+						height: 120px;
+						border-radius: 8px;
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						justify-content: center;
+						background: rgba(239, 68, 68, 0.05);
+						color: #ef4444;
+					"
+				>
+					<i class="mdi mdi-file-pdf-box" style="font-size: 48px"></i>
+					<span style="font-size: 11px; font-weight: 600">PDF Document</span>
+				</div>
+
+				<!-- Filename Input -->
+				<div class="textbox-field" style="width: 100%">
+					<label class="custom-label">File Name</label>
+					<input
+						type="text"
+						v-model="uploadCustomFileName"
+						class="custom-input"
+						placeholder="Enter filename..."
+						required
+					/>
+				</div>
+			</div>
+			<template #footer>
+				<Button variant="secondary" @click="cancelFileUpload">Cancel</Button>
+				<Button
+					variant="primary"
+					@click="confirmFileUpload"
+					:disabled="!uploadCustomFileName.trim()"
+				>
+					Upload
+				</Button>
 			</template>
+		</Dialog>
+
+		<!-- File Preview & Rename Dialog -->
+		<Dialog
+			v-model="isPreviewDialogOpen"
+			title="File Preview & Details"
+			maxWidth="600px"
+		>
+			<div style="display: flex; flex-direction: column; gap: 16px; align-items: center">
+				<div
+					v-if="isLoadingFilePreview"
+					style="height: 320px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--colors-text-muted)"
+				>
+					<i class="mdi mdi-loading mdi-spin" style="font-size: 34px; color: var(--colors-brand-primary)"></i>
+					<span style="font-size: 13px">Loading file preview...</span>
+				</div>
+				<div
+					v-else-if="filePreviewError"
+					style="height: 240px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 1px dashed var(--colors-surface-border); border-radius: 8px; color: var(--colors-text-muted)"
+				>
+					<i class="mdi mdi-file-alert-outline" style="font-size: 38px; color: var(--colors-error, #ef4444)"></i>
+					<span style="font-size: 13px">{{ filePreviewError }}</span>
+					<Button variant="secondary" @click="previewTargetFile && openFilePreview(previewTargetFile)">
+						Try Again
+					</Button>
+				</div>
+				<!-- Preview media -->
+				<div v-else-if="previewTargetFile?.url" style="width: 100%">
+					<!-- PDF File Preview -->
+					<div
+						v-if="isPdfFile(previewTargetFile.name)"
+						style="width: 100%; display: flex; flex-direction: column; gap: 12px"
+					>
+						<iframe
+							:src="previewTargetFile.url"
+							style="width: 100%; height: 480px; border: 1px solid var(--colors-surface-border); border-radius: 8px; background: white;"
+						></iframe>
+						<a
+							:href="previewTargetFile.url"
+							target="_blank"
+							style="
+								display: flex;
+								align-items: center;
+								justify-content: center;
+								gap: 6px;
+								padding: 10px;
+								background: rgba(239, 68, 68, 0.05);
+								border: 1px solid rgba(239, 68, 68, 0.15);
+								border-radius: 6px;
+								color: #ef4444;
+								text-decoration: none;
+								font-size: 13px;
+								font-weight: 600;
+								transition: all 0.2s;
+							"
+						>
+							<i class="mdi mdi-open-in-new" style="font-size: 16px"></i>
+							Open PDF in New Tab
+						</a>
+					</div>
+					<!-- Image File Preview -->
+					<div
+						v-else
+						style="
+							width: 100%;
+							max-height: 320px;
+							border-radius: 8px;
+							overflow: hidden;
+							background: var(--colors-surface-background);
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							border: 1px solid var(--colors-surface-border);
+						"
+					>
+						<img
+							:src="previewTargetFile.url"
+							style="max-width: 100%; max-height: 320px; object-fit: contain"
+						/>
+					</div>
+				</div>
+
+				<!-- Rename Input -->
+				<div class="textbox-field" style="width: 100%">
+					<label class="custom-label">File Name</label>
+					<input
+						type="text"
+						v-model="previewCustomFileName"
+						class="custom-input"
+						:disabled="!isEditing"
+						placeholder="Enter file name..."
+					/>
+				</div>
+			</div>
+			<template #footer>
+				<Button variant="secondary" @click="isPreviewDialogOpen = false">Close</Button>
+				<Button
+					v-if="isEditing && previewTargetFile"
+					variant="primary"
+					@click="savePreviewFileRename"
+					:disabled="!previewCustomFileName.trim()"
+				>
+					Save Changes
+				</Button>
+			</template>
+		</Dialog>
+
+		<!-- Reusable Confirmation Dialog -->
+		<Dialog
+			v-model="isConfirmDialogOpen"
+			:title="confirmTitle"
+			maxWidth="440px"
+			:confirmText="confirmButtonText"
+			:confirmVariant="confirmVariant"
+			@confirm="handleConfirmDialog"
+			@cancel="isConfirmDialogOpen = false"
+		>
+			<p style="margin: 0; font-size: 14px; color: var(--colors-text-secondary); line-height: 1.5">
+				{{ confirmMessage }}
+			</p>
 		</Dialog>
 	</div>
 </template>
@@ -2224,21 +3040,33 @@ onUnmounted(() => {
 	padding: 32px;
 	border-radius: 12px;
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-	.card-header {
-		margin-bottom: 24px;
+	:deep(.card-header),
+	:deep(.report-toolbar) {
+		margin: -32px -32px 24px -32px !important;
+		padding: 20px 32px !important;
+		background: var(--colors-surface-background) !important;
+		border-bottom: 1px solid var(--colors-surface-border) !important;
+		border-top-left-radius: 12px !important;
+		border-top-right-radius: 12px !important;
+		box-sizing: border-box !important;
+
 		.header-title-flex {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 		}
+
 		h3 {
-			margin: 0 0 8px 0;
-			font-size: 20px;
+			margin: 0;
+			font-size: 18px;
+			font-weight: 600;
 			color: var(--colors-text-primary);
 		}
+
 		p {
-			margin: 0;
-			font-size: 14px;
+			margin: 4px 0 0 0;
+			font-size: 13px;
+			color: var(--colors-text-muted);
 		}
 	}
 }
@@ -2400,6 +3228,71 @@ onUnmounted(() => {
 			font-size: 11px;
 			color: var(--colors-text-muted);
 		}
+	}
+}
+
+.custom-label {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--colors-text-primary, #0f172a);
+}
+
+.custom-textarea {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--colors-surface-border, #cbd5e1);
+	border-radius: 6px;
+	background-color: var(--colors-surface-background, #f8fafc);
+	color: var(--colors-text-primary, #0f172a);
+	font-family: inherit;
+	font-size: 14px;
+	line-height: 1.5;
+	resize: vertical;
+	transition: border-color 0.2s, box-shadow 0.2s;
+
+	&:focus {
+		outline: none;
+		border-color: var(--colors-brand-primary, #5058f2);
+		box-shadow: 0 0 0 3px rgba(80, 88, 242, 0.1);
+	}
+}
+
+.custom-input {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--colors-surface-border, #cbd5e1);
+	border-radius: 6px;
+	background-color: var(--colors-surface-background, #f8fafc);
+	color: var(--colors-text-primary, #0f172a);
+	font-family: inherit;
+	font-size: 14px;
+	transition: border-color 0.2s, box-shadow 0.2s;
+
+	&:focus {
+		outline: none;
+		border-color: var(--colors-brand-primary, #5058f2);
+		box-shadow: 0 0 0 3px rgba(80, 88, 242, 0.1);
+	}
+}
+
+.custom-select {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--colors-surface-border, #cbd5e1);
+	border-radius: 6px;
+	background-color: var(--colors-surface-background, #f8fafc);
+	color: var(--colors-text-primary, #0f172a);
+	font-family: inherit;
+	font-size: 14px;
+	cursor: pointer;
+	transition: border-color 0.2s, box-shadow 0.2s;
+
+	&:focus {
+		outline: none;
+		border-color: var(--colors-brand-primary, #5058f2);
+		box-shadow: 0 0 0 3px rgba(80, 88, 242, 0.1);
 	}
 }
 

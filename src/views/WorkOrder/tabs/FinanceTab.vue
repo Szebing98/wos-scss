@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import Button from "@/components/Button.vue";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
 
@@ -7,12 +7,18 @@ const props = defineProps<{
 	quotations: any[];
 	totalQuotationAmount: number;
 	workOrderStatus: string;
+	isEditing: boolean;
+	isManager: boolean;
 }>();
 
-const emit = defineEmits(["upload", "delete", "edit"]);
+const emit = defineEmits(["upload", "delete", "edit", "preview"]);
 
 const quotationInput = ref<HTMLInputElement | null>(null);
 const dateFormatStore = useDateFormatStore();
+
+const canUpload = computed(() => {
+	return props.isEditing || props.workOrderStatus === 'InProgress' || (props.isManager && props.workOrderStatus === 'Claimed');
+});
 </script>
 
 <template>
@@ -43,7 +49,8 @@ const dateFormatStore = useDateFormatStore();
 					<i class="mdi mdi-file-document-multiple"></i> Quotations
 				</h4>
 				<p class="text-muted" style="font-size: 13px; margin: 4px 0 0 0">
-					{{ quotations.length }} quotation(s) totalling ${{
+					{{ quotations.length }} quotation(s) totalling RM 
+					{{
 						totalQuotationAmount.toFixed(2)
 					}}
 				</p>
@@ -51,21 +58,26 @@ const dateFormatStore = useDateFormatStore();
 			<Button
 				variant="primary"
 				@click="quotationInput?.click()"
-				v-if="workOrderStatus === 'InProgress'"
+				v-if="isEditing || workOrderStatus === 'InProgress' || (isManager && workOrderStatus === 'Claimed')"
 			>
 				<i class="mdi mdi-plus" style="margin-right: 4px"></i> Add Quotation
 			</Button>
 		</div>
 
-		<div v-if="quotations.length === 0" class="payment-empty-state">
+		<div
+			v-if="quotations.length === 0"
+			class="payment-empty-state"
+			:class="{ 'payment-empty-state--clickable': canUpload }"
+			@click="canUpload ? quotationInput?.click() : null"
+		>
 			<i class="mdi mdi-file-document-outline"></i>
 			<p>
-				No quotations added yet. Click "Add Quotation" to upload and scan a quotation PDF.
+				No quotations added yet. Click here or "Add Quotation" to upload and scan a quotation PDF.
 			</p>
 		</div>
 
 		<div class="invoice-list" v-else>
-			<div v-for="qt in quotations" :key="qt.id" class="document-card">
+			<div v-for="qt in quotations" :key="qt.id" class="document-card" @click="emit('preview', qt)">
 				<div class="doc-icon">
 					<i class="mdi mdi-file-pdf-box text-danger" style="font-size: 32px"></i>
 				</div>
@@ -83,22 +95,22 @@ const dateFormatStore = useDateFormatStore();
 						<div class="ocr-field">
 							<span class="label">Amount:</span>
 							<span class="value text-primary font-weight-bold"
-								>${{ qt.amount.toFixed(2) }}</span
+								> RM {{ qt.amount.toFixed(2) }}</span
 							>
 						</div>
 					</div>
 				</div>
-				<div class="doc-actions" v-if="workOrderStatus === 'InProgress'">
+				<div class="doc-actions" v-if="isEditing || workOrderStatus === 'InProgress' || (isManager && workOrderStatus === 'Claimed')">
 					<button
 						class="btn-icon"
-						@click="emit('edit', qt.guid || '')"
+						@click.stop="emit('edit', qt.guid || '')"
 						title="Edit Details"
 					>
 						<i class="mdi mdi-pencil" style="font-size: 18px"></i>
 					</button>
 					<button
 						class="btn-icon"
-						@click="emit('delete', qt.guid || '')"
+						@click.stop="emit('delete', qt.guid || '')"
 						title="Remove Quotation"
 					>
 						<i class="mdi mdi-delete" style="font-size: 20px"></i>
@@ -148,6 +160,17 @@ const dateFormatStore = useDateFormatStore();
 		margin: 0;
 		font-size: 14px;
 	}
+
+	&--clickable {
+		cursor: pointer;
+		transition: all 0.2s ease-in-out;
+
+		&:hover {
+			border-color: var(--colors-brand-primary, #5058f2);
+			background-color: rgba(80, 88, 242, 0.02);
+			color: var(--colors-brand-primary, #5058f2);
+		}
+	}
 }
 
 .invoice-list {
@@ -164,6 +187,7 @@ const dateFormatStore = useDateFormatStore();
 	border-radius: 12px;
 	padding: 16px;
 	gap: 16px;
+	cursor: pointer;
 	transition: all 0.2s;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 	&:hover {

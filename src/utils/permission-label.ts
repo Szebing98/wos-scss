@@ -12,7 +12,63 @@ const actionLabels: Record<string, string> = {
 	manage: "Manage",
 	read: "View",
 	update: "Edit",
+	update_completed: "Update Completed",
+	update_claimed: "Update Claimed",
+	update_closed: "Update Closed",
+	update_cancelled: "Update Cancelled",
+	update_done: "Update Done",
+	update_draft: "Update Draft",
+	update_progress: "Update In Progress",
+	update_new: "Update New",
+	update_pending: "Update Pending Approval",
+	update_rejected: "Update Rejected",
+	mark_as_claimed: "Mark as Claimed",
+	mark_as_closed: "Mark as Closed",
+	mark_as_completed: "Mark as Completed",
+	mark_as_done: "Mark as Done",
 };
+
+export interface PermissionCatalogItem {
+	code?: string;
+	action?: string;
+	subject?: string;
+	inverted?: boolean;
+}
+
+/**
+ * The abilities endpoint can contain multiple database rows for the same
+ * logical permission (for example an old row or an inverted override).
+ * The permission matrix represents one control per action and subject, so
+ * normalise and de-duplicate the catalogue before rendering it.
+ */
+export function normalizePermissionCatalog<T extends PermissionCatalogItem>(
+	permissions: T[],
+): Array<T & { code: string; action: string; subject: string }> {
+	const uniquePermissions = new Map<
+		string,
+		T & { code: string; action: string; subject: string }
+	>();
+
+	permissions.forEach((permission) => {
+		if (permission.inverted) return;
+
+		const action = String(permission.action || "").trim();
+		const subject = String(permission.subject || "").trim();
+		if (!action || !subject) return;
+
+		const logicalKey = `${action.toLowerCase()}:${subject.toLowerCase()}`;
+		if (uniquePermissions.has(logicalKey)) return;
+
+		uniquePermissions.set(logicalKey, {
+			...permission,
+			code: String(permission.code || `${action}:${subject}`).trim(),
+			action,
+			subject,
+		});
+	});
+
+	return Array.from(uniquePermissions.values());
+}
 
 function splitWords(value: string): string {
 	return value
@@ -33,4 +89,8 @@ export function getPermissionSubjectLabel(subject: string): string {
 
 export function getPermissionActionLabel(action: string): string {
 	return actionLabels[action] || titleCase(action);
+}
+
+export function getPermissionLabel(action: string, subject: string): string {
+	return `${getPermissionActionLabel(action)} ${getPermissionSubjectLabel(subject)}`;
 }

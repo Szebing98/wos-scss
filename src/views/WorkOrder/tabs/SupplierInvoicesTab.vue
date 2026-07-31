@@ -9,8 +9,12 @@ const props = defineProps<{
 	workOrderStatus: string;
 }>();
 
-const emit = defineEmits(["upload", "delete"]);
+const emit = defineEmits(["upload", "delete", "preview"]);
 const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
+
+function isPdfFile(fileName: string) {
+	return /\.(pdf)$/i.test(fileName || "");
+}
 </script>
 
 <template>
@@ -21,18 +25,16 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 		<div style="display: block">
 			<div style="display: flex; align-items: center; gap: 12px">
 				<h3>Supplier Invoices</h3>
-				<span class="photo-counter-badge">
-					{{ supplierInvoicePhotos.length }}/12 Photos
-				</span>
+				<span><b> ({{ supplierInvoicePhotos.length }}/12) </b></span>
 			</div>
-			<p class="text-muted" style="margin: 0px">
+			<p class="text-muted" style="margin: 2px">
 				Upload up to 12 supplier invoice photos or scanned documents.
 			</p>
 		</div>
 
 		<input
 			type="file"
-			ref="partInfoInput"
+			ref="supplierInvoiceInput"
 			style="display: none"
 			@change="emit('upload', $event)"
 			accept="image/*,application/pdf"
@@ -48,21 +50,30 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 		</Button>
 	</div>
 
-	<hr style="margin: 8px" />
 	<div class="photo-grid-12">
 		<div v-for="photo in supplierInvoicePhotos" :key="photo.id" class="photo-slot">
-			<div class="photo-slot__img-wrap">
-				<img :src="photo.url" :alt="photo.name" class="photo-slot__img" />
-				<button
-					v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
-					class="photo-slot__del"
-					@click="emit('delete', photo.guid || '')"
-					title="Remove invoice"
+			<button
+				v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
+				class="photo-slot__del"
+				@click.stop="emit('delete', photo.guid || '')"
+				title="Remove invoice"
+			>
+				<i class="mdi mdi-trash-can-outline"></i>
+			</button>
+			<div class="photo-slot__img-wrap" @click="emit('preview', photo)">
+				<a
+					v-if="isPdfFile(photo.name)"
+					:href="photo.url"
+					target="_blank"
+					class="photo-slot__pdf-link"
+					@click.stop
 				>
-					<i class="mdi mdi-close"></i>
-				</button>
+					<i class="mdi mdi-file-pdf-box"></i>
+					<span>View PDF</span>
+				</a>
+				<img v-else :src="photo.url" :alt="photo.name" class="photo-slot__img" />
 			</div>
-			<div class="photo-slot__name">{{ photo.name }}</div>
+			<div class="photo-slot__name" @click="emit('preview', photo)">{{ photo.name }}</div>
 		</div>
 		<div
 			v-if="
@@ -110,6 +121,7 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 	border: 1px solid var(--colors-surface-border);
 	border-radius: 8px;
 	padding: 8px;
+	position: relative;
 
 	&__img-wrap {
 		position: relative;
@@ -118,6 +130,7 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 		border-radius: 6px;
 		overflow: hidden;
 		background: var(--colors-surface-background);
+		cursor: pointer;
 	}
 
 	&__img {
@@ -126,27 +139,58 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 		object-fit: cover;
 	}
 
-	button {
+	&__pdf-link {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		background: rgba(239, 68, 68, 0.08);
+		color: #ef4444;
+		text-decoration: none;
+		gap: 6px;
+		transition: background-color 0.2s;
+
+		&:hover {
+			background: rgba(239, 68, 68, 0.15);
+		}
+
+		i {
+			font-size: 38px;
+		}
+
+		span {
+			font-size: 11px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+	}
+
+	&__del {
 		position: absolute;
-		top: 6px;
-		right: 6px;
+		top: -6px;
+		right: -6px;
 		width: 24px;
 		height: 24px;
 		border-radius: 50%;
-		background: rgba(239, 68, 68, 0.9);
-		color: white;
-		border: none;
+		background: rgba(239, 68, 68, 0.06);
+		border: 1px solid rgba(239, 68, 68, 0.25);
+		color: var(--colors-error, #ef4444);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
 		font-size: 14px;
-		transition:
-			transform 0.2s,
-			background-color 0.2s;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+		z-index: 10;
+		transition: all 0.2s;
 
 		&:hover {
-			background: #dc2626;
+			background: var(--colors-error, #ef4444);
+			border-color: var(--colors-error, #ef4444);
+			color: #ffffff;
 			transform: scale(1.1);
 		}
 	}
@@ -158,6 +202,22 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		text-align: center;
+	}
+
+	&__name-input {
+		width: 100%;
+		padding: 4px;
+		font-size: 11px;
+		border: 1px solid var(--colors-surface-border);
+		border-radius: 4px;
+		text-align: center;
+		background: var(--colors-surface-background);
+		color: var(--colors-text-primary);
+
+		&:focus {
+			outline: none;
+			border-color: var(--colors-brand-primary);
+		}
 	}
 
 	&--add {

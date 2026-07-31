@@ -6,7 +6,9 @@ import http from "@/utils/http";
 import { useAuthStore } from "@/stores/auth.store";
 import {
 	getPermissionActionLabel,
+	getPermissionLabel,
 	getPermissionSubjectLabel,
+	normalizePermissionCatalog,
 } from "@/utils/permission-label";
 import { getHighestRoleLevel, getRoleLevel, hasRole } from "@/utils/role";
 
@@ -44,7 +46,44 @@ const authStore = useAuthStore();
 const defaultSystemPermissions: PermissionModel[] = [
 	{ code: "read:WorkOrder", subject: "WorkOrder", action: "read" },
 	{ code: "create:WorkOrder", subject: "WorkOrder", action: "create" },
-	{ code: "update:WorkOrder", subject: "WorkOrder", action: "update" },
+	{ code: "update_draft:WorkOrder", subject: "WorkOrder", action: "update_draft" },
+	{ code: "update_new:WorkOrder", subject: "WorkOrder", action: "update_new" },
+	{
+		code: "update_pending:WorkOrder",
+		subject: "WorkOrder",
+		action: "update_pending",
+	},
+	{
+		code: "update_progress:WorkOrder",
+		subject: "WorkOrder",
+		action: "update_progress",
+	},
+	{ code: "update_done:WorkOrder", subject: "WorkOrder", action: "update_done" },
+	{
+		code: "update_completed:WorkOrder",
+		subject: "WorkOrder",
+		action: "update_completed",
+	},
+	{ code: "update_claimed:WorkOrder", subject: "WorkOrder", action: "update_claimed" },
+	{ code: "update_closed:WorkOrder", subject: "WorkOrder", action: "update_closed" },
+	{
+		code: "update_cancelled:WorkOrder",
+		subject: "WorkOrder",
+		action: "update_cancelled",
+	},
+	{ code: "update_rejected:WorkOrder", subject: "WorkOrder", action: "update_rejected" },
+	{ code: "mark_as_done:WorkOrder", subject: "WorkOrder", action: "mark_as_done" },
+	{
+		code: "mark_as_completed:WorkOrder",
+		subject: "WorkOrder",
+		action: "mark_as_completed",
+	},
+	{
+		code: "mark_as_claimed:WorkOrder",
+		subject: "WorkOrder",
+		action: "mark_as_claimed",
+	},
+	{ code: "mark_as_closed:WorkOrder", subject: "WorkOrder", action: "mark_as_closed" },
 	{ code: "delete:WorkOrder", subject: "WorkOrder", action: "delete" },
 	{ code: "list:WorkOrder", subject: "WorkOrder", action: "list" },
 
@@ -179,15 +218,15 @@ async function loadAllPermissions() {
 		const res = await http.get("/abilities");
 		const data = res.data?.data || res.data || [];
 		if (Array.isArray(data) && data.length > 0) {
-			allPermissions.value = data
-				.map((p: any) => ({
+			allPermissions.value = normalizePermissionCatalog(
+				data.map((p: any) => ({
 					guid: p.guid,
 					code: getPermissionCode(p),
 					action: p.action,
 					subject: p.subject,
 					inverted: p.inverted ?? false,
-				}))
-				.filter((p) => !isManageAllPermission(p));
+				})),
+			).filter((p) => !isManageAllPermission(p));
 		} else {
 			allPermissions.value = defaultSystemPermissions;
 		}
@@ -273,6 +312,10 @@ function toggleAllInSubject(subject: string, enable: boolean) {
 }
 
 function startEditingPermissions() {
+	if (!authStore.can("update", "Permission")) {
+		permissionGuardMessage.value = "You do not have permission to edit role permissions.";
+		return;
+	}
 	if (!canEditSelectedGroup.value) {
 		permissionGuardMessage.value = selectedGroupEditMessage.value;
 		return;
@@ -334,7 +377,12 @@ onMounted(async () => {
 				<button
 					v-if="!isEditingPermissions"
 					class="btn btn--primary"
-					:disabled="!selectedGroup || !canEditSelectedGroup || isLoadingPermissions"
+					:disabled="
+						!selectedGroup ||
+						!canEditSelectedGroup ||
+						!authStore.can('update', 'Permission') ||
+						isLoadingPermissions
+					"
 					:title="selectedGroupEditMessage || 'Edit Permissions'"
 					@click="startEditingPermissions"
 				>
@@ -493,7 +541,7 @@ onMounted(async () => {
 									/>
 									<span class="checkbox-container__box"></span>
 									<span class="perm-box__action-label">
-										{{ getPermissionActionLabel(perm.action) }}
+										{{ getPermissionLabel(perm.action, perm.subject) }}
 									</span>
 								</label>
 

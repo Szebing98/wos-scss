@@ -15,4 +15,10 @@ export const authApi = {
 
 	resetPassword: (body: { token: string; password: string; passwordConfirm: string }) =>
 		client.POST("/api/auth/reset-password", { body }) as any,
+
+	changePassword: (body: {
+		currentPassword: string;
+		newPassword: string;
+		newPasswordConfirm: string;
+	}) => client.POST("/api/auth/change-password", { body }),
 };

@@ -26,7 +26,7 @@ const notificationError = ref("");
 
 const unreadLabel = computed(() => {
 	if (!unreadTotal.value) return "";
-	return unreadTotal.value > 99 ? "99+" : String(unreadTotal.value);
+	return String(unreadTotal.value);
 });
 
 const isOwnProfileActive = computed(() => {
@@ -141,18 +141,36 @@ function getNotificationTitle(notification: NotificationItem) {
 	const payload = getPayloadRecord(notification.payload);
 	const code = typeof payload?.code === "string" ? payload.code : "";
 	const title = typeof payload?.title === "string" ? payload.title : "";
+	const workOrder = code ? `Work Order ${code}` : "Work Order";
 
 	switch (notification.templateCode) {
 		case "WO_DRAFT_CREATED":
-			return code ? `Draft Work Order ${code}` : "Draft Work Order Saved";
+			return `${workOrder} has been saved as Draft`;
 		case "WO_CREATED":
-			return code ? `New Work Order ${code}` : "New Work Order";
+		case "WORK_ORDER_CREATED":
+			return `${workOrder} has been created as New`;
 		case "WO_SUBMITTED":
-			return code ? `Work Order ${code} Pending Approval` : "Work Order Pending Approval";
+			return `${workOrder} has been submitted for Approval`;
 		case "WO_APPROVED":
-			return code ? `Work Order ${code} Approved` : "Work Order Approved";
+		case "WORK_ORDER_APPROVED":
+			return `${workOrder} has been approved`;
 		case "WO_REJECTED":
-			return code ? `Work Order ${code} Rejected` : "Work Order Rejected";
+			return `${workOrder} has been rejected`;
+		case "WO_CLAIMED":
+			return `${workOrder} has been claimed`;
+		case "WO_DONE":
+			return `${workOrder} has been marked as Done`;
+		case "WO_COMPLETED":
+		case "WORK_ORDER_COMPLETED":
+			return `${workOrder} has been completed`;
+		case "WO_CLOSED":
+			return `${workOrder} has been closed`;
+		case "WO_CANCELLED":
+			return `${workOrder} has been cancelled`;
+		case "WO_REOPENED":
+			return `${workOrder} has been reopened as New`;
+		case "WORK_ORDER_ASSIGNED":
+			return `${workOrder} has been assigned to you`;
 	}
 
 	const value = title || payload?.subject || payload?.heading;

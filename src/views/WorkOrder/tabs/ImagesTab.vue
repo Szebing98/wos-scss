@@ -8,7 +8,7 @@ const props = defineProps<{
 	workOrderStatus: string;
 }>();
 
-const emit = defineEmits(["upload", "delete", "rename"]);
+const emit = defineEmits(["upload", "delete", "preview"]);
 
 const imageInput = ref<HTMLInputElement | null>(null);
 const cameraInput = ref<HTMLInputElement | null>(null);
@@ -66,36 +66,32 @@ function handleFileChange(event: Event) {
 					v-for="img in images.filter((i: any) => i.category === cat)"
 					:key="img.id"
 				>
-					<div class="image-preview" :style="{ backgroundImage: `url(${img.url})` }">
-						<button
-							v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
-							class="del-btn"
-							@click="emit('delete', img.guid || '')"
-						>
-							<i class="mdi mdi-close"></i>
-						</button>
+					<button
+						v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
+						class="del-btn"
+						@click.stop="emit('delete', img.guid || '')"
+					>
+						<i class="mdi mdi-trash-can-outline"></i>
+					</button>
+					<div class="image-preview" :style="{ backgroundImage: `url(${img.url})` }" @click="emit('preview', img)">
 					</div>
-					<input
-						v-if="isEditing"
-						type="text"
-						v-model="img.name"
-						class="image-name-input"
-						@blur="emit('rename', img)"
-					/>
-					<div v-else class="image-name-display">{{ img.name }}</div>
+					<div class="image-name-display" @click="emit('preview', img)">{{ img.name }}</div>
 				</div>
 				<div
-					class="image-placeholder-split"
+					class="image-placeholder-card"
 					v-if="isEditing && images.filter((i: any) => i.category === cat).length < 4"
+					@click="triggerImageUpload(cat)"
 				>
-					<div class="split-btn" @click="triggerImageUpload(cat)">
-						<i class="mdi mdi-image-plus"></i>
-						<span>Upload</span>
-					</div>
-					<div class="split-btn split-btn--camera" @click="triggerCameraUpload(cat)">
-						<i class="mdi mdi-camera"></i>
-						<span>Camera</span>
-					</div>
+					<i class="mdi mdi-image-plus"></i>
+					<span>Upload Photo</span>
+				</div>
+				<div
+					class="image-placeholder-card image-placeholder-card--camera"
+					v-if="isEditing && images.filter((i: any) => i.category === cat).length < 4"
+					@click="triggerCameraUpload(cat)"
+				>
+					<i class="mdi mdi-camera"></i>
+					<span>Take Photo</span>
 				</div>
 			</div>
 		</div>
@@ -128,33 +124,41 @@ function handleFileChange(event: Event) {
 	gap: 8px;
 	width: 140px;
 	flex-shrink: 0;
+	position: relative;
+
 	.image-preview {
 		aspect-ratio: 1;
 		border-radius: 8px;
 		background-size: cover;
 		background-position: center;
-		position: relative;
 		border: 1px solid var(--colors-surface-border);
-		.del-btn {
-			position: absolute;
-			top: -6px;
-			right: -6px;
-			background: var(--colors-danger);
-			color: white;
-			border: none;
-			border-radius: 50%;
-			width: 22px;
-			height: 22px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			cursor: pointer;
-			font-size: 14px;
-			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-			transition: transform 0.2s;
-			&:hover {
-				transform: scale(1.1);
-			}
+		cursor: pointer;
+	}
+
+	.del-btn {
+		position: absolute;
+		top: -6px;
+		right: -6px;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		background: rgba(239, 68, 68, 0.06);
+		border: 1px solid rgba(239, 68, 68, 0.25);
+		color: var(--colors-error, #ef4444);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		font-size: 14px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+		z-index: 10;
+		transition: all 0.2s;
+
+		&:hover {
+			background: var(--colors-error, #ef4444);
+			border-color: var(--colors-error, #ef4444);
+			color: #ffffff;
+			transform: scale(1.1);
 		}
 	}
 	.image-name-input {
@@ -171,42 +175,42 @@ function handleFileChange(event: Event) {
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		cursor: pointer;
 	}
 }
-.image-placeholder-split {
+.image-placeholder-card {
 	display: flex;
 	flex-direction: column;
-	border: 2px dashed var(--colors-border);
+	align-items: center;
+	justify-content: center;
+	border: 2px dashed var(--colors-surface-border);
 	border-radius: 8px;
-	height: 150px;
-	overflow: hidden;
+	height: 140px;
 	width: 140px;
 	flex-shrink: 0;
+	gap: 8px;
+	color: var(--colors-text-secondary);
+	cursor: pointer;
+	transition: all 0.2s;
 
-	.split-btn {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 4px;
-		cursor: pointer;
-		font-size: 12px;
-		color: var(--colors-text-secondary);
-		background-color: transparent;
-		transition: background-color 0.2s;
+	&:hover {
+		border-color: var(--colors-brand-primary);
+		color: var(--colors-brand-primary);
+		background-color: var(--colors-bg-hover);
+	}
 
-		&:hover {
-			background-color: var(--colors-bg-hover);
-			color: var(--colors-brand-primary);
-		}
+	i {
+		font-size: 24px;
+	}
 
-		i {
-			font-size: 20px;
-		}
+	span {
+		font-size: 11px;
+		font-weight: 500;
+	}
 
-		&--camera {
-			border-top: 1px dashed var(--colors-border);
+	&--camera {
+		@media (min-width: 768px) {
+			display: none !important;
 		}
 	}
 }

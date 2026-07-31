@@ -13,6 +13,8 @@ import { userApi } from "@/api/user/user.api";
 import { useAuthStore } from "@/stores/auth.store";
 import { getAvatarUrl } from "@/utils/avatar";
 import HighlightText from "@/components/HighlightText.vue";
+import { reportApi } from "@/api/report/report.api";
+import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
 
 const headers: TableHeader[] = [
 	{ key: "status", label: "Status" },
@@ -41,6 +43,7 @@ const filterStatus = ref("all");
 
 const users = ref<UserModel[]>([]);
 const loading = ref(false);
+const exporting = ref(false);
 
 // Status Modal Confirmation State
 const showStatusModal = ref(false);
@@ -175,6 +178,27 @@ function handleCreateUser() {
 	router.push("/user/form");
 }
 
+async function handleExport(format: "CSV" | "PDF") {
+	if (exporting.value) return;
+	exporting.value = true;
+	try {
+		const { data, error } = await reportApi.exportUsers({
+			format,
+			type: "list",
+		});
+		if (error) throw new Error((error as any).error?.message || "Export request failed.");
+		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
+		const date = new Date().toISOString().slice(0, 10);
+		if (format === "CSV") downloadCsv(`employees-${date}.csv`, rows);
+		else printRowsAsPdf("Employee Report", rows);
+		snackbar.success(`${rows.length} employee(s) exported.`);
+	} catch (error) {
+		snackbar.error(error instanceof Error ? error.message : "Failed to export employees.");
+	} finally {
+		exporting.value = false;
+	}
+}
+
 function viewUserProfile(guid: string) {
 	router.push(`/user/profile?code=${guid}`);
 }
@@ -232,14 +256,24 @@ function getRandomAvatarBg(name: string) {
 					Manage internal technicians, support staff, and system administrative roles
 				</p>
 			</div>
-			<button
-				class="btn btn--primary add-employee-btn"
-				@click="handleCreateUser"
-				title="Add Employee"
-			>
-				<i class="mdi mdi-plus"></i>
-				<span class="btn-text">Add Employee</span>
-			</button>
+			<div style="display: flex; gap: 8px">
+				<button class="btn btn--outlined" :disabled="exporting" @click="handleExport('CSV')">
+					<i class="mdi mdi-file-delimited-outline"></i>
+					{{ exporting ? "Exporting..." : "CSV" }}
+				</button>
+				<button class="btn btn--outlined" :disabled="exporting" @click="handleExport('PDF')">
+					<i class="mdi mdi-file-pdf-box"></i> PDF
+				</button>
+				<button
+					v-if="authStore.can('create', 'User')"
+					class="btn btn--primary add-employee-btn"
+					@click="handleCreateUser"
+					title="Add Employee"
+				>
+					<i class="mdi mdi-plus"></i>
+					<span class="btn-text">Add Employee</span>
+				</button>
+			</div>
 		</div>
 
 		<!-- Metric Summary Cards -->

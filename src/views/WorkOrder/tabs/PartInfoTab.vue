@@ -9,8 +9,9 @@ const props = defineProps<{
 	workOrderStatus: string;
 }>();
 
-const emit = defineEmits(["upload", "delete"]);
+const emit = defineEmits(["upload", "delete", "preview"]);
 const partInfoInput = ref<HTMLInputElement | null>(null);
+const partInfoCameraInput = ref<HTMLInputElement | null>(null);
 </script>
 
 <template>
@@ -21,9 +22,11 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 		<div style="display: block">
 			<div style="display: flex; align-items: center; gap: 12px">
 				<h3>Part Info</h3>
-				<span class="photo-counter-badge">{{ partInfoPhotos.length }}/12 Photos</span>
+				<span>
+					<b>( {{ partInfoPhotos.length }}/12 )</b>
+				</span>
 			</div>
-			<p class="text-muted" style="margin: 0px">
+			<p class="text-muted" style="margin: 2px">
 				Upload up to 12 photos of parts, components, and job-related materials.
 			</p>
 		</div>
@@ -34,6 +37,14 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 			style="display: none"
 			@change="emit('upload', $event)"
 			accept="image/*"
+		/>
+		<input
+			type="file"
+			ref="partInfoCameraInput"
+			style="display: none"
+			@change="emit('upload', $event)"
+			accept="image/*"
+			capture="environment"
 		/>
 
 		<Button
@@ -47,21 +58,20 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 		</Button>
 	</div>
 
-	<hr style="margin: 8px" />
-
 	<div class="photo-grid-12">
 		<div v-for="photo in partInfoPhotos" :key="photo.id" class="photo-slot">
-			<div class="photo-slot__img-wrap">
+			<button
+				v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
+				class="photo-slot__del"
+				@click.stop="emit('delete', photo.guid || '')"
+				title="Remove photo"
+			>
+				<i class="mdi mdi-trash-can-outline"></i>
+			</button>
+			<div class="photo-slot__img-wrap" @click="emit('preview', photo)">
 				<img :src="photo.url" :alt="photo.name" class="photo-slot__img" />
-				<button
-					v-if="isEditing || (isManager && workOrderStatus === 'Claimed')"
-					@click="emit('delete', photo.guid || '')"
-					title="Remove photo"
-				>
-					<i class="mdi mdi-close"></i>
-				</button>
 			</div>
-			<div class="photo-slot__name">{{ photo.name }}</div>
+			<div class="photo-slot__name" @click="emit('preview', photo)">{{ photo.name }}</div>
 		</div>
 		<div
 			v-if="
@@ -71,8 +81,19 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 			class="photo-slot photo-slot--add"
 			@click="partInfoInput?.click()"
 		>
-			<i class="mdi mdi-camera-plus"></i>
+			<i class="mdi mdi-image-plus"></i>
 			<span>Upload Photo</span>
+		</div>
+		<div
+			v-if="
+				(isEditing || (isManager && workOrderStatus === 'Claimed')) &&
+				partInfoPhotos.length < 12
+			"
+			class="photo-slot photo-slot--add photo-slot--add-camera"
+			@click="partInfoCameraInput?.click()"
+		>
+			<i class="mdi mdi-camera"></i>
+			<span>Take Photo</span>
 		</div>
 		<div
 			v-if="partInfoPhotos.length === 0 && !isEditing && workOrderStatus !== 'Claimed'"
@@ -109,6 +130,7 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 	border: 1px solid var(--colors-surface-border);
 	border-radius: 8px;
 	padding: 8px;
+	position: relative;
 
 	&__img-wrap {
 		position: relative;
@@ -117,6 +139,7 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 		border-radius: 6px;
 		overflow: hidden;
 		background: var(--colors-surface-background);
+		cursor: pointer;
 	}
 
 	&__img {
@@ -125,27 +148,29 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 		object-fit: cover;
 	}
 
-	button {
+	&__del {
 		position: absolute;
-		top: 6px;
-		right: 6px;
+		top: -6px;
+		right: -6px;
 		width: 24px;
 		height: 24px;
 		border-radius: 50%;
-		background: rgba(239, 68, 68, 0.9);
-		color: white;
-		border: none;
+		background: rgba(239, 68, 68, 0.06);
+		border: 1px solid rgba(239, 68, 68, 0.25);
+		color: var(--colors-error, #ef4444);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
 		font-size: 14px;
-		transition:
-			transform 0.2s,
-			background-color 0.2s;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+		z-index: 10;
+		transition: all 0.2s;
 
 		&:hover {
-			background: #dc2626;
+			background: var(--colors-error, #ef4444);
+			border-color: var(--colors-error, #ef4444);
+			color: #ffffff;
 			transform: scale(1.1);
 		}
 	}
@@ -157,6 +182,22 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		text-align: center;
+	}
+
+	&__name-input {
+		width: 100%;
+		padding: 4px;
+		font-size: 11px;
+		border: 1px solid var(--colors-surface-border);
+		border-radius: 4px;
+		text-align: center;
+		background: var(--colors-surface-background);
+		color: var(--colors-text-primary);
+
+		&:focus {
+			outline: none;
+			border-color: var(--colors-brand-primary);
+		}
 	}
 
 	&--add {
@@ -185,6 +226,12 @@ const partInfoInput = ref<HTMLInputElement | null>(null);
 		span {
 			font-size: 12px;
 			font-weight: 500;
+		}
+
+		&-camera {
+			@media (min-width: 768px) {
+				display: none !important;
+			}
 		}
 	}
 }

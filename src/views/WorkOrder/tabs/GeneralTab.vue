@@ -7,6 +7,7 @@ import DatePicker from "@/components/DatePicker.vue";
 import Badge from "@/components/Badge.vue";
 import Button from "@/components/Button.vue";
 import Autocomplete from "@/components/Autocomplete.vue";
+import { userDisplayCode } from "@/utils/user-display";
 
 const props = defineProps<{
 	workOrder: any;
@@ -36,10 +37,7 @@ const isPriorityEditable = computed(() => {
 });
 
 function userDisplay(user: any) {
-	const name = user?.name?.trim();
-	const displayCode = user?.displayCode?.trim();
-	if (name && displayCode) return `${name} (${displayCode})`;
-	return name || displayCode || user?.code || "—";
+	return userDisplayCode(user?.displayCode, user?.code, "—");
 }
 
 const salesAgentUsers = computed(() => {
@@ -289,30 +287,35 @@ function openImageModal(url: string) {
 			/>
 		</div>
 		<div class="col-6">
-			<div style="display: flex; gap: 8px; align-items: flex-end">
-				<DatePicker
-					v-model="workOrder.estimatedEndDate"
-					label="Estimated Date of Completion *"
-					:enableTime="false"
-					disabled
-					style="flex-grow: 1"
-				/>
-				<Button
-					v-if="canEnterEdit"
-					variant="outlined"
-					style="
-						padding: 10px 14px;
-						height: 42px;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						gap: 4px;
-					"
-					@click="emit('extend')"
-					title="Extend End Date"
-				>
-					<i class="mdi mdi-calendar-plus"></i> Extend
-				</Button>
+			<div class="textbox-field">
+				<label class="textbox-field__label">
+					Estimated Date of Completion <span class="required-asterisk">*</span>
+				</label>
+				<div style="display: flex; gap: 8px; align-items: center">
+					<DatePicker
+						v-model="workOrder.estimatedEndDate"
+						:enableTime="false"
+						disabled
+						hide-footer
+						style="flex-grow: 1"
+					/>
+					<Button
+						v-if="canEnterEdit"
+						variant="outlined"
+						style="
+							padding: 10px 14px;
+							height: 40px;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							gap: 4px;
+						"
+						@click="emit('extend')"
+						title="Extend End Date"
+					>
+						<i class="mdi mdi-calendar-plus"></i> Extend
+					</Button>
+				</div>
 			</div>
 			<div
 				class="extended-count-badge"
@@ -377,25 +380,18 @@ function openImageModal(url: string) {
 			</Textbox>
 		</div>
 		<div class="col-6">
-			<label class="custom-label">Site</label>
-			<div
-				class="read-only-val"
-				style="
-					height: 42px;
-					display: flex;
-					align-items: center;
-					padding-left: 12px;
-					border: 1px solid var(--colors-surface-border);
-					border-radius: 6px;
-					background-color: var(--colors-surface-background);
-				"
-			>
-				<i
-					class="mdi mdi-map-marker-radius"
-					style="margin-right: 4px; color: var(--colors-brand-primary)"
-				></i>
-				{{ workOrder.siteCode || "—" }}
-			</div>
+			<Textbox v-model="workOrder.siteCode" label="Site" disabled>
+				<template #prefix>
+					<i
+						class="mdi mdi-map-marker-radius"
+						style="
+							margin-right: 4px;
+							color: var(--colors-brand-primary);
+							font-size: 18px;
+						"
+					></i>
+				</template>
+			</Textbox>
 		</div>
 		<div class="col-12">
 			<MultiSelect
@@ -581,9 +577,7 @@ function openImageModal(url: string) {
 		<!-- Equipment Information -->
 		<template v-if="showEquipmentForm">
 			<div class="col-12">
-				<h4 class="section-title" style="margin-top: 16px">
-					Equipment Information (Read-Only)
-				</h4>
+				<h4 class="section-title" style="margin-top: 16px">Equipment Information</h4>
 			</div>
 			<div class="col-6">
 				<Textbox v-model="workOrder.equipment.name" label="Equipment Name" disabled />
@@ -613,9 +607,7 @@ function openImageModal(url: string) {
 		<!-- Mechanical Information -->
 		<template v-if="isMechanical">
 			<div class="col-12">
-				<h4 class="section-title" style="margin-top: 16px">
-					Mechanical Information (Read-Only)
-				</h4>
+				<h4 class="section-title" style="margin-top: 16px">Mechanical Information</h4>
 			</div>
 			<div class="col-12">
 				<Textbox v-model="workOrder.technical.flowHead" label="Flow & Head" disabled />

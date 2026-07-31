@@ -9,9 +9,9 @@ export interface RoleModel {
 export const DEFAULT_ROLES: RoleModel[] = [
 	{ code: "SA", name: "Superadmin", description: "Complete system control" },
 	{ code: "ADM", name: "Administrator", description: "Manage users and settings" },
-	{ code: "MGR", name: "Manager", description: "Manage engineers and schedules" },
+	{ code: "MNG", name: "Manager", description: "Manage engineers and schedules" },
 	{ code: "ENG", name: "Engineer", description: "Execute work orders" },
-	{ code: "Sales", name: "Sales", description: "Manage customer requests" },
+	{ code: "SAL", name: "Sales", description: "Manage customer requests" },
 ];
 
 export const ROLE_LEVELS: Record<string, number> = {
@@ -21,10 +21,12 @@ export const ROLE_LEVELS: Record<string, number> = {
 	ADMIN: 3,
 	ADMINISTRATOR: 3,
 	MGR: 2,
+	MNG: 2,
 	MANAGER: 2,
 	ENG: 1,
 	ENGINEER: 1,
 	SALES: 1,
+	SAL: 1,
 };
 
 function normalizeRoleKey(value?: string | null): string {

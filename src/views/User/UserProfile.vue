@@ -415,6 +415,14 @@ function onFileChange(event: Event) {
 	const file = target.files?.[0];
 	if (!file) return;
 
+	// Validate file type
+	const imageExtensions = /\.(jpg|jpeg|png|gif|webp|heic)$/i;
+	if (!imageExtensions.test(file.name) && !file.type.startsWith("image/")) {
+		snackbar.error("Invalid File Type. Only image files are allowed.");
+		target.value = "";
+		return;
+	}
+
 	// Create local preview URL (FB-style)
 	avatarPreviewUrl.value = URL.createObjectURL(file);
 	avatarPreviewFile.value = file;

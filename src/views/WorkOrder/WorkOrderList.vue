@@ -18,6 +18,11 @@ import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
 import HighlightText from "@/components/HighlightText.vue";
 import Autocomplete from "@/components/Autocomplete.vue";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useAuthStore } from "@/stores/auth.store";
+import { reportApi } from "@/api/report/report.api";
+import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
+import { userDisplayCode } from "@/utils/user-display";
 
 const props = defineProps({
 	status: {
@@ -33,6 +38,10 @@ const props = defineProps({
 const route = useRoute();
 const router = useRouter();
 const dateFormatStore = useDateFormatStore();
+const snackbar = useSnackbarStore();
+const authStore = useAuthStore();
+const exporting = ref(false);
+const applyingBulkAction = ref(false);
 const priorityColors: Record<string, string> = {
 	High: "error",
 	Medium: "warning",
@@ -129,15 +138,8 @@ function normalizeStatusForApi(status?: string | null) {
 	return uiToBackendStatusMap[status] || status;
 }
 
-function formatUserDisplay(name?: string | null, code?: string | null) {
-	const cleanName = name?.trim();
-	const cleanCode = code?.trim();
-	const isGuid =
-		cleanCode &&
-		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanCode);
-	if (cleanName && cleanCode && !isGuid && cleanName !== cleanCode)
-		return `${cleanName} (${cleanCode})`;
-	return cleanName || (isGuid ? "" : cleanCode) || "Unassigned";
+function formatUserDisplay(_name?: string | null, code?: string | null) {
+	return userDisplayCode(code, null, "Unassigned");
 }
 
 watch(
@@ -200,6 +202,9 @@ interface WorkOrderModel {
 	isDraft?: boolean;
 	woNumber: string;
 	title: string;
+	createdByCode?: string;
+	personInChargeCode?: string;
+	leaderCode?: string;
 	personInCharge: string;
 	customer: CustomerModel;
 	workType: string;
@@ -336,6 +341,9 @@ async function fetchWorkOrders() {
 			workOrders.value = data.data.map((w: any) => ({
 				guid: w.guid,
 				isDraft: !!w.isDraft,
+				createdByCode: w.createdBy || w.createdByCode || "",
+				personInChargeCode: w.projectPicCode || w.personInChargeCode || "",
+				leaderCode: w.leaderCode || w.leadEngineerCode || "",
 				woNumber: w.docNo || w.code || w.guid.substring(0, 8).toUpperCase(),
 				title: w.title,
 				personInCharge: resolveUserDisplay(
@@ -854,6 +862,63 @@ const buttonList = [
 	},
 ];
 
+function updatePermissionForStatus(status: WorkOrderStatus) {
+	const permissionByStatus: Partial<Record<WorkOrderStatus, string>> = {
+		[WorkOrderStatus.Draft]: "update_draft",
+		[WorkOrderStatus.New]: "update_new",
+		[WorkOrderStatus.PendingApproval]: "update_pending",
+		[WorkOrderStatus.InProgress]: "update_progress",
+		[WorkOrderStatus.Done]: "update_done",
+		[WorkOrderStatus.Completed]: "update_completed",
+	};
+	return permissionByStatus[status];
+}
+
+function canEditAssignedWorkOrder(item: WorkOrderModel) {
+	const isSuperadmin = (authStore.currentUser?.userGroups || []).some(
+		(group: any) => String(group.code || "").toUpperCase() === "SA",
+	);
+	if (isSuperadmin) return true;
+	const userCode = authStore.currentUser?.code;
+	if (!userCode) return false;
+	if (item.isDraft || [WorkOrderStatus.Draft, WorkOrderStatus.New].includes(item.status as WorkOrderStatus)) {
+		return item.createdByCode === userCode;
+	}
+	if (item.status === WorkOrderStatus.PendingApproval) {
+		return item.personInChargeCode === userCode;
+	}
+	if (item.status === WorkOrderStatus.InProgress) {
+		return item.personInChargeCode === userCode || item.leaderCode === userCode;
+	}
+	return false;
+}
+
+function canUseWorkOrderAction(
+	button: (typeof buttonList)[number],
+	item: WorkOrderModel,
+) {
+	const permissionByTooltip: Record<string, string> = {
+		Approve: "approve",
+		Reject: "reject",
+		"Mark As Done": "mark_as_done",
+		Cancel: "cancel",
+		Reopen: "reopen",
+		"Mark As Claimed": "mark_as_claimed",
+		"Mark As Closed": "mark_as_closed",
+	};
+	const action =
+		button.tooltip === "Edit"
+			? updatePermissionForStatus(item.status)
+			: permissionByTooltip[button.tooltip] || "read";
+	const requiresAssignedEditor =
+		button.tooltip === "Edit" || button.tooltip === "Mark As Done";
+	return Boolean(
+		action &&
+			authStore.can(action, "WorkOrder") &&
+			(!requiresAssignedEditor || canEditAssignedWorkOrder(item)),
+	);
+}
+
 // Bulk Actions
 const bulkActionList = [
 	{ title: "Approve", value: WorkOrderAction.Approve, status: [WorkOrderStatus.PendingApproval] },
@@ -878,11 +943,31 @@ const selectedWorkOrdersList = computed(() => {
 	);
 });
 
+function canUseBulkAction(action: WorkOrderAction) {
+	const permissionByAction: Partial<Record<WorkOrderAction, string>> = {
+		[WorkOrderAction.Approve]: "approve",
+		[WorkOrderAction.Reject]: "reject",
+		[WorkOrderAction.Cancel]: "cancel",
+		[WorkOrderAction.Reopen]: "reopen",
+		[WorkOrderAction.Close]: "mark_as_closed",
+		[WorkOrderAction.MarkAsDone]: "mark_as_done",
+		[WorkOrderAction.MarkAsClaimed]: "mark_as_claimed",
+	};
+	const permission = permissionByAction[action];
+	return Boolean(permission && authStore.can(permission, "WorkOrder"));
+}
+
 const availableBulkActions = computed(() => {
 	if (!selectedWorkOrdersList.value.length) return [];
 	return bulkActionList.filter((action) => {
-		return selectedWorkOrdersList.value.every((item) =>
-			action.status.includes(item.status as WorkOrderStatus),
+		const requiresAssignedEditor = action.value === WorkOrderAction.MarkAsDone;
+		return (
+			canUseBulkAction(action.value) &&
+			selectedWorkOrdersList.value.every(
+				(item) =>
+					action.status.includes(item.status as WorkOrderStatus) &&
+					(!requiresAssignedEditor || canEditAssignedWorkOrder(item)),
+			)
 		);
 	});
 });
@@ -893,8 +978,40 @@ async function handleCreateWorkOrder() {
 	isCreateDialog.value = true;
 }
 
-function handleExport() {
-	console.log("Exporting work orders...");
+async function handleExport(format: "CSV" | "PDF") {
+	if (exporting.value) return;
+	exporting.value = true;
+	try {
+		const filters: Record<string, string> = {};
+		const status =
+			activeStatus.value !== "All" && activeStatus.value !== "all"
+				? normalizeStatusForApi(activeStatus.value)
+				: appliedStatusFilter.value !== "all"
+					? normalizeStatusForApi(appliedStatusFilter.value)
+					: "";
+		if (status) filters.orderStatus = status === "draft" ? "new" : status;
+		if (appliedWorkTypeFilter.value !== "all") {
+			filters.workType = appliedWorkTypeFilter.value;
+		}
+
+		const { data, error } = await reportApi.exportWorkOrders({
+			format,
+			type: "list",
+			...(Object.keys(filters).length ? { filters: filters as any } : {}),
+		});
+		if (error) throw new Error((error as any).error?.message || "Export request failed.");
+
+		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
+		const date = new Date().toISOString().slice(0, 10);
+		if (format === "CSV") downloadCsv(`work-orders-${date}.csv`, rows);
+		else printRowsAsPdf("Work Order Report", rows);
+		snackbar.success(`${rows.length} work order(s) exported.`);
+	} catch (error) {
+		console.error("Failed to export work orders:", error);
+		snackbar.error(error instanceof Error ? error.message : "Failed to export work orders.");
+	} finally {
+		exporting.value = false;
+	}
 }
 
 function openConfirmDialog(
@@ -975,41 +1092,58 @@ async function executeReject() {
 }
 
 async function applyBulkAction() {
-	if (!bulkAction.value) return;
-	try {
-		for (const woNumber of selectedWorkOrders.value) {
+	if (!bulkAction.value || applyingBulkAction.value) return;
+	applyingBulkAction.value = true;
+	const action = bulkAction.value;
+	const selected = [...selectedWorkOrders.value];
+	const failed: string[] = [];
+
+	await Promise.all(
+		selected.map(async (woNumber) => {
 			const target = workOrders.value.find((w) => w.woNumber === woNumber);
-			if (target && target.guid) {
-				const guid = target.guid;
-				switch (bulkAction.value) {
+			if (!target?.guid) {
+				failed.push(woNumber);
+				return;
+			}
+			try {
+				let response: any;
+				switch (action) {
 					case WorkOrderAction.Approve:
-						await workOrderApi.approve(guid);
+						response = await workOrderApi.approve(target.guid);
 						break;
 					case WorkOrderAction.MarkAsDone:
-						await workOrderApi.complete(guid);
+						response = await workOrderApi.complete(target.guid);
 						break;
 					case WorkOrderAction.Cancel:
-						await workOrderApi.cancel(guid);
+						response = await workOrderApi.cancel(target.guid);
 						break;
 					case WorkOrderAction.Reopen:
-						await workOrderApi.reopen(guid);
+						response = await workOrderApi.reopen(target.guid);
 						break;
 					case WorkOrderAction.MarkAsClaimed:
-						await workOrderApi.claim(guid, { invoiceAmount: 0 });
+						response = await workOrderApi.claim(target.guid, { invoiceAmount: 0 });
 						break;
 					case WorkOrderAction.Close:
-						await workOrderApi.close(guid);
+						response = await workOrderApi.close(target.guid);
 						break;
 				}
+				if (response?.error) failed.push(woNumber);
+			} catch {
+				failed.push(woNumber);
 			}
-		}
-		fetchWorkOrders();
-	} catch (e) {
-		console.error(e);
+		}),
+	);
+
+	const succeeded = selected.length - failed.length;
+	if (succeeded) snackbar.success(`${succeeded} work order(s) updated.`);
+	if (failed.length) {
+		snackbar.error(`${failed.length} work order(s) failed. They remain selected.`);
 	}
-	selectedWorkOrders.value = [];
+	selectedWorkOrders.value = failed;
 	bulkAction.value = "";
 	isConfirmBulkAction.value = false;
+	applyingBulkAction.value = false;
+	await fetchWorkOrders();
 }
 
 interface WorkTypeOption {
@@ -1262,9 +1396,10 @@ defineExpose({
 			<div class="header-actions">
 				<button
 					v-if="
-						effectiveStatus === 'New' ||
-						effectiveStatus === 'All' ||
-						effectiveStatus === 'all'
+						authStore.can('create', 'WorkOrder') &&
+						(effectiveStatus === 'New' ||
+							effectiveStatus === 'All' ||
+							effectiveStatus === 'all')
 					"
 					class="btn btn--primary add-workorder-btn"
 					@click="handleCreateWorkOrder"
@@ -1339,12 +1474,25 @@ defineExpose({
 				</FilterPanel>
 				<Button
 					variant="outlined"
-					@click="handleExport"
+					@click="handleExport('CSV')"
+					:disabled="exporting"
 					title="Export List"
 					style="margin-left: 8px; display: inline-flex; align-items: center; gap: 6px"
 				>
-					<i class="mdi mdi-tray-arrow-down" style="font-size: 18px"></i>
-					<span class="filter-label-text">Export</span>
+					<i
+						class="mdi"
+						:class="exporting ? 'mdi-loading mdi-spin' : 'mdi-tray-arrow-down'"
+						style="font-size: 18px"
+					></i>
+					<span class="filter-label-text">{{ exporting ? "Exporting..." : "CSV" }}</span>
+				</Button>
+				<Button
+					variant="outlined"
+					:disabled="exporting"
+					@click="handleExport('PDF')"
+					title="Export PDF"
+				>
+					<i class="mdi mdi-file-pdf-box"></i> PDF
 				</Button>
 			</div>
 		</Card>
@@ -1503,7 +1651,10 @@ defineExpose({
 					<div class="row-actions">
 						<template v-for="btn in buttonList" :key="btn.tooltip">
 							<button
-								v-if="btn.status.includes(item.status as WorkOrderStatus)"
+								v-if="
+									canUseWorkOrderAction(btn, item) &&
+									btn.status.includes(item.status as WorkOrderStatus)
+								"
 								class="btn btn--icon"
 								:class="btn.class"
 								:title="btn.tooltip"
@@ -1568,7 +1719,9 @@ defineExpose({
 			</p>
 			<template #footer>
 				<Button variant="secondary" @click="isConfirmBulkAction = false">Cancel</Button>
-				<Button variant="primary" @click="applyBulkAction">Confirm</Button>
+				<Button variant="primary" :disabled="applyingBulkAction" @click="applyBulkAction">
+					{{ applyingBulkAction ? "Processing..." : "Confirm" }}
+				</Button>
 			</template>
 		</Dialog>
 

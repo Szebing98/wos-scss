@@ -46,6 +46,15 @@ function parseDateValue(val: string | Date | number | null | undefined): Date | 
 	}
 
 	const raw = String(val).trim();
+
+	// Preserve timezone information from API timestamps. Parsing the date parts
+	// manually would treat a UTC value (ending in Z) as local time and skip the
+	// browser's timezone conversion.
+	if (/(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw)) {
+		const zonedDate = new Date(raw);
+		return isNaN(zonedDate.getTime()) ? null : zonedDate;
+	}
+
 	const timeMatch = raw.match(/(?:T|\s)(\d{1,2}:\d{2}(?::\d{2})?)/);
 	const time = timeMatch?.[1] || "00:00:00";
 

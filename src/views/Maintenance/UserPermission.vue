@@ -6,7 +6,9 @@ import http from "@/utils/http";
 import { useAuthStore } from "@/stores/auth.store";
 import {
 	getPermissionActionLabel,
+	getPermissionLabel,
 	getPermissionSubjectLabel,
+	normalizePermissionCatalog,
 } from "@/utils/permission-label";
 import { getHighestRoleLevel } from "@/utils/role";
 
@@ -110,15 +112,15 @@ async function loadAllPermissions() {
 		const res = await http.get("/abilities");
 		const data = res.data?.data || res.data || [];
 		if (Array.isArray(data)) {
-			allPermissions.value = data
-				.map((p: any) => ({
+			allPermissions.value = normalizePermissionCatalog(
+				data.map((p: any) => ({
 					guid: p.guid,
 					code: getPermissionCode(p),
 					action: p.action,
 					subject: p.subject,
 					inverted: p.inverted ?? false,
-				}))
-				.filter((p) => !isManageAllPermission(p));
+				})),
+			).filter((p) => !isManageAllPermission(p));
 		}
 	} catch (e) {
 		console.error("Failed to load abilities", e);
@@ -313,6 +315,10 @@ const selectedUserEditMessage = computed(() => {
 });
 
 function startEditingOverrides() {
+	if (!authStore.can("update", "Permission")) {
+		permissionGuardMessage.value = "You do not have permission to edit user overrides.";
+		return;
+	}
 	if (!canEditSelectedUser.value) {
 		permissionGuardMessage.value = selectedUserEditMessage.value;
 		return;
@@ -408,7 +414,12 @@ async function saveOverrides() {
 				<button
 					v-if="!isEditingOverrides"
 					class="btn btn--primary"
-					:disabled="!selectedUser || !canEditSelectedUser || isLoadingPermissions"
+					:disabled="
+						!selectedUser ||
+						!canEditSelectedUser ||
+						!authStore.can('update', 'Permission') ||
+						isLoadingPermissions
+					"
 					:title="selectedUserEditMessage || 'Edit Overrides'"
 					@click="startEditingOverrides"
 				>
@@ -565,7 +576,7 @@ async function saveOverrides() {
 							>
 								<div class="override-box__info">
 									<span class="override-box__action">
-										{{ getPermissionActionLabel(perm.action) }}
+										{{ getPermissionLabel(perm.action, perm.subject) }}
 									</span>
 									<span class="override-box__inherited-text">
 										{{ getInheritedStatusText(perm.code) }}

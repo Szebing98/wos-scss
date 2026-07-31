@@ -5,7 +5,7 @@ import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 const props = defineProps<{
 	workOrder: any;
-	partsReplaced: any[];
+	partReplacedImages: any[];
 	images: any[];
 }>();
 
@@ -56,10 +56,17 @@ function display(value: unknown, fallback = "-") {
 }
 
 function photosFor(category: string) {
+	const aliases: Record<string, string[]> = {
+		before: ["before"],
+		during: ["during", "in progress", "inprogress"],
+		after: ["after"],
+	};
 	const normalized = category.toLowerCase();
 	return props.images.filter((image: any) => {
-		const imageCategory = String(image.subCategory || image.category || "").toLowerCase();
-		return imageCategory === normalized || imageCategory.replace(/\s+/g, "") === normalized.replace(/\s+/g, "");
+		const imageCategory = String(image.subCategory || image.category || "")
+			.toLowerCase()
+			.trim();
+		return (aliases[normalized] || [normalized]).includes(imageCategory);
 	});
 }
 </script>
@@ -188,12 +195,19 @@ function photosFor(category: string) {
 					<tr><th colspan="11" class="section-cell section-cell--left">DETAIL OF WORK:</th></tr>
 					<tr><td colspan="11" class="large-cell report-blue">{{ display(workOrder.description, "") }}</td></tr>
 					<tr><th colspan="11" class="section-cell">PARTS REPLACED/ REPAIR:</th></tr>
-					<tr><th colspan="11" class="section-cell section-cell--light">Parts Detail (Parts Name, Qty)</th></tr>
-					<tr v-for="idx in 5" :key="`part-line-${idx}`">
-						<td colspan="11" class="line-cell">
-							<span v-if="partsReplaced[idx - 1]">
-								{{ partsReplaced[idx - 1].name }} - Qty: {{ partsReplaced[idx - 1].quantity }}
-							</span>
+					<tr>
+						<td colspan="11" class="part-photo-cell">
+							<div v-if="partReplacedImages.length" class="part-photo-grid">
+								<figure
+									v-for="img in partReplacedImages"
+									:key="img.id || img.guid || img.url"
+									class="part-photo"
+								>
+									<img :src="img.url" :alt="img.name || 'Part replaced'" />
+									<figcaption v-if="img.name">{{ img.name }}</figcaption>
+								</figure>
+							</div>
+							<span v-else class="photo-empty">No part replaced photos uploaded.</span>
 						</td>
 					</tr>
 				</template>
@@ -280,14 +294,14 @@ function photosFor(category: string) {
 				</tr>
 
 				<tr class="signature-row">
-					<th colspan="2">{{ reportKind === "piping" ? "CREATED BY:" : "REPORTED BY:" }}</th>
+					<th>{{ reportKind === "piping" ? "CREATED BY:" : "REPORTED BY:" }}</th>
 					<td colspan="2" class="report-blue">
 						{{ display(workOrder.salesAgentDisplay || workOrder.salesAgent || workOrder.createdBy) }}
 					</td>
 					<th>DONE BY:</th>
-					<td colspan="2" class="report-blue">{{ doneBy }}</td>
-					<th colspan="2">{{ reportKind === "piping" ? "CHECKED BY:" : "QC MINGGU:" }}</th>
-					<td class="report-blue">
+					<td class="report-blue">{{ doneBy }}</td>
+					<th>{{ reportKind === "piping" ? "CHECKED BY:" : "QC MINGGU:" }}</th>
+					<td colspan="2" class="report-blue">
 						{{
 							display(
 								workOrder.leaderDisplay ||
@@ -298,9 +312,6 @@ function photosFor(category: string) {
 						}}
 					</td>
 					<th>VERIFIED BY:</th>
-				</tr>
-				<tr class="signature-row">
-					<td colspan="9"></td>
 					<td colspan="2" class="report-blue">
 						{{ display(workOrder.projectPersonInChargeDisplay || workOrder.projectPersonInCharge) }}
 					</td>
@@ -468,13 +479,50 @@ function photosFor(category: string) {
 	white-space: pre-line;
 }
 
-.line-cell {
-	height: 18px;
-}
-
 .photo-cell {
 	height: 150px;
 	padding: 6px 7px !important;
+}
+
+.part-photo-cell {
+	min-height: 140px;
+	padding: 8px !important;
+}
+
+.part-photo-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 8px;
+}
+
+.part-photo {
+	min-width: 0;
+	margin: 0;
+	break-inside: avoid;
+}
+
+.part-photo img {
+	display: block;
+	width: 100%;
+	height: 90px;
+	object-fit: contain;
+	border: 1px solid #999;
+	background: #fff;
+}
+
+.part-photo figcaption {
+	margin-top: 3px;
+	overflow: hidden;
+	color: #444;
+	font-size: 9px;
+	text-align: center;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.photo-empty {
+	color: #777;
+	font-style: italic;
 }
 
 .report-document--piping .photo-cell,
@@ -578,6 +626,9 @@ function photosFor(category: string) {
 	}
 	.photo-grid img {
 		height: 96px !important;
+	}
+	.part-photo img {
+		height: 78px !important;
 	}
 }
 </style>

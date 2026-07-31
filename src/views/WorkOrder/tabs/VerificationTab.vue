@@ -13,7 +13,7 @@ const emit = defineEmits(["updateRole", "approve", "reject"]);
 const dateFormatStore = useDateFormatStore();
 
 function formatDateString(dateStr: string) {
-	return dateFormatStore.formatDateTime(dateStr);
+	return dateFormatStore.formatDate(dateStr);
 }
 </script>
 

@@ -10,6 +10,19 @@ export const useAuthStore = defineStore("auth", {
 		currentUser: null as any | null,
 	}),
 
+	getters: {
+		can: (state) => (action: string, subject: string) => {
+			const rights = state.currentUser?.accessRights || [];
+			for (let index = rights.length - 1; index >= 0; index -= 1) {
+				const right = rights[index];
+				const actionMatches = right.action === action || right.action === "manage";
+				const subjectMatches = right.subject === subject || right.subject === "all";
+				if (actionMatches && subjectMatches) return !right.inverted;
+			}
+			return false;
+		},
+	},
+
 	actions: {
 		async login(email: string, password: string, remember: boolean) {
 			const { data, error } = await authApi.login({ email, password, remember }) as any;

@@ -20,6 +20,15 @@ const emit = defineEmits<{
 
 const route = useRoute();
 const authStore = useAuthStore();
+const canAccessMaintenance = computed(() =>
+	[
+		["read", "Location"],
+		["read", "Site"],
+		["read", "WorkType"],
+		["read", "DocNoFormat"],
+		["read", "Permission"],
+	].some(([action, subject]) => authStore.can(action, subject)),
+);
 
 const isEmployeesActive = computed(() => {
 	if (route.path === "/user/list" || route.path === "/user/form" || route.query.mode === "new") {
@@ -95,7 +104,11 @@ watch(
 			</router-link>
 
 			<!-- Work Order -->
-			<div class="nav__group" :class="{ 'nav__group--expanded': groups.workOrders }">
+			<div
+				v-if="authStore.can('read', 'WorkOrder')"
+				class="nav__group"
+				:class="{ 'nav__group--expanded': groups.workOrders }"
+			>
 				<router-link
 					to="/work-order"
 					class="nav__item"
@@ -190,6 +203,7 @@ watch(
 
 			<!-- Customers -->
 			<router-link
+				v-if="authStore.can('read', 'Customer')"
 				class="nav__item"
 				to="/customer/list"
 				:class="{ 'nav__item--active': route.path.startsWith('/customer') }"
@@ -202,6 +216,7 @@ watch(
 
 			<!-- Employees -->
 			<router-link
+				v-if="authStore.can('read', 'User')"
 				class="nav__item"
 				to="/user/list"
 				:class="{ 'nav__item--active': isEmployeesActive }"
@@ -212,7 +227,11 @@ watch(
 			</router-link>
 
 			<!-- Maintenance -->
-			<div class="nav__group" :class="{ 'nav__group--expanded': groups.maintenance }">
+			<div
+				v-if="canAccessMaintenance"
+				class="nav__group"
+				:class="{ 'nav__group--expanded': groups.maintenance }"
+			>
 				<div
 					class="nav__item"
 					:class="{
@@ -233,7 +252,7 @@ watch(
 					class="nav__children"
 					v-show="!((isDesktop && isDocked) || isTablet) && groups.maintenance"
 				>
-					<li>
+					<li v-if="authStore.can('read', 'Location')">
 						<router-link
 							to="/maintenance/location"
 							class="nav__child"
@@ -241,7 +260,7 @@ watch(
 							><span>Location</span></router-link
 						>
 					</li>
-					<li>
+					<li v-if="authStore.can('read', 'Site')">
 						<router-link
 							to="/maintenance/site"
 							class="nav__child"
@@ -249,7 +268,7 @@ watch(
 							><span>Site</span></router-link
 						>
 					</li>
-					<li>
+					<li v-if="authStore.can('read', 'WorkType')">
 						<router-link
 							to="/maintenance/work-types"
 							class="nav__child"
@@ -265,7 +284,7 @@ watch(
 							><span>Part Info</span></router-link
 						>
 					</li>
-					<li>
+					<li v-if="authStore.can('read', 'DocNoFormat')">
 						<router-link
 							to="/maintenance/services"
 							class="nav__child"
@@ -273,7 +292,7 @@ watch(
 							><span>Service Provided</span></router-link
 						>
 					</li> -->
-					<li>
+					<li v-if="authStore.can('read', 'Permission')">
 						<router-link
 							to="/maintenance/doc-no-format"
 							class="nav__child"
@@ -281,7 +300,7 @@ watch(
 							><span>Doc No Format</span></router-link
 						>
 					</li>
-					<li>
+					<li v-if="authStore.can('read', 'Permission')">
 						<router-link
 							to="/maintenance/role-permission"
 							class="nav__child"
@@ -302,6 +321,7 @@ watch(
 
 			<!-- Audit Log -->
 			<router-link
+				v-if="authStore.can('read', 'Audit')"
 				class="nav__item"
 				to="/audit-log"
 				active-class="nav__item--active"

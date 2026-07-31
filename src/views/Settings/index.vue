@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useThemeStore } from "@/stores/theme.store";
-import { useAuthStore } from "@/stores/auth.store";
 import { useSnackbarStore } from "@/stores/snackbar.store";
 import { useDateFormatStore, type SystemDateFormat } from "@/stores/dateFormat.store";
-import { userApi } from "@/api/user/user.api";
+import { authApi } from "@/api/auth/auth.api";
 import Card from "@/components/Card.vue";
 import Button from "@/components/Button.vue";
 import Textbox from "@/components/Textbox.vue";
@@ -12,7 +11,6 @@ import Select from "@/components/Select.vue";
 import Dialog from "@/components/Dialog.vue";
 
 const themeStore = useThemeStore();
-const authStore = useAuthStore();
 const snackbar = useSnackbarStore();
 const dateFormatStore = useDateFormatStore();
 
@@ -20,41 +18,51 @@ const dateFormatStore = useDateFormatStore();
 const showPasswordModal = ref(false);
 const passwordLoading = ref(false);
 const passwordForm = ref({
+	currentPassword: "",
 	newPassword: "",
-	confirmPassword: "",
+	newPasswordConfirm: "",
 });
 
 function openPasswordModal() {
-	passwordForm.value = { newPassword: "", confirmPassword: "" };
+	passwordForm.value = {
+		currentPassword: "",
+		newPassword: "",
+		newPasswordConfirm: "",
+	};
 	showPasswordModal.value = true;
 }
 
 async function handleUpdatePassword() {
-	if (!passwordForm.value.newPassword || !passwordForm.value.confirmPassword) {
-		snackbar.error("Please fill in both password fields.");
+	const { currentPassword, newPassword, newPasswordConfirm } = passwordForm.value;
+
+	if (!currentPassword || !newPassword || !newPasswordConfirm) {
+		snackbar.error("Please fill in all password fields.");
 		return;
 	}
-	if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+	if (newPassword !== newPasswordConfirm) {
 		snackbar.error("Passwords do not match.");
 		return;
 	}
-	if (passwordForm.value.newPassword.length < 6) {
-		snackbar.error("Password must be at least 6 characters long.");
-		return;
-	}
-
-	const guid = (authStore.currentUser && authStore.currentUser.guid) || (authStore.user && authStore.user.guid);
-	if (!guid) {
-		snackbar.error("Could not determine user ID.");
+	if (
+		newPassword.length < 8 ||
+		!/[A-Z]/.test(newPassword) ||
+		!/[a-z]/.test(newPassword) ||
+		!/[0-9]/.test(newPassword) ||
+		!/[!@#$%^&*]/.test(newPassword)
+	) {
+		snackbar.error(
+			"Password must be at least 8 characters and include uppercase, lowercase, number, and special character.",
+		);
 		return;
 	}
 
 	passwordLoading.value = true;
 	try {
-		const { error } = await userApi.updatePassword(guid, {
-			password: passwordForm.value.newPassword,
-			passwordConfirm: passwordForm.value.confirmPassword,
-		} as any);
+		const { error } = await authApi.changePassword({
+			currentPassword,
+			newPassword,
+			newPasswordConfirm,
+		});
 
 		if (error) {
 			snackbar.error((error as any)?.error?.message || "Failed to update password.");
@@ -165,12 +173,16 @@ function handleDateFormatChange(val: string) {
 		<Dialog v-model="showPasswordModal" title="Change Password" maxWidth="440px">
 			<div class="form-grid" style="display: flex; flex-direction: column; gap: 16px; padding: 8px 0;">
 				<div class="form-group">
+					<label class="form-group__label">Current Password <span class="u-required">*</span></label>
+					<Textbox v-model="passwordForm.currentPassword" type="password" placeholder="Enter current password" />
+				</div>
+				<div class="form-group">
 					<label class="form-group__label">New Password <span class="u-required">*</span></label>
 					<Textbox v-model="passwordForm.newPassword" type="password" placeholder="Enter new password" />
 				</div>
 				<div class="form-group">
 					<label class="form-group__label">Confirm New Password <span class="u-required">*</span></label>
-					<Textbox v-model="passwordForm.confirmPassword" type="password" placeholder="Confirm new password" />
+					<Textbox v-model="passwordForm.newPasswordConfirm" type="password" placeholder="Confirm new password" />
 				</div>
 			</div>
 			<template #footer>
