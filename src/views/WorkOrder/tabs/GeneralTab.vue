@@ -37,7 +37,15 @@ const isPriorityEditable = computed(() => {
 });
 
 function userDisplay(user: any) {
-	return userDisplayCode(user?.displayCode, user?.code, "—");
+	const visibleName = user?.name?.trim();
+	const visibleCode = userDisplayCode(user?.displayCode, user?.code, "");
+	if (visibleName && visibleCode) {
+		if (visibleName.includes(`(${visibleCode})`) || visibleName === visibleCode) {
+			return visibleName;
+		}
+		return `${visibleName} (${visibleCode})`;
+	}
+	return visibleName || visibleCode || "—";
 }
 
 const salesAgentUsers = computed(() => {

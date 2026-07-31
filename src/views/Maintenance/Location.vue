@@ -45,7 +45,10 @@ function resetFilters() {
 	filterRegion.value = "all";
 }
 
+import { useAuthStore } from "@/stores/auth.store";
 import http from "@/utils/http";
+
+const authStore = useAuthStore();
 
 const mysStates = ref<SubNode[]>(
 	LHDN_STATES.map((s) => ({ code: s.Code, name: s.State, isActive: true }))
@@ -261,7 +264,7 @@ async function syncWithLhdn() {
 					Official LHDN MyInvois Standard Country & State Reference Specifications
 				</p>
 			</div>
-			<button class="btn btn--primary sync-btn" :disabled="isSyncing" @click="syncWithLhdn">
+			<button v-if="authStore.can('manage', 'Location')" class="btn btn--primary sync-btn" :disabled="isSyncing" @click="syncWithLhdn">
 				<i class="mdi" :class="isSyncing ? 'mdi-loading mdi-spin' : 'mdi-sync'"></i>
 				<span class="btn-text">{{ isSyncing ? 'Syncing SDK...' : 'Sync LHDN Codes' }}</span>
 			</button>

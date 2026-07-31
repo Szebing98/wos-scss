@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import Button from "@/components/Button.vue";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
+import logo from "@/assets/logo.svg";
 
 const props = defineProps<{
 	workOrder: any;
@@ -15,7 +16,8 @@ const dateFormatStore = useDateFormatStore();
 const showCompanyHeader = ref(true);
 
 const reportKind = computed(() => {
-	const workType = `${props.workOrder?.workType || ""} ${props.workOrder?.workTypeItem || ""}`.toLowerCase();
+	const workType =
+		`${props.workOrder?.workType || ""} ${props.workOrder?.workTypeItem || ""}`.toLowerCase();
 	if (workType.includes("pipe")) return "piping";
 	if (workType.includes("mechanical") || workType.includes("maintenance")) return "mechanical";
 	return "general";
@@ -41,8 +43,16 @@ const reportTypeLabel = computed(() => {
 });
 
 const doneBy = computed(() => {
-	const technicians = props.workOrder?.technicianCodes || props.workOrder?.assistantEngineers || [];
-	return Array.isArray(technicians) && technicians.length ? technicians.join(", ") : "-";
+	const technicians = props.workOrder?.technicians;
+	if (Array.isArray(technicians) && technicians.length) {
+		return technicians
+			.map((tech: any) => tech.display || tech.name || tech.code)
+			.filter(Boolean)
+			.join(", ");
+	}
+	const codes =
+		props.workOrder?.technicianCodes || props.workOrder?.assistantEngineers || [];
+	return Array.isArray(codes) && codes.length ? codes.join(", ") : "-";
 });
 
 function formatDateString(dateStr: string | Date | null) {
@@ -102,13 +112,14 @@ function photosFor(category: string) {
 			<tbody>
 				<tr v-if="showCompanyHeader" class="company-row">
 					<td class="logo-cell" colspan="2">
-						<img src="@/assets/logo.svg" alt="GS-TECH" />
+						<img :src="logo" alt="GS-TECH" />
 					</td>
 					<td class="company-cell" colspan="5">
 						<strong>GS-TECH Engineering Sdn. Bhd (853477-A)</strong><br />
 						1009, Jalan 7, Demak Laut Industrial Park, 93050 Kuching, Sarawak.<br />
 						Tel: 082-439863; Fax: 082-439862<br />
-						Email: <span class="report-blue">kch@gstech.com.my</span>; Website: www.gstech.com.my
+						Email: <span class="report-blue">kch@gstech.com.my</span>; Website:
+						www.gstech.com.my
 					</td>
 					<th colspan="2">WORK ORDER:</th>
 					<td colspan="2">{{ display(workOrder.woNumber) }}</td>
@@ -123,13 +134,17 @@ function photosFor(category: string) {
 						<th colspan="2">REPORT TYPE:</th>
 						<td colspan="2" class="report-blue">{{ reportTypeLabel }}</td>
 						<th>TYPE:</th>
-						<td colspan="2" class="report-blue">{{ display(workOrder.workTypeItem) }}</td>
+						<td colspan="2" class="report-blue">
+							{{ display(workOrder.workTypeItem) }}
+						</td>
 						<th colspan="2">LOCATION:</th>
 						<td colspan="2" class="report-blue">{{ display(workOrder.location) }}</td>
 					</tr>
 					<tr>
 						<th colspan="2">CUSTOMER NAME:</th>
-						<td colspan="5" class="report-blue">{{ display(workOrder.customer?.name) }}</td>
+						<td colspan="5" class="report-blue">
+							{{ display(workOrder.customer?.name) }}
+						</td>
 						<th colspan="2">CUST REF NO.:</th>
 						<td colspan="2" class="report-blue">{{ display(workOrder.cusRefNo) }}</td>
 					</tr>
@@ -141,22 +156,40 @@ function photosFor(category: string) {
 					</tr>
 					<tr>
 						<th colspan="2">EQUIPMENT NAME:</th>
-						<td colspan="5" class="report-blue">{{ display(workOrder.equipment?.name) }}</td>
+						<td colspan="5" class="report-blue">
+							{{ display(workOrder.equipment?.name) }}
+						</td>
 						<th colspan="2">COMPLETE DATE:</th>
-						<td colspan="2">{{ formatDateString(workOrder.completedDate || workOrder.estimatedEndDate) }}</td>
+						<td colspan="2">
+							{{
+								formatDateString(
+									workOrder.completedDate || workOrder.estimatedEndDate,
+								)
+							}}
+						</td>
 					</tr>
-					<tr><th colspan="11" class="section-cell">GENERAL INFORMATION</th></tr>
+					<tr>
+						<th colspan="11" class="section-cell">GENERAL INFORMATION</th>
+					</tr>
 					<tr>
 						<th colspan="2">EQUIPMENT TYPE:</th>
-						<td colspan="5" class="report-blue">{{ display(workOrder.equipment?.equipmentType) }}</td>
+						<td colspan="5" class="report-blue">
+							{{ display(workOrder.equipment?.equipmentType) }}
+						</td>
 						<th colspan="2">BRAND NAME:</th>
-						<td colspan="2" class="report-blue">{{ display(workOrder.equipment?.brand) }}</td>
+						<td colspan="2" class="report-blue">
+							{{ display(workOrder.equipment?.brand) }}
+						</td>
 					</tr>
 					<tr>
 						<th colspan="2">MODEL:</th>
-						<td colspan="5" class="report-blue">{{ display(workOrder.equipment?.model) }}</td>
+						<td colspan="5" class="report-blue">
+							{{ display(workOrder.equipment?.model) }}
+						</td>
 						<th colspan="2">SERIAL NO.:</th>
-						<td colspan="2" class="report-blue">{{ display(workOrder.equipment?.serialNo) }}</td>
+						<td colspan="2" class="report-blue">
+							{{ display(workOrder.equipment?.serialNo) }}
+						</td>
 					</tr>
 					<tr>
 						<th colspan="4" class="section-cell">TECHNICAL DATA</th>
@@ -164,11 +197,15 @@ function photosFor(category: string) {
 					</tr>
 					<tr>
 						<th colspan="2">FLOW&HEAD:</th>
-						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.flowHead) }}</td>
+						<td colspan="2" class="report-blue">
+							{{ display(workOrder.technical?.flowHead) }}
+						</td>
 						<th colspan="2">BRAND NAME:</th>
 						<td class="report-blue">{{ display(workOrder.technical?.brandName) }}</td>
 						<th colspan="2">RATED VOLTAGE:</th>
-						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.ratedVoltage) }}</td>
+						<td colspan="2" class="report-blue">
+							{{ display(workOrder.technical?.ratedVoltage) }}
+						</td>
 					</tr>
 					<tr>
 						<th colspan="2">OTHERS:</th>
@@ -176,25 +213,41 @@ function photosFor(category: string) {
 						<th colspan="2">SERIAL NO.:</th>
 						<td class="report-blue">{{ display(workOrder.technical?.serialNo) }}</td>
 						<th colspan="2">RATED SPEED:</th>
-						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.ratedSpeed) }}</td>
+						<td colspan="2" class="report-blue">
+							{{ display(workOrder.technical?.ratedSpeed) }}
+						</td>
 					</tr>
 					<tr>
 						<td colspan="4"></td>
 						<th colspan="2">FRAME SIZE:</th>
 						<td class="report-blue">{{ display(workOrder.technical?.frameSize) }}</td>
 						<th colspan="2">RATED CURRENT:</th>
-						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.ratedCurrent) }}</td>
+						<td colspan="2" class="report-blue">
+							{{ display(workOrder.technical?.ratedCurrent) }}
+						</td>
 					</tr>
 					<tr>
 						<td colspan="4"></td>
 						<th colspan="2">PHASE:</th>
 						<td class="report-blue">{{ display(workOrder.technical?.phase) }}</td>
 						<th colspan="2">RATED POWER:</th>
-						<td colspan="2" class="report-blue">{{ display(workOrder.technical?.ratedPower) }}</td>
+						<td colspan="2" class="report-blue">
+							{{ display(workOrder.technical?.ratedPower) }}
+						</td>
 					</tr>
-					<tr><th colspan="11" class="section-cell section-cell--left">DETAIL OF WORK:</th></tr>
-					<tr><td colspan="11" class="large-cell report-blue">{{ display(workOrder.description, "") }}</td></tr>
-					<tr><th colspan="11" class="section-cell">PARTS REPLACED/ REPAIR:</th></tr>
+					<tr>
+						<th colspan="11" class="section-cell section-cell--left">
+							DETAIL OF WORK:
+						</th>
+					</tr>
+					<tr>
+						<td colspan="11" class="large-cell report-blue">
+							{{ display(workOrder.description, "") }}
+						</td>
+					</tr>
+					<tr>
+						<th colspan="11" class="section-cell">PARTS REPLACED/ REPAIR:</th>
+					</tr>
 					<tr>
 						<td colspan="11" class="part-photo-cell">
 							<div v-if="partReplacedImages.length" class="part-photo-grid">
@@ -207,7 +260,9 @@ function photosFor(category: string) {
 									<figcaption v-if="img.name">{{ img.name }}</figcaption>
 								</figure>
 							</div>
-							<span v-else class="photo-empty">No part replaced photos uploaded.</span>
+							<span v-else class="photo-empty"
+								>No part replaced photos uploaded.</span
+							>
 						</td>
 					</tr>
 				</template>
@@ -215,17 +270,23 @@ function photosFor(category: string) {
 				<template v-else-if="reportKind === 'piping'">
 					<tr v-if="!showCompanyHeader">
 						<th colspan="2">CUSTOMER NAME:</th>
-						<td colspan="5" class="report-blue">{{ display(workOrder.customer?.name) }}</td>
+						<td colspan="5" class="report-blue">
+							{{ display(workOrder.customer?.name) }}
+						</td>
 						<th colspan="2">WORK ORDER:</th>
 						<td colspan="2">{{ display(workOrder.woNumber) }}</td>
 					</tr>
 					<tr v-else>
 						<th colspan="2">CUSTOMER NAME:</th>
-						<td colspan="9" class="report-blue">{{ display(workOrder.customer?.name) }}</td>
+						<td colspan="9" class="report-blue">
+							{{ display(workOrder.customer?.name) }}
+						</td>
 					</tr>
 					<tr>
 						<th colspan="2">REPORT TYPE:</th>
-						<td colspan="5" class="report-blue">{{ display(workOrder.workTypeItem || workOrder.title) }}</td>
+						<td colspan="5" class="report-blue">
+							{{ display(workOrder.workTypeItem || workOrder.title) }}
+						</td>
 						<th colspan="2">CUST REF NO:</th>
 						<td colspan="2" class="report-blue">{{ display(workOrder.cusRefNo) }}</td>
 					</tr>
@@ -237,13 +298,29 @@ function photosFor(category: string) {
 						<th colspan="2">START DATE:</th>
 						<td colspan="5">{{ formatDateString(workOrder.startDate) }}</td>
 						<th colspan="2">COMPLETE DATE:</th>
-						<td colspan="2">{{ formatDateString(workOrder.completedDate || workOrder.estimatedEndDate) }}</td>
+						<td colspan="2">
+							{{
+								formatDateString(
+									workOrder.completedDate || workOrder.estimatedEndDate,
+								)
+							}}
+						</td>
 					</tr>
-					<tr><th colspan="11" class="section-cell section-cell--left">WORK DESCRIPTION:</th></tr>
-					<tr><td colspan="11" class="medium-cell report-blue">{{ display(workOrder.description, "") }}</td></tr>
+					<tr>
+						<th colspan="11" class="section-cell section-cell--left">
+							WORK DESCRIPTION:
+						</th>
+					</tr>
+					<tr>
+						<td colspan="11" class="medium-cell report-blue">
+							{{ display(workOrder.description, "") }}
+						</td>
+					</tr>
 					<tr>
 						<th colspan="2">REMARK(S):</th>
-						<td colspan="9" class="remark-cell report-blue">{{ display(workOrder.remarks, "") }}</td>
+						<td colspan="9" class="remark-cell report-blue">
+							{{ display(workOrder.remarks, "") }}
+						</td>
 					</tr>
 				</template>
 
@@ -254,31 +331,51 @@ function photosFor(category: string) {
 					</tr>
 					<tr>
 						<th colspan="2">CUSTOMER NAME:</th>
-						<td colspan="5" class="report-blue">{{ display(workOrder.customer?.name) }}</td>
+						<td colspan="5" class="report-blue">
+							{{ display(workOrder.customer?.name) }}
+						</td>
 						<th colspan="2">CUSTOMER REF NO:</th>
 						<td colspan="2" class="report-blue">{{ display(workOrder.cusRefNo) }}</td>
 					</tr>
 					<tr>
 						<th colspan="2">REPORT TYPE:</th>
-						<td colspan="5" class="report-blue">{{ display(workOrder.workTypeItem || workOrder.workType) }}</td>
+						<td colspan="5" class="report-blue">
+							{{ display(workOrder.workTypeItem || workOrder.workType) }}
+						</td>
 						<th colspan="2">START DATE:</th>
-						<td colspan="2" class="report-blue">{{ formatDateString(workOrder.startDate) }}</td>
+						<td colspan="2" class="report-blue">
+							{{ formatDateString(workOrder.startDate) }}
+						</td>
 					</tr>
 					<tr>
 						<th colspan="2">LOCATION:</th>
 						<td colspan="5" class="report-blue">{{ display(workOrder.location) }}</td>
 						<th colspan="2">COMPLETE DATE:</th>
-						<td colspan="2" class="report-blue">{{ formatDateString(workOrder.completedDate || workOrder.estimatedEndDate) }}</td>
+						<td colspan="2" class="report-blue">
+							{{
+								formatDateString(
+									workOrder.completedDate || workOrder.estimatedEndDate,
+								)
+							}}
+						</td>
 					</tr>
 					<tr>
 						<th colspan="2">WORK DESCRIPTION:</th>
-						<td colspan="9" class="report-blue">{{ display(workOrder.description, "") }}</td>
+						<td colspan="9" class="report-blue">
+							{{ display(workOrder.description, "") }}
+						</td>
 					</tr>
-					<tr><th colspan="11" class="section-cell">DETAIL OF WORK:</th></tr>
-					<tr><td colspan="11" class="large-cell"></td></tr>
+					<tr>
+						<th colspan="11" class="section-cell">DETAIL OF WORK:</th>
+					</tr>
+					<tr>
+						<td colspan="11" class="large-cell"></td>
+					</tr>
 				</template>
 
-				<tr><th colspan="11" class="section-cell">WORK PROGRESS PHOTO(S):</th></tr>
+				<tr>
+					<th colspan="11" class="section-cell">WORK PROGRESS PHOTO(S):</th>
+				</tr>
 				<tr v-for="category in ['Before', 'During', 'After']" :key="category">
 					<td colspan="11" class="photo-cell">
 						<strong>{{ category.toUpperCase() }}:</strong>
@@ -296,7 +393,13 @@ function photosFor(category: string) {
 				<tr class="signature-row">
 					<th>{{ reportKind === "piping" ? "CREATED BY:" : "REPORTED BY:" }}</th>
 					<td colspan="2" class="report-blue">
-						{{ display(workOrder.salesAgentDisplay || workOrder.salesAgent || workOrder.createdBy) }}
+						{{
+							display(
+								workOrder.salesAgentDisplay ||
+									workOrder.salesAgent ||
+									workOrder.createdBy,
+							)
+						}}
 					</td>
 					<th>DONE BY:</th>
 					<td class="report-blue">{{ doneBy }}</td>
@@ -313,7 +416,12 @@ function photosFor(category: string) {
 					</td>
 					<th>VERIFIED BY:</th>
 					<td colspan="2" class="report-blue">
-						{{ display(workOrder.projectPersonInChargeDisplay || workOrder.projectPersonInCharge) }}
+						{{
+							display(
+								workOrder.projectPersonInChargeDisplay ||
+									workOrder.projectPersonInCharge,
+							)
+						}}
 					</td>
 				</tr>
 			</tbody>
@@ -396,7 +504,7 @@ function photosFor(category: string) {
 	border-radius: 8px;
 	color: #111;
 	font-family: Arial, Helvetica, sans-serif;
-	font-size: 12px;
+	font-size: 11px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 	margin-top: 16px;
 	overflow-x: auto;
@@ -548,87 +656,70 @@ function photosFor(category: string) {
 .signature-row td {
 	vertical-align: middle;
 	height: 30px;
+	font-size: 8.5px;
 }
 
 @media print {
-	:global(.header),
-	:global(.side-menu),
-	:global(.app-footer) {
-		display: none !important;
+	@page {
+		size: A4 portrait;
+		margin: 2mm;
 	}
-	:global(.app-main),
-	:global(.app-container) {
-		margin: 0 !important;
-		padding: 0 !important;
-		overflow: visible !important;
-	}
-	:global(.card),
-	:global(.content-card),
-	:global(.panel-card) {
-		border: none !important;
-		box-shadow: none !important;
-		border-radius: 0 !important;
-		background: transparent !important;
-		padding: 0 !important;
-		margin: 0 !important;
-	}
-	.page-header,
-	.tabs-horizontal,
-	.header-actions,
-	.stepper-horizontal,
-	.no-print,
-	.finance-summary-box,
-	.payment-section,
-	.alert-box {
-		display: none !important;
-	}
-	.wo-detail-page {
-		margin: 0 !important;
-		padding: 0 !important;
-		background: white !important;
-	}
-	.workspace-area {
-		padding: 0 !important;
-		max-width: 100% !important;
-	}
+
 	.report-document {
-		border: none !important;
-		box-shadow: none !important;
-		outline: none !important;
-		background: transparent !important;
-		padding: 0 !important;
-		margin: 0 !important;
-		overflow: visible !important;
+		width: 140mm;
 	}
-	.report-table {
-		width: 190mm !important;
-		min-height: 277mm !important;
-		border: 1px solid #000 !important;
-		font-size: 11px !important;
+
+	body * {
+		visibility: hidden !important;
 	}
-	.report-table th,
-	.report-table td {
-		border-color: #000 !important;
-		padding: 3px 5px !important;
-	}
-	.report-table th,
-	.section-cell {
-		background-color: #d0cece !important;
-		-webkit-print-color-adjust: exact;
-		print-color-adjust: exact;
-	}
+
 	.photo-cell {
-		height: 130px !important;
+		height: auto;
 	}
-	.report-document--piping .photo-cell,
-	.report-document--general .photo-cell {
-		height: 180px !important;
+
+	.large-cell {
+		height: auto;
 	}
-	.photo-grid img {
-		height: 96px !important;
+
+	.medium-cell {
+		height: auto;
 	}
-	.part-photo img {
-		height: 78px !important;
+
+	html,
+	body,
+	#app,
+	main,
+	.layout,
+	.sidebar {
+		position: static !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		width: 100% !important;
+		height: auto !important;
+		overflow: visible !important;
+		background: transparent !important;
+	}
+
+	aside,
+	nav,
+	.sidebar,
+	.no-print,
+	.report-toolbar {
+		display: none !important;
+	}
+
+	.report-document,
+	.report-document * {
+		visibility: visible !important;
+	}
+
+	.report-document {
+		position: absolute !important;
+		left: 0 !important;
+		top: 0 !important;
+		width: 100% !important;
+		margin: 0 !important;
+		padding: 0 !important;
 	}
 }
 </style>

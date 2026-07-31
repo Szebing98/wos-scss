@@ -14,16 +14,6 @@ import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
 import { useSnackbarStore } from "@/stores/snackbar.store";
 import { useAuthStore } from "@/stores/auth.store";
 
-const headers: TableHeader[] = [
-	{ key: "status", label: "Status", width: "110px", minWidth: "100px" },
-	{ key: "customer", label: "Customer", minWidth: "220px" },
-	{ key: "autocount", label: "AutoCount No", width: "150px", minWidth: "140px" },
-	{ key: "contractNo", label: "Contract No", width: "150px", minWidth: "140px" },
-	{ key: "tax", label: "Tax Info", minWidth: "200px" },
-	{ key: "einvoice", label: "e-Invoice", width: "140px", minWidth: "130px" },
-	{ key: "actions", label: "Actions", align: "right", width: "110px", minWidth: "100px" },
-];
-
 const router = useRouter();
 const searchQuery = ref("");
 const identityFilter = ref("all");
@@ -42,6 +32,27 @@ const loading = ref(false);
 const exporting = ref(false);
 const snackbar = useSnackbarStore();
 const authStore = useAuthStore();
+
+const headers = computed<TableHeader[]>(() => {
+	const cols: TableHeader[] = [
+		{ key: "status", label: "Status", width: "110px", minWidth: "100px" },
+		{ key: "customer", label: "Customer", minWidth: "220px" },
+		{ key: "classification", label: "Classification", width: "150px", minWidth: "130px" },
+		{ key: "autocount", label: "AutoCount No", width: "150px", minWidth: "140px" },
+		{ key: "contractNo", label: "Contract No", width: "150px", minWidth: "140px" },
+		{ key: "einvoice", label: "e-Invoice", width: "140px", minWidth: "130px" },
+	];
+	if (authStore.can("update", "Customer")) {
+		cols.push({
+			key: "actions",
+			label: "Actions",
+			align: "right",
+			width: "110px",
+			minWidth: "100px",
+		});
+	}
+	return cols;
+});
 
 async function fetchCustomers() {
 	loading.value = true;
@@ -70,19 +81,17 @@ async function fetchCustomers() {
 				isActive: c.isActive,
 				requestEinvoice: c.requestEinvoice,
 				addressCode: c.addressCode,
-				profile: c.profile
-					? {
-							customerCode: c.profile.customerCode,
-							email: c.profile.email,
-							phone: c.profile.phone,
-							tin: c.profile.tin,
-							brn: c.profile.brn,
-							individualType: c.profile.individualType,
-							identityNo: c.profile.identityNo,
-							msicCode: c.profile.msicCode,
-							msicDesc: c.profile.msicDesc,
-						}
-					: null,
+				profile: {
+					customerCode: c.customerCode || c.code || "",
+					email: c.email || "",
+					phone: c.phone || "",
+					tin: c.tin || "",
+					brn: c.brn || "",
+					individualType: c.individualType || "",
+					identityNo: c.identityNo || "",
+					msicCode: c.msicCode || "",
+					msicDesc: c.msicDesc || "",
+				},
 			}));
 		} else if (error) {
 			console.error("Failed to load customers:", error);
@@ -120,6 +129,8 @@ const filteredCustomers = computed(() => {
 			const matchTin = item.profile?.tin?.toLowerCase().includes(q);
 			const matchBrn = item.profile?.brn?.toLowerCase().includes(q);
 			const matchId = item.profile?.identityNo?.toLowerCase().includes(q);
+			const classification = getCustomerClassification(item.profile?.individualType || "", item.profile?.identityNo || "");
+			const matchClassification = classification.toLowerCase().includes(q);
 			return (
 				matchName ||
 				matchCode ||
@@ -129,7 +140,8 @@ const filteredCustomers = computed(() => {
 				matchPhone ||
 				matchTin ||
 				matchBrn ||
-				matchId
+				matchId ||
+				matchClassification
 			);
 		}
 
@@ -187,6 +199,31 @@ function getAvatarStyle(name: string) {
 function countryFormatAccount(acc: string) {
 	return acc.toUpperCase();
 }
+
+function getCustomerClassification(individualType: string, identityNo: string = ""): string {
+	if (!individualType) {
+		if (identityNo) return "INDIVIDUAL";
+		return "COMPANY";
+	}
+	const upper = individualType.toUpperCase();
+	if (upper === "COMPANY" || upper === "BUSINESS") return "COMPANY";
+	if (upper === "GOVERNMENT") return "GOVERNMENT";
+	return "INDIVIDUAL";
+}
+
+function getClassificationBadge(individualType: string, identityNo: string = "") {
+	const classification = getCustomerClassification(individualType, identityNo);
+	switch (classification) {
+		case "COMPANY":
+			return "info";
+		case "GOVERNMENT":
+			return "warning";
+		case "INDIVIDUAL":
+			return "success";
+		default:
+			return "default";
+	}
+}
 </script>
 
 <template>
@@ -201,12 +238,17 @@ function countryFormatAccount(acc: string) {
 				</p>
 			</div>
 			<div style="display: flex; gap: 8px">
-				<button class="btn btn--outlined" :disabled="exporting" @click="handleExport('CSV')">
+				<!-- <button class="btn btn--outlined" :disabled="exporting" @click="handleExport('CSV')">
 					<i class="mdi mdi-file-delimited-outline"></i>
 					{{ exporting ? "Exporting..." : "CSV" }}
-				</button>
-				<button class="btn btn--outlined" :disabled="exporting" @click="handleExport('PDF')">
-					<i class="mdi mdi-file-pdf-box"></i> PDF
+				</button> -->
+				<button
+					v-if="authStore.can('export', 'Report')"
+					class="btn btn--outlined"
+					:disabled="exporting"
+					@click="handleExport('PDF')"
+				>
+					<i class="mdi mdi-file-pdf-box"></i> Export
 				</button>
 				<button
 					v-if="authStore.can('create', 'Customer')"
@@ -285,26 +327,21 @@ function countryFormatAccount(acc: string) {
 				<FilterPanel show-reset align="right" @reset="resetFilters">
 					<Select v-model="identityFilter" label="Identity Type">
 						<option value="all">All Types</option>
-						<option value="COMPANY">COMPANY (Corporate / BRN)</option>
-						<option value="INDIVIDUAL">INDIVIDUAL (All Personal)</option>
-						<option value="MyKAD">MyKAD (Citizen)</option>
-						<option value="MyPR">MyPR (Permanent Resident)</option>
-						<option value="MyKAS">MyKAS (Temporary Resident)</option>
-						<option value="ARMY">ARMY (Military Personnel)</option>
-						<option value="PASSPORT">PASSPORT (Foreigner)</option>
-						<option value="GOVERNMENT">GOVERNMENT (Agency)</option>
+						<option value="COMPANY">Company</option>
+						<option value="INDIVIDUAL">Individual</option>
+						<option value="GOVERNMENT">Government</option>
 					</Select>
 
 					<Select v-model="filterStatus" label="Status">
 						<option value="all">All Status</option>
 						<option value="active">Active</option>
-						<option value="inactive">Disabled</option>
+						<option value="inactive">Inactive</option>
 					</Select>
 
 					<Select v-model="filterEinvoice" label="e-Invoice">
 						<option value="all">All</option>
-						<option value="required">Required</option>
-						<option value="standard">Standard</option>
+						<option value="required">Requested</option>
+						<option value="standard">Not Requested</option>
 					</Select>
 				</FilterPanel>
 			</div>
@@ -314,14 +351,17 @@ function countryFormatAccount(acc: string) {
 		<div class="panel-card table-card">
 			<Table
 				paginate
-				hover
+				:hover="authStore.can('update', 'Customer')"
 				storageKey="customer-directory"
 				:headers="headers"
 				:items="filteredCustomers"
 				:loading="loading"
 				:search-query="searchQuery"
 				emptyMessage="No customer records found."
-				@row-click="(customer) => viewCustomerDetail(customer)"
+				@row-click="
+					(customer) =>
+						authStore.can('update', 'Customer') && viewCustomerDetail(customer)
+				"
 			>
 				<template #item-customer="{ item: customer }">
 					<div class="customer-cell">
@@ -350,6 +390,16 @@ function countryFormatAccount(acc: string) {
 							</span>
 						</div>
 					</div>
+				</template>
+
+				<template #item-classification="{ item: customer }">
+					<Badge
+						v-if="customer.profile?.individualType || customer.profile?.identityNo"
+						:type="getClassificationBadge(customer.profile.individualType, customer.profile.identityNo)"
+					>
+						{{ getCustomerClassification(customer.profile.individualType, customer.profile.identityNo) }}
+					</Badge>
+					<span v-else class="u-text-muted">—</span>
 				</template>
 
 				<template #item-autocount="{ item: customer }">
@@ -412,11 +462,14 @@ function countryFormatAccount(acc: string) {
 
 				<template #item-status="{ item: customer }">
 					<Badge :type="customer.isActive ? 'success' : 'error'">
-						{{ customer.isActive ? "Active" : "Disabled" }}
+						{{ customer.isActive ? "Active" : "Inactive" }}
 					</Badge>
 				</template>
 
-				<template #item-actions="{ item: customer }">
+				<template
+					#item-actions="{ item: customer }"
+					v-if="authStore.can('update', 'Customer')"
+				>
 					<div class="action-buttons" @click.stop>
 						<button
 							class="btn btn--icon"

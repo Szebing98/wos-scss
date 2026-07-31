@@ -117,10 +117,11 @@ const canEditForCurrentAssignment = computed(() => {
 	}
 	return false;
 });
-const canEnterGeneralEdit = computed(() =>
-	["inprogress", "progress"].includes(normalizedWorkOrderStatus.value) &&
-	authStore.can("update_progress", "WorkOrder") &&
-	canEditForCurrentAssignment.value,
+const canEnterGeneralEdit = computed(
+	() =>
+		["inprogress", "progress"].includes(normalizedWorkOrderStatus.value) &&
+		authStore.can("update_progress", "WorkOrder") &&
+		canEditForCurrentAssignment.value,
 );
 const canEditGeneral = computed(() => canEnterGeneralEdit.value && isGeneralEditMode.value);
 const isDraftOrNew = computed(() => ["draft", "new"].includes(normalizedWorkOrderStatus.value));
@@ -358,8 +359,16 @@ const workOrder = ref<any>({
 
 const loading = ref(false);
 
-function formatUserDisplay(_name?: string | null, code?: string | null) {
-	return userDisplayCode(code, null, "");
+function formatUserDisplay(name?: string | null, code?: string | null) {
+	const visibleName = name?.trim();
+	const visibleCode = userDisplayCode(code, null, "");
+	if (visibleName && visibleCode) {
+		if (visibleName.includes(`(${visibleCode})`) || visibleName === visibleCode) {
+			return visibleName;
+		}
+		return `${visibleName} (${visibleCode})`;
+	}
+	return visibleName || visibleCode || "";
 }
 
 async function fetchWorkOrderDetails() {
@@ -530,14 +539,43 @@ const allTabs = [
 ];
 const visibleTabs = computed(() => {
 	const status = normalizedWorkOrderStatus.value;
+
+	const hasPermission = (tabId: string) => {
+		switch (tabId) {
+			case "partInfo":
+				return authStore.can("read", "PartInfo");
+			case "supplierInvoices":
+				return authStore.can("read", "SupplierInvoice");
+			case "notes":
+				return authStore.can("read", "WorkOrderNote");
+			case "finance":
+				return authStore.can("read", "WorkOrderQuotation");
+			case "payment":
+				return (
+					authStore.can("read", "Payment") || authStore.can("read", "WorkOrderInvoice")
+				);
+			case "report":
+				return authStore.can("read", "Report");
+			default:
+				return true;
+		}
+	};
+
+	let baseTabs = [];
 	const throughFinance = allTabs.slice(0, 6);
-	if (["inprogress", "progress"].includes(status)) return throughFinance;
-	if (status === "done") return [...throughFinance, allTabs[6], allTabs[8]];
-	if (status === "completed") {
-		return [...throughFinance, allTabs[6], allTabs[7], allTabs[8]];
+	if (["inprogress", "progress"].includes(status)) {
+		baseTabs = throughFinance;
+	} else if (status === "done") {
+		baseTabs = [...throughFinance, allTabs[6], allTabs[8]];
+	} else if (status === "completed") {
+		baseTabs = [...throughFinance, allTabs[6], allTabs[7], allTabs[8]];
+	} else if (["claimed", "closed"].includes(status)) {
+		baseTabs = allTabs;
+	} else {
+		baseTabs = [allTabs[0]];
 	}
-	if (["claimed", "closed"].includes(status)) return allTabs;
-	return [allTabs[0]];
+
+	return baseTabs.filter((tab) => hasPermission(tab.id));
 });
 
 const activeTab = ref<string>("general");
@@ -694,6 +732,59 @@ async function markAsDone() {
 	}
 }
 
+function requestApprovalForNewWorkOrder() {
+	if (siteInstructionsFiles.value.length < 2) {
+		snackbar.error(
+			"At least 2 site instruction files are required before requesting approval.",
+		);
+		return;
+	}
+
+	triggerConfirmation({
+		title: "Request For Approval",
+		message: "Submit this work order for approval?",
+		confirmText: "Request For Approval",
+		action: async () => {
+			loading.value = true;
+			try {
+				const { error } = await workOrderApi.submitApproval(woNumber, {
+					estimatedEndDate: workOrder.value.estimatedEndDate,
+				} as any);
+				if (error) {
+					snackbar.error(
+						`Failed to request approval: ${error.error?.message || error.message}`,
+					);
+					return;
+				}
+				snackbar.success("Work order submitted for approval!");
+				await fetchWorkOrderDetails();
+				await fetchActivityLogs();
+			} catch (e) {
+				console.error(e);
+				snackbar.error("Failed to request approval");
+			} finally {
+				loading.value = false;
+			}
+		},
+	});
+}
+
+async function reopenWorkOrder() {
+	try {
+		const { error } = await workOrderApi.reopen(woNumber);
+		if (error) {
+			snackbar.error(`Failed to reopen work order: ${error.error?.message || error.message}`);
+		} else {
+			snackbar.success("Work order reopened successfully!");
+			await fetchWorkOrderDetails();
+			await fetchActivityLogs();
+		}
+	} catch (e) {
+		console.error(e);
+		snackbar.error("Failed to reopen work order");
+	}
+}
+
 const tabsWrapperRef = ref<HTMLElement | null>(null);
 const showLeftArrow = ref(false);
 const showRightArrow = ref(false);
@@ -724,41 +815,6 @@ const isSavingQuotation = ref(false);
 // const editingQuotationId = ref<number | null>(null);
 const quotationForm = ref({ refNo: "", date: "", amount: 0, name: "" });
 
-// function simulateQuotationOCR() {
-// 	isUploadingQuotation.value = true;
-// 	setTimeout(() => {
-// 		quotationForm.value = {
-// 			refNo: `QT-2026-${89 + quotations.value.length + 1}`,
-// 			date: new Date().toLocaleDateString("en-GB", {
-// 				day: "2-digit",
-// 				month: "short",
-// 				year: "numeric",
-// 			}),
-// 			amount: 4500,
-// 			name: `Quotation_${Date.now()}.pdf`,
-// 		};
-// 		isUploadingQuotation.value = false;
-// 	}, 1500);
-// }
-
-// function openAddQuotationDialog() {
-// 	quotationForm.value = { refNo: "", date: "", amount: 0, name: "" };
-// 	isAddQuotationDialogOpen.value = true;
-// }
-
-// function addQuotation() {
-// 	if (!quotationForm.value.refNo || !quotationForm.value.amount) return;
-// 	quotations.value.push({
-// 		id: Date.now(),
-// 		refNo: quotationForm.value.refNo,
-// 		date: quotationForm.value.date,
-// 		amount: quotationForm.value.amount,
-// 		name: quotationForm.value.name || `Quotation_${quotationForm.value.refNo}.pdf`,
-// 	});
-// 	isAddQuotationDialogOpen.value = false;
-// 	quotationForm.value = { refNo: "", date: "", amount: 0, name: "" };
-// }
-
 const editingQuotationGuid = ref("");
 
 function openEditQuotation(guid: string) {
@@ -788,7 +844,9 @@ async function saveEditQuotation() {
 			docDate,
 		});
 		if (error) {
-			snackbar.error(`Failed to update quotation: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(
+				`Failed to update quotation: ${error.error?.message || "Unknown error"}`,
+			);
 		} else {
 			snackbar.success("Quotation details updated successfully!");
 			isEditQuotationDialogOpen.value = false;
@@ -814,9 +872,6 @@ const isEditInvoiceDialogOpen = ref(false);
 const isSavingInvoice = ref(false);
 const isEditPaymentDialogOpen = ref(false);
 const isSavingPayment = ref(false);
-// const isAddPaymentDialogOpen = ref(false);
-// const isUploadingNewInvoice = ref(false);
-// const editingInvoiceId = ref<number | null>(null);
 
 const invoiceForm = ref({ refNo: "", date: "", amount: 0, name: "" });
 const paymentForm = ref({ reference: "", date: "", amount: 0, fileName: "" });
@@ -827,24 +882,11 @@ const totalPaymentReceived = computed(() =>
 );
 const balanceRemaining = computed(() => totalInvoiceIssued.value - totalPaymentReceived.value);
 const isFullyPaid = computed(() => invoices.value.length > 0 && balanceRemaining.value <= 0);
-const canMarkAsComplete = computed(() => {
+const canMarkAsClosed = computed(() => {
 	const invoiceCents = Math.round(totalInvoiceIssued.value * 100);
 	const paymentCents = Math.round(totalPaymentReceived.value * 100);
-	return invoiceCents > 0 && invoiceCents === paymentCents;
+	return invoiceCents > 0 && paymentCents === invoiceCents;
 });
-
-// function addInvoice() {
-// 	if (!invoiceForm.value.refNo || !invoiceForm.value.amount) return;
-// 	invoices.value.push({
-// 		id: Date.now(),
-// 		refNo: invoiceForm.value.refNo,
-// 		date: invoiceForm.value.date,
-// 		amount: invoiceForm.value.amount,
-// 		name: invoiceForm.value.name || `Invoice_${invoiceForm.value.refNo}.pdf`,
-// 	});
-// 	isAddInvoiceDialogOpen.value = false;
-// 	invoiceForm.value = { refNo: "", date: "", amount: 0, name: "" };
-// }
 
 const editingInvoiceGuid = ref("");
 
@@ -951,26 +993,28 @@ async function markAsClaimed() {
 	}
 }
 
-function markAsComplete() {
-	if (!canMarkAsComplete.value) return;
+function markAsClosed() {
+	if (!canMarkAsClosed.value) return;
 	triggerConfirmation({
-		title: "Complete Work Order",
+		title: "Closed Work Order",
 		message: "Invoice and payment totals match. Mark this work order as complete?",
-		confirmText: "Mark as Complete",
+		confirmText: "Mark as Closed",
 		action: async () => {
 			loading.value = true;
 			try {
 				const { error } = await workOrderApi.close(woNumber);
 				if (error) {
-					snackbar.error(`Failed to complete work order: ${error.error?.message || error.message}`);
+					snackbar.error(
+						`Failed to close work order: ${error.error?.message || error.message}`,
+					);
 					return;
 				}
-				snackbar.success("Work order completed successfully!");
+				snackbar.success("Work order closed successfully!");
 				await fetchWorkOrderDetails();
 				await fetchActivityLogs();
 			} catch (e) {
 				console.error(e);
-				snackbar.error("Failed to complete work order");
+				snackbar.error("Failed to close work order");
 			} finally {
 				loading.value = false;
 			}
@@ -979,7 +1023,28 @@ function markAsComplete() {
 }
 
 function printReport() {
-	window.print();
+	const report = document.querySelector(".report-document");
+
+	if (!report) return;
+
+	const win = window.open("", "_blank");
+
+	win!.document.write(`
+<html>
+<head>
+    <title>Report</title>
+    ${document.head.innerHTML}
+</head>
+<body>
+${report.outerHTML}
+</body>
+</html>
+    `);
+
+	win!.document.close();
+	win!.focus();
+	win!.print();
+	win!.close();
 }
 
 // New states and variables
@@ -1067,8 +1132,7 @@ async function fetchWorkOrderFiles() {
 			});
 
 			const siteInstructionsList = items.filter(
-				(f: any) =>
-					f.category === "SiteInstructions" || f.category === "site_instructions",
+				(f: any) => f.category === "SiteInstructions" || f.category === "site_instructions",
 			);
 			siteInstructionsFiles.value = await Promise.all(
 				siteInstructionsList.map(async (f: any) => {
@@ -1087,10 +1151,12 @@ async function fetchWorkOrderFiles() {
 						name: f.fileName,
 						type: f.mimeType || "",
 					};
-				})
+				}),
 			);
 
-			const partInfoList = items.filter((f: any) => f.category === "PartInfo" || f.category === "part_info");
+			const partInfoList = items.filter(
+				(f: any) => f.category === "PartInfo" || f.category === "part_info",
+			);
 			partInfoPhotos.value = await Promise.all(
 				partInfoList.map(async (f: any) => {
 					const rawUrl = getFileUrl(f.storageUrl, true);
@@ -1102,12 +1168,11 @@ async function fetchWorkOrderFiles() {
 						url,
 						name: f.fileName,
 					};
-				})
+				}),
 			);
 
 			const supplierInvoiceList = items.filter(
-				(f: any) =>
-					f.category === "SupplierInvoice" || f.category === "supplier_invoices",
+				(f: any) => f.category === "SupplierInvoice" || f.category === "supplier_invoices",
 			);
 			supplierInvoicePhotos.value = await Promise.all(
 				supplierInvoiceList.map(async (f: any) => {
@@ -1120,7 +1185,7 @@ async function fetchWorkOrderFiles() {
 						url,
 						name: f.fileName,
 					};
-				})
+				}),
 			);
 
 			const imagesList = items.filter((f: any) => f.category === "Image");
@@ -1135,7 +1200,7 @@ async function fetchWorkOrderFiles() {
 						url,
 						name: f.fileName,
 					};
-				})
+				}),
 			);
 
 			quotations.value = items
@@ -1245,7 +1310,8 @@ async function saveGeneralFormChanges() {
 function approveDoneWorkOrder() {
 	triggerConfirmation({
 		title: "Approve Work Order",
-		message: "Are you sure you want to approve this work order? This will transition it to Completed state.",
+		message:
+			"Are you sure you want to approve this work order? This will transition it to Completed state.",
 		confirmText: "Approve",
 		action: async () => {
 			loading.value = true;
@@ -1263,7 +1329,7 @@ function approveDoneWorkOrder() {
 			} finally {
 				loading.value = false;
 			}
-		}
+		},
 	});
 }
 
@@ -1290,7 +1356,7 @@ function approvePendingWorkOrder() {
 			} finally {
 				loading.value = false;
 			}
-		}
+		},
 	});
 }
 
@@ -1422,7 +1488,7 @@ function deleteWorkNote(noteGuid: string) {
 			} finally {
 				loading.value = false;
 			}
-		}
+		},
 	});
 }
 
@@ -1521,7 +1587,8 @@ async function confirmFileUpload() {
 		const response = await workOrderApi.uploadFile(workOrder.value.guid, fd);
 		const resData = await response.json().catch(() => null);
 		if (!response.ok) {
-			const message = resData?.error?.message || resData?.message || `Upload failed (${response.status})`;
+			const message =
+				resData?.error?.message || resData?.message || `Upload failed (${response.status})`;
 			console.error(
 				`File upload failed: ${JSON.stringify({ status: response.status, message, response: resData })}`,
 			);
@@ -1566,8 +1633,8 @@ async function openFilePreview(file: any) {
 	const baseName = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
 	previewCustomFileName.value = baseName;
 	filePreviewError.value = "";
-	isPreviewDialogOpen.value = true;
-
+	isPreviewDialogOpen.value = false;
+	let targetUrl = file.url || "";
 	if (file.url || !file.guid) return;
 
 	isLoadingFilePreview.value = true;
@@ -1575,9 +1642,20 @@ async function openFilePreview(file: any) {
 		const response = await http.get(`/work-order/files/${file.guid}/preview`, {
 			responseType: "blob",
 		});
-		previewObjectUrl.value = URL.createObjectURL(response.data);
-		if (previewTargetFile.value?.guid === file.guid) {
-			previewTargetFile.value = { ...file, url: previewObjectUrl.value };
+		// previewObjectUrl.value = URL.createObjectURL(response.data);
+		// if (previewTargetFile.value?.guid === file.guid) {
+		// 	previewTargetFile.value = { ...file, url: previewObjectUrl.value };
+		// }
+		const fileType = response.data.type;
+
+		// const fileType = response.data.type || getMimeType(fileName);
+		const blob = new Blob([response.data], { type: fileType });
+
+		targetUrl = URL.createObjectURL(blob);
+		previewObjectUrl.value = targetUrl;
+
+		if (targetUrl) {
+			window.open(targetUrl, "_blank");
 		}
 	} catch (error) {
 		console.error("Failed to load file preview:", error);
@@ -1621,11 +1699,7 @@ async function savePreviewFileRename() {
 	}
 }
 
-async function handleFileUpload(
-	event: Event,
-	category: string,
-	subcategory?: string,
-) {
+async function handleFileUpload(event: Event, category: string, subcategory?: string) {
 	const target = event.target as HTMLInputElement;
 	if (!target.files || target.files.length === 0) return;
 	const file = target.files[0];
@@ -1641,7 +1715,12 @@ async function handleFileUpload(
 			target.value = "";
 			return;
 		}
-	} else if (category === "SupplierInvoice" || category === "Quotation" || category === "Invoice" || category === "Payment") {
+	} else if (
+		category === "SupplierInvoice" ||
+		category === "Quotation" ||
+		category === "Invoice" ||
+		category === "Payment"
+	) {
 		const isImg = imageExtensions.test(fileName) || file.type.startsWith("image/");
 		const isPdf = pdfExtensions.test(fileName) || file.type === "application/pdf";
 		if (!isImg && !isPdf) {
@@ -1691,7 +1770,7 @@ function handleDeleteFile(fileGuid: string) {
 			} finally {
 				loading.value = false;
 			}
-		}
+		},
 	});
 }
 
@@ -1815,6 +1894,18 @@ onUnmounted(() => {
 					<i class="mdi mdi-note-edit-outline" style="margin-right: 4px"></i>
 					Edit
 				</Button>
+				<Button
+					v-if="
+						normalizedWorkOrderStatus === 'new' &&
+						authStore.can('update_new', 'WorkOrder') &&
+						canEditForCurrentAssignment
+					"
+					variant="primary"
+					:disabled="loading"
+					@click="requestApprovalForNewWorkOrder"
+				>
+					<i class="mdi mdi-check"></i> Request For Approval
+				</Button>
 				<template
 					v-if="
 						isPendingApproval &&
@@ -1842,37 +1933,6 @@ onUnmounted(() => {
 					</Button>
 				</template>
 
-				<!-- Approve / Reject for Done state -->
-				<template
-					v-if="
-						workOrder?.status === 'Done' &&
-						isManager &&
-						(authStore.can('mark_as_completed', 'WorkOrder') ||
-							authStore.can('reject', 'WorkOrder'))
-					"
-				>
-					<Button
-						v-if="authStore.can('mark_as_completed', 'WorkOrder')"
-						variant="primary"
-						style="
-							background-color: var(--colors-success);
-							border-color: var(--colors-success);
-						"
-						@click="approveDoneWorkOrder"
-					>
-						<i class="mdi mdi-check-circle-outline" style="margin-right: 4px"></i>
-						Approve
-					</Button>
-					<Button
-						v-if="authStore.can('reject', 'WorkOrder')"
-						variant="outlined"
-						style="color: var(--colors-error); border-color: var(--colors-error)"
-						@click="openRejectDoneDialog"
-					>
-						<i class="mdi mdi-close-circle-outline" style="margin-right: 4px"></i>
-						Reject
-					</Button>
-				</template>
 				<!-- Repeat & Transfer Work Order (Commented out) -->
 				<!--
 				<Button variant="outlined" @click="isRepeatDialogOpen = true" title="Create a repeat sub-order">
@@ -1894,9 +1954,19 @@ onUnmounted(() => {
 					Mark as Done
 				</Button>
 				<Button
+					v-if="
+						normalizedWorkOrderStatus === 'done' &&
+						authStore.can('mark_as_done', 'WorkOrder')
+					"
+					variant="primary"
+					@click="reopenWorkOrder"
+				>
+					<i class="mdi mdi-lock-open-variant-outline"></i> Reopen
+				</Button>
+				<Button
 					v-slot:default
 					v-if="
-						workOrder?.status === 'Completed' &&
+						normalizedWorkOrderStatus === 'completed' &&
 						authStore.can('mark_as_claimed', 'WorkOrder')
 					"
 					variant="primary"
@@ -1917,16 +1987,16 @@ onUnmounted(() => {
 						authStore.can('mark_as_closed', 'WorkOrder')
 					"
 					variant="primary"
-					:disabled="!canMarkAsComplete"
+					:disabled="!canMarkAsClosed"
 					:title="
-						canMarkAsComplete
+						canMarkAsClosed
 							? 'Mark as Complete'
 							: 'Invoice total must equal payment total before completing'
 					"
-					@click="markAsComplete"
+					@click="markAsClosed"
 					style="display: flex; align-items: center; gap: 6px"
 				>
-					<i class="mdi mdi-check-decagram-outline"></i> Mark as Complete
+					<i class="mdi mdi-check-decagram-outline"></i> Mark as Closed
 				</Button>
 			</div>
 		</div>
@@ -2051,8 +2121,8 @@ onUnmounted(() => {
 					<PartInfoTab
 						v-if="activeTab === 'partInfo'"
 						:partInfoPhotos="partInfoPhotos"
-						:isEditing="isEditing"
-						:isManager="isManager"
+						:isEditing="isEditing && authStore.can('create', 'PartInfo')"
+						:isManager="isManager && authStore.can('create', 'PartInfo')"
 						:workOrderStatus="workOrder?.status"
 						@upload="handleFileUpload($event, 'PartInfo')"
 						@delete="handleDeleteFile"
@@ -2063,8 +2133,8 @@ onUnmounted(() => {
 					<SupplierInvoicesTab
 						v-if="activeTab === 'supplierInvoices'"
 						:supplierInvoicePhotos="supplierInvoicePhotos"
-						:isEditing="isEditing"
-						:isManager="isManager"
+						:isEditing="isEditing && authStore.can('create', 'SupplierInvoice')"
+						:isManager="isManager && authStore.can('create', 'SupplierInvoice')"
 						:workOrderStatus="workOrder?.status"
 						@upload="handleFileUpload($event, 'SupplierInvoice')"
 						@delete="handleDeleteFile"
@@ -2075,8 +2145,8 @@ onUnmounted(() => {
 					<ImagesTab
 						v-if="activeTab === 'images'"
 						:images="images"
-						:isEditing="isEditing"
-						:isManager="isManager"
+						:isEditing="isEditing && authStore.can('create', 'WorkOrderImage')"
+						:isManager="isManager && authStore.can('create', 'WorkOrderImage')"
 						:workOrderStatus="workOrder?.status"
 						@upload="uploadJobImage"
 						@delete="handleDeleteFile"
@@ -2186,12 +2256,22 @@ onUnmounted(() => {
 		<Dialog v-model="isEditQuotationDialogOpen" title="Edit Quotation Details" maxWidth="580px">
 			<div style="display: flex; flex-direction: column; gap: 18px">
 				<div
-					style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--colors-surface-secondary, #f6f7fb); color: var(--colors-text-secondary, #5f6472)"
+					style="
+						display: flex;
+						gap: 12px;
+						padding: 12px 14px;
+						border-radius: 10px;
+						background: var(--colors-surface-secondary, #f6f7fb);
+						color: var(--colors-text-secondary, #5f6472);
+					"
 				>
-					<i class="mdi mdi-text-recognition" style="font-size: 22px; color: var(--colors-brand-primary)"></i>
+					<i
+						class="mdi mdi-text-recognition"
+						style="font-size: 22px; color: var(--colors-brand-primary)"
+					></i>
 					<p style="margin: 0; font-size: 13px; line-height: 1.5">
-						Review and correct any details that were read incorrectly from the quotation.
-						The original uploaded file will not be changed.
+						Review and correct any details that were read incorrectly from the
+						quotation. The original uploaded file will not be changed.
 					</p>
 				</div>
 
@@ -2209,7 +2289,13 @@ onUnmounted(() => {
 					hide-footer
 				/>
 
-				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px">
+				<div
+					style="
+						display: grid;
+						grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+						gap: 14px;
+					"
+				>
 					<DatePicker
 						v-model="quotationForm.date"
 						label="Quotation Date"
@@ -2222,13 +2308,21 @@ onUnmounted(() => {
 						placeholder="0.00"
 						hide-footer
 					>
-						<template #prefix><span style="font-size: 13px; color: var(--colors-text-muted)">RM</span></template>
+						<template #prefix
+							><span style="font-size: 13px; color: var(--colors-text-muted)"
+								>RM</span
+							></template
+						>
 					</Textbox>
 				</div>
 			</div>
 
 			<template #footer>
-				<Button variant="secondary" :disabled="isSavingQuotation" @click="isEditQuotationDialogOpen = false">
+				<Button
+					variant="secondary"
+					:disabled="isSavingQuotation"
+					@click="isEditQuotationDialogOpen = false"
+				>
 					Cancel
 				</Button>
 				<Button
@@ -2246,9 +2340,19 @@ onUnmounted(() => {
 		<Dialog v-model="isEditInvoiceDialogOpen" title="Edit Invoice Details" maxWidth="580px">
 			<div style="display: flex; flex-direction: column; gap: 18px">
 				<div
-					style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--colors-surface-secondary, #f6f7fb); color: var(--colors-text-secondary, #5f6472)"
+					style="
+						display: flex;
+						gap: 12px;
+						padding: 12px 14px;
+						border-radius: 10px;
+						background: var(--colors-surface-secondary, #f6f7fb);
+						color: var(--colors-text-secondary, #5f6472);
+					"
 				>
-					<i class="mdi mdi-text-recognition" style="font-size: 22px; color: var(--colors-brand-primary)"></i>
+					<i
+						class="mdi mdi-text-recognition"
+						style="font-size: 22px; color: var(--colors-brand-primary)"
+					></i>
 					<p style="margin: 0; font-size: 13px; line-height: 1.5">
 						Review and correct any details that were read incorrectly from the invoice.
 						The original uploaded file will not be changed.
@@ -2267,7 +2371,13 @@ onUnmounted(() => {
 					placeholder="Enter invoice number"
 					hide-footer
 				/>
-				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px">
+				<div
+					style="
+						display: grid;
+						grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+						gap: 14px;
+					"
+				>
 					<DatePicker
 						v-model="invoiceForm.date"
 						label="Invoice Date"
@@ -2280,13 +2390,21 @@ onUnmounted(() => {
 						placeholder="0.00"
 						hide-footer
 					>
-						<template #prefix><span style="font-size: 13px; color: var(--colors-text-muted)">RM</span></template>
+						<template #prefix
+							><span style="font-size: 13px; color: var(--colors-text-muted)"
+								>RM</span
+							></template
+						>
 					</Textbox>
 				</div>
 			</div>
 
 			<template #footer>
-				<Button variant="secondary" :disabled="isSavingInvoice" @click="isEditInvoiceDialogOpen = false">
+				<Button
+					variant="secondary"
+					:disabled="isSavingInvoice"
+					@click="isEditInvoiceDialogOpen = false"
+				>
 					Cancel
 				</Button>
 				<Button
@@ -2304,12 +2422,22 @@ onUnmounted(() => {
 		<Dialog v-model="isEditPaymentDialogOpen" title="Edit Payment Details" maxWidth="580px">
 			<div style="display: flex; flex-direction: column; gap: 18px">
 				<div
-					style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--colors-surface-secondary, #f6f7fb); color: var(--colors-text-secondary, #5f6472)"
+					style="
+						display: flex;
+						gap: 12px;
+						padding: 12px 14px;
+						border-radius: 10px;
+						background: var(--colors-surface-secondary, #f6f7fb);
+						color: var(--colors-text-secondary, #5f6472);
+					"
 				>
-					<i class="mdi mdi-text-recognition" style="font-size: 22px; color: var(--colors-brand-primary)"></i>
+					<i
+						class="mdi mdi-text-recognition"
+						style="font-size: 22px; color: var(--colors-brand-primary)"
+					></i>
 					<p style="margin: 0; font-size: 13px; line-height: 1.5">
-						Review and correct any details that were read incorrectly from the payment file.
-						The original uploaded file will not be changed.
+						Review and correct any details that were read incorrectly from the payment
+						file. The original uploaded file will not be changed.
 					</p>
 				</div>
 
@@ -2325,7 +2453,13 @@ onUnmounted(() => {
 					placeholder="Enter payment reference"
 					hide-footer
 				/>
-				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px">
+				<div
+					style="
+						display: grid;
+						grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+						gap: 14px;
+					"
+				>
 					<DatePicker
 						v-model="paymentForm.date"
 						label="Payment Date"
@@ -2338,13 +2472,21 @@ onUnmounted(() => {
 						placeholder="0.00"
 						hide-footer
 					>
-						<template #prefix><span style="font-size: 13px; color: var(--colors-text-muted)">RM</span></template>
+						<template #prefix
+							><span style="font-size: 13px; color: var(--colors-text-muted)"
+								>RM</span
+							></template
+						>
 					</Textbox>
 				</div>
 			</div>
 
 			<template #footer>
-				<Button variant="secondary" :disabled="isSavingPayment" @click="isEditPaymentDialogOpen = false">
+				<Button
+					variant="secondary"
+					:disabled="isSavingPayment"
+					@click="isEditPaymentDialogOpen = false"
+				>
 					Cancel
 				</Button>
 				<Button
@@ -2495,6 +2637,7 @@ onUnmounted(() => {
 			</template>
 		</Dialog>
 
+		<!-- Extend Work Order Dialog-->
 		<Dialog v-model="isExtendDialogOpen" title="Extend Estimated End Date" maxWidth="520px">
 			<div class="extend-dialog-form">
 				<DatePicker
@@ -2531,6 +2674,7 @@ onUnmounted(() => {
 			</template>
 		</Dialog>
 
+		<!-- Loaction Map Dialog -->
 		<Dialog v-model="isMapDialogOpen" title="Work Order Location" maxWidth="760px">
 			<GoogleMapPicker
 				v-model:location="workOrder.location"
@@ -2567,10 +2711,7 @@ onUnmounted(() => {
 
 				<div class="select-field">
 					<label class="custom-label">View Level *</label>
-					<select
-						v-model="noteForm.viewLevel"
-						class="custom-select"
-					>
+					<select v-model="noteForm.viewLevel" class="custom-select">
 						<option value="internal">Internal (Team Only)</option>
 						<option value="customer">External (Customer Viewable)</option>
 					</select>
@@ -2586,16 +2727,11 @@ onUnmounted(() => {
 				>
 					Save Note
 				</Button>
-				</template>
+			</template>
 		</Dialog>
-		
 
 		<!-- Upload Confirmation & Rename Dialog -->
-		<Dialog
-			v-model="isUploadConfirmOpen"
-			title="Upload File"
-			maxWidth="500px"
-		>
+		<Dialog v-model="isUploadConfirmOpen" title="Upload File" maxWidth="500px">
 			<div style="display: flex; flex-direction: column; gap: 16px; align-items: center">
 				<!-- Small Preview -->
 				<div
@@ -2608,7 +2744,10 @@ onUnmounted(() => {
 						border: 1px solid var(--colors-surface-border);
 					"
 				>
-					<img :src="uploadPreviewUrl" style="width: 100%; height: 100%; object-fit: cover" />
+					<img
+						:src="uploadPreviewUrl"
+						style="width: 100%; height: 100%; object-fit: cover"
+					/>
 				</div>
 				<div
 					v-else-if="uploadTargetFile"
@@ -2653,39 +2792,75 @@ onUnmounted(() => {
 		</Dialog>
 
 		<!-- File Preview & Rename Dialog -->
-		<Dialog
-			v-model="isPreviewDialogOpen"
-			title="File Preview & Details"
-			maxWidth="600px"
-		>
+		<Dialog v-model="isPreviewDialogOpen" title="File Preview & Details" maxWidth="600px">
 			<div style="display: flex; flex-direction: column; gap: 16px; align-items: center">
+				<!-- Loading -->
 				<div
 					v-if="isLoadingFilePreview"
-					style="height: 320px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--colors-text-muted)"
+					style="
+						height: 320px;
+						width: 100%;
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						justify-content: center;
+						gap: 10px;
+						color: var(--colors-text-muted);
+					"
 				>
-					<i class="mdi mdi-loading mdi-spin" style="font-size: 34px; color: var(--colors-brand-primary)"></i>
+					<i
+						class="mdi mdi-loading mdi-spin"
+						style="font-size: 34px; color: var(--colors-brand-primary)"
+					></i>
 					<span style="font-size: 13px">Loading file preview...</span>
 				</div>
+				<!-- Error -->
 				<div
 					v-else-if="filePreviewError"
-					style="height: 240px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 1px dashed var(--colors-surface-border); border-radius: 8px; color: var(--colors-text-muted)"
+					style="
+						height: 240px;
+						width: 100%;
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						justify-content: center;
+						gap: 10px;
+						border: 1px dashed var(--colors-surface-border);
+						border-radius: 8px;
+						color: var(--colors-text-muted);
+					"
 				>
-					<i class="mdi mdi-file-alert-outline" style="font-size: 38px; color: var(--colors-error, #ef4444)"></i>
-					<span style="font-size: 13px">{{ filePreviewError }}</span>
-					<Button variant="secondary" @click="previewTargetFile && openFilePreview(previewTargetFile)">
+					<i
+						class="mdi mdi-file-alert-outline"
+						style="font-size: 38px; color: var(--colors-error, #ef4444)"
+					></i>
+					<span style="font-size: 13px">
+						{{ filePreviewError }}
+					</span>
+
+					<Button
+						variant="secondary"
+						@click="previewTargetFile && openFilePreview(previewTargetFile)"
+					>
 						Try Again
 					</Button>
 				</div>
+
 				<!-- Preview media -->
 				<div v-else-if="previewTargetFile?.url" style="width: 100%">
-					<!-- PDF File Preview -->
 					<div
 						v-if="isPdfFile(previewTargetFile.name)"
 						style="width: 100%; display: flex; flex-direction: column; gap: 12px"
 					>
 						<iframe
 							:src="previewTargetFile.url"
-							style="width: 100%; height: 480px; border: 1px solid var(--colors-surface-border); border-radius: 8px; background: white;"
+							style="
+								width: 100%;
+								height: 480px;
+								border: 1px solid var(--colors-surface-border);
+								border-radius: 8px;
+								background: white;
+							"
 						></iframe>
 						<a
 							:href="previewTargetFile.url"
@@ -2710,6 +2885,7 @@ onUnmounted(() => {
 							Open PDF in New Tab
 						</a>
 					</div>
+
 					<!-- Image File Preview -->
 					<div
 						v-else
@@ -2767,7 +2943,14 @@ onUnmounted(() => {
 			@confirm="handleConfirmDialog"
 			@cancel="isConfirmDialogOpen = false"
 		>
-			<p style="margin: 0; font-size: 14px; color: var(--colors-text-secondary); line-height: 1.5">
+			<p
+				style="
+					margin: 0;
+					font-size: 14px;
+					color: var(--colors-text-secondary);
+					line-height: 1.5;
+				"
+			>
 				{{ confirmMessage }}
 			</p>
 		</Dialog>
@@ -3250,7 +3433,9 @@ onUnmounted(() => {
 	font-size: 14px;
 	line-height: 1.5;
 	resize: vertical;
-	transition: border-color 0.2s, box-shadow 0.2s;
+	transition:
+		border-color 0.2s,
+		box-shadow 0.2s;
 
 	&:focus {
 		outline: none;
@@ -3268,7 +3453,9 @@ onUnmounted(() => {
 	color: var(--colors-text-primary, #0f172a);
 	font-family: inherit;
 	font-size: 14px;
-	transition: border-color 0.2s, box-shadow 0.2s;
+	transition:
+		border-color 0.2s,
+		box-shadow 0.2s;
 
 	&:focus {
 		outline: none;
@@ -3287,7 +3474,9 @@ onUnmounted(() => {
 	font-family: inherit;
 	font-size: 14px;
 	cursor: pointer;
-	transition: border-color 0.2s, box-shadow 0.2s;
+	transition:
+		border-color 0.2s,
+		box-shadow 0.2s;
 
 	&:focus {
 		outline: none;

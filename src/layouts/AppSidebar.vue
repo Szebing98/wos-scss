@@ -308,13 +308,14 @@ watch(
 							><span>Role Permission</span></router-link
 						>
 					</li>
-					<li>
+					<li v-if="authStore.can('read', 'Permission')">
 						<router-link
 							to="/maintenance/user-permission"
 							class="nav__child"
 							active-class="nav__child-active"
-							><span>User Permission</span></router-link
 						>
+							<span>User Permission</span>
+						</router-link>
 					</li>
 				</ul>
 			</div>

@@ -3,6 +3,10 @@ const subjectLabels: Record<string, string> = {
 	DocNoFormat: "Document Number Format",
 	WorkOrder: "Work Order",
 	WorkType: "Work Type",
+	Site: "Site",
+	PartInfo: "Part Info",
+	WorkOrderInvoice: "Work Order Invoice",
+	SupplierInvoice: "Supplier Invoices",
 };
 
 const actionLabels: Record<string, string> = {
@@ -35,6 +39,25 @@ export interface PermissionCatalogItem {
 	inverted?: boolean;
 }
 
+const EXCLUDED_ACTIONS = new Set([
+	"update_done",
+	"update_completed",
+	"update_claimed",
+	"update_closed",
+	"update_cancelled",
+	"update_rejected",
+].map((a) => a.toLowerCase()));
+
+const EXCLUDED_SUBJECTS = new Set([
+	"WorkOrderEquipment",
+	"WorkOrderTechnical",
+	"WorkOrderEngineer",
+	"PartReplaced",
+	"ServiceProvided",
+	"Signature",
+	"DocNoFormat",
+].map((s) => s.toLowerCase()));
+
 /**
  * The abilities endpoint can contain multiple database rows for the same
  * logical permission (for example an old row or an inverted override).
@@ -55,6 +78,9 @@ export function normalizePermissionCatalog<T extends PermissionCatalogItem>(
 		const action = String(permission.action || "").trim();
 		const subject = String(permission.subject || "").trim();
 		if (!action || !subject) return;
+
+		if (EXCLUDED_ACTIONS.has(action.toLowerCase())) return;
+		if (EXCLUDED_SUBJECTS.has(subject.toLowerCase())) return;
 
 		const logicalKey = `${action.toLowerCase()}:${subject.toLowerCase()}`;
 		if (uniquePermissions.has(logicalKey)) return;

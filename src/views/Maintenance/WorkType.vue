@@ -8,7 +8,10 @@ import FilterPanel from "@/components/FilterPanel.vue";
 import Table from "@/components/Table.vue";
 import Textbox from "@/components/Textbox.vue";
 import type { TableHeader } from "@/components/Table.vue";
+import { useAuthStore } from "@/stores/auth.store";
 import http from "@/utils/http";
+
+const authStore = useAuthStore();
 
 interface WorkType {
 	guid?: string;
@@ -48,13 +51,18 @@ const workTypeFormData = ref<Partial<WorkType>>({
 	isActive: true,
 });
 
-const itemHeaders: TableHeader[] = [
-	{ key: "code", label: "Code", width: "120px", minWidth: "100px" },
-	{ key: "name", label: "Item Name", width: "180px", minWidth: "140px" },
-	{ key: "description", label: "Description", minWidth: "150px" },
-	{ key: "status", label: "Status", width: "100px", minWidth: "90px" },
-	{ key: "actions", label: "Actions", align: "right", width: "100px", minWidth: "90px" },
-];
+const itemHeaders = computed<TableHeader[]>(() => {
+	const baseHeaders: TableHeader[] = [
+		{ key: "code", label: "Code", width: "120px", minWidth: "100px" },
+		{ key: "name", label: "Item Name", width: "180px", minWidth: "140px" },
+		{ key: "description", label: "Description", minWidth: "150px" },
+		{ key: "status", label: "Status", width: "100px", minWidth: "90px" },
+	];
+	if (authStore.can("update", "WorkTypeItem")) {
+		baseHeaders.push({ key: "actions", label: "Actions", align: "right", width: "100px", minWidth: "90px" });
+	}
+	return baseHeaders;
+});
 
 const searchItem = ref("");
 const filterItemStatus = ref("all");
@@ -296,6 +304,7 @@ onMounted(() => {
 				</p>
 			</div>
 			<button
+				v-if="authStore.can('create', 'WorkType')"
 				class="action-btn action-btn--primary add-worktype-btn"
 				@click="openCreateTypeModal"
 				style="display: flex; align-items: center; gap: 6px"
@@ -393,6 +402,7 @@ onMounted(() => {
 								{{ selectedType.name }}<strong> ({{ selectedType.code }})</strong>
 							</h2>
 							<button
+								v-if="authStore.can('update', 'WorkType')"
 								class="action-btn action-btn--sm action-btn--outlined"
 								@click="openEditTypeModal(selectedType)"
 							>
@@ -478,6 +488,7 @@ onMounted(() => {
 						<template #header>
 							<h2>Work Type Items</h2>
 							<button
+								v-if="authStore.can('create', 'WorkTypeItem')"
 								class="action-btn action-btn--outlined action-btn--sm"
 								@click="addNewItem"
 							>

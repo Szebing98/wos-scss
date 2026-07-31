@@ -138,8 +138,16 @@ function normalizeStatusForApi(status?: string | null) {
 	return uiToBackendStatusMap[status] || status;
 }
 
-function formatUserDisplay(_name?: string | null, code?: string | null) {
-	return userDisplayCode(code, null, "Unassigned");
+function formatUserDisplay(name?: string | null, code?: string | null) {
+	const visibleName = name?.trim();
+	const visibleCode = userDisplayCode(code, null, "");
+	if (visibleName && visibleCode) {
+		if (visibleName.includes(`(${visibleCode})`) || visibleName === visibleCode) {
+			return visibleName;
+		}
+		return `${visibleName} (${visibleCode})`;
+	}
+	return visibleName || visibleCode || "Unassigned";
 }
 
 watch(
@@ -400,10 +408,7 @@ async function fetchWorkOrders() {
 						w.leadEngineer?.displayCode,
 				),
 				leaderII: resolveUserDisplay(
-					w.leaderIICode ||
-						w.leaderIiCode ||
-						w.leaderIicode ||
-						w.leaderII?.code,
+					w.leaderIICode || w.leaderIiCode || w.leaderIicode || w.leaderII?.code,
 					w.leaderIIName ||
 						w.leaderIiName ||
 						w.leaderIiname ||
@@ -758,13 +763,20 @@ const buttonList = [
 		icon: "mdi-eye",
 		class: "btn--icon-secondary",
 		tooltip: "View Details",
-		status: [WorkOrderStatus.Claimed, WorkOrderStatus.Rejected],
+		status: [
+			WorkOrderStatus.Draft,
+			WorkOrderStatus.New,
+			WorkOrderStatus.PendingApproval,
+			WorkOrderStatus.InProgress,
+			WorkOrderStatus.Done,
+			WorkOrderStatus.Completed,
+			WorkOrderStatus.Claimed,
+			WorkOrderStatus.Rejected,
+			WorkOrderStatus.Closed,
+			WorkOrderStatus.Cancelled,
+		],
 		click: (item: WorkOrderModel) => {
-			router.push({
-				name: "Work Order Detail",
-				params: { id: item.guid },
-				query: { status: "completed" },
-			});
+			goToDetail(item);
 		},
 	},
 	{
@@ -881,7 +893,10 @@ function canEditAssignedWorkOrder(item: WorkOrderModel) {
 	if (isSuperadmin) return true;
 	const userCode = authStore.currentUser?.code;
 	if (!userCode) return false;
-	if (item.isDraft || [WorkOrderStatus.Draft, WorkOrderStatus.New].includes(item.status as WorkOrderStatus)) {
+	if (
+		item.isDraft ||
+		[WorkOrderStatus.Draft, WorkOrderStatus.New].includes(item.status as WorkOrderStatus)
+	) {
 		return item.createdByCode === userCode;
 	}
 	if (item.status === WorkOrderStatus.PendingApproval) {
@@ -893,16 +908,13 @@ function canEditAssignedWorkOrder(item: WorkOrderModel) {
 	return false;
 }
 
-function canUseWorkOrderAction(
-	button: (typeof buttonList)[number],
-	item: WorkOrderModel,
-) {
+function canUseWorkOrderAction(button: (typeof buttonList)[number], item: WorkOrderModel) {
 	const permissionByTooltip: Record<string, string> = {
 		Approve: "approve",
 		Reject: "reject",
 		"Mark As Done": "mark_as_done",
 		Cancel: "cancel",
-		Reopen: "reopen",
+		Reopen: "mark_as_done",
 		"Mark As Claimed": "mark_as_claimed",
 		"Mark As Closed": "mark_as_closed",
 	};
@@ -910,12 +922,11 @@ function canUseWorkOrderAction(
 		button.tooltip === "Edit"
 			? updatePermissionForStatus(item.status)
 			: permissionByTooltip[button.tooltip] || "read";
-	const requiresAssignedEditor =
-		button.tooltip === "Edit" || button.tooltip === "Mark As Done";
+	const requiresAssignedEditor = button.tooltip === "Edit" || button.tooltip === "Mark As Done";
 	return Boolean(
 		action &&
-			authStore.can(action, "WorkOrder") &&
-			(!requiresAssignedEditor || canEditAssignedWorkOrder(item)),
+		authStore.can(action, "WorkOrder") &&
+		(!requiresAssignedEditor || canEditAssignedWorkOrder(item)),
 	);
 }
 
@@ -1288,7 +1299,13 @@ function viewWorkOrder(woNumber: string) {
 			name: "Work Order Detail",
 			params: { id: wo.guid || wo.woNumber },
 			query:
-				wo.status === WorkOrderStatus.Completed || wo.status === WorkOrderStatus.Claimed
+				wo.status === WorkOrderStatus.InProgress ||
+				wo.status === WorkOrderStatus.Done ||
+				wo.status === WorkOrderStatus.Completed ||
+				wo.status === WorkOrderStatus.Claimed ||
+				wo.status === WorkOrderStatus.Closed ||
+				wo.status === WorkOrderStatus.Cancelled ||
+				wo.status === WorkOrderStatus.Rejected
 					? { status: "completed" }
 					: undefined,
 		});
@@ -1405,7 +1422,7 @@ defineExpose({
 					@click="handleCreateWorkOrder"
 				>
 					<i class="mdi mdi-plus"></i>
-					<span class="btn-text">New Work Order</span>
+					<span class="btn-text">Create New Work Order</span>
 				</button>
 			</div>
 		</div>
@@ -1472,7 +1489,7 @@ defineExpose({
 						/>
 					</div>
 				</FilterPanel>
-				<Button
+				<!-- <Button
 					variant="outlined"
 					@click="handleExport('CSV')"
 					:disabled="exporting"
@@ -1485,14 +1502,15 @@ defineExpose({
 						style="font-size: 18px"
 					></i>
 					<span class="filter-label-text">{{ exporting ? "Exporting..." : "CSV" }}</span>
-				</Button>
+				</Button> -->
 				<Button
+					v-if="authStore.can('export', 'report')"
 					variant="outlined"
 					:disabled="exporting"
 					@click="handleExport('PDF')"
 					title="Export PDF"
 				>
-					<i class="mdi mdi-file-pdf-box"></i> PDF
+					<i class="mdi mdi-file-pdf-box" style="font-size: 18px"></i> Export
 				</Button>
 			</div>
 		</Card>

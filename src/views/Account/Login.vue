@@ -43,7 +43,7 @@ const login = async () => {
 	try {
 		await auth.login(form.value.email, form.value.password, form.value.remember);
 		snackbar.success("Logged in successfully");
-		router.push("/dashboard");
+		router.push("/");
 	} catch (e) {
 		const msg = (e as Error).message;
 		error.value = msg;

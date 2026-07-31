@@ -98,7 +98,7 @@ const handleReset = async () => {
 					"
 					@click="handleReset"
 				>
-					{{ isSubmitting ? "Updating..." : "Update Password" }}
+					{{ isSubmitting ? "Updating..." : "Reset Password" }}
 				</Button>
 			</div>
 		</div>

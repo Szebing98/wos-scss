@@ -11,6 +11,7 @@ import {
 	normalizePermissionCatalog,
 } from "@/utils/permission-label";
 import { getHighestRoleLevel, getRoleLevel, hasRole } from "@/utils/role";
+import { useSnackbarStore } from "@/stores/snackbar.store";
 
 interface UserGroupModel {
 	guid?: string;
@@ -26,6 +27,8 @@ interface PermissionModel {
 	subject: string;
 	inverted?: boolean;
 }
+
+const snackbar = useSnackbarStore();
 
 const isLoadingGroups = ref(false);
 const isLoadingPermissions = ref(false);
@@ -48,41 +51,11 @@ const defaultSystemPermissions: PermissionModel[] = [
 	{ code: "create:WorkOrder", subject: "WorkOrder", action: "create" },
 	{ code: "update_draft:WorkOrder", subject: "WorkOrder", action: "update_draft" },
 	{ code: "update_new:WorkOrder", subject: "WorkOrder", action: "update_new" },
-	{
-		code: "update_pending:WorkOrder",
-		subject: "WorkOrder",
-		action: "update_pending",
-	},
-	{
-		code: "update_progress:WorkOrder",
-		subject: "WorkOrder",
-		action: "update_progress",
-	},
-	{ code: "update_done:WorkOrder", subject: "WorkOrder", action: "update_done" },
-	{
-		code: "update_completed:WorkOrder",
-		subject: "WorkOrder",
-		action: "update_completed",
-	},
-	{ code: "update_claimed:WorkOrder", subject: "WorkOrder", action: "update_claimed" },
-	{ code: "update_closed:WorkOrder", subject: "WorkOrder", action: "update_closed" },
-	{
-		code: "update_cancelled:WorkOrder",
-		subject: "WorkOrder",
-		action: "update_cancelled",
-	},
-	{ code: "update_rejected:WorkOrder", subject: "WorkOrder", action: "update_rejected" },
+	{ code: "update_pending:WorkOrder", subject: "WorkOrder", action: "update_pending" },
+	{ code: "update_progress:WorkOrder", subject: "WorkOrder", action: "update_progress" },
 	{ code: "mark_as_done:WorkOrder", subject: "WorkOrder", action: "mark_as_done" },
-	{
-		code: "mark_as_completed:WorkOrder",
-		subject: "WorkOrder",
-		action: "mark_as_completed",
-	},
-	{
-		code: "mark_as_claimed:WorkOrder",
-		subject: "WorkOrder",
-		action: "mark_as_claimed",
-	},
+	{ code: "mark_as_completed:WorkOrder", subject: "WorkOrder", action: "mark_as_completed" },
+	{ code: "mark_as_claimed:WorkOrder", subject: "WorkOrder", action: "mark_as_claimed" },
 	{ code: "mark_as_closed:WorkOrder", subject: "WorkOrder", action: "mark_as_closed" },
 	{ code: "delete:WorkOrder", subject: "WorkOrder", action: "delete" },
 	{ code: "list:WorkOrder", subject: "WorkOrder", action: "list" },
@@ -116,10 +89,20 @@ const defaultSystemPermissions: PermissionModel[] = [
 	{ code: "delete:WorkType", subject: "WorkType", action: "delete" },
 	{ code: "list:WorkType", subject: "WorkType", action: "list" },
 
-	{ code: "read:DocNoFormat", subject: "DocNoFormat", action: "read" },
-	{ code: "create:DocNoFormat", subject: "DocNoFormat", action: "create" },
-	{ code: "update:DocNoFormat", subject: "DocNoFormat", action: "update" },
-	{ code: "list:DocNoFormat", subject: "DocNoFormat", action: "list" },
+	{ code: "read:PartInfo", subject: "PartInfo", action: "read" },
+	{ code: "create:PartInfo", subject: "PartInfo", action: "create" },
+	{ code: "update:PartInfo", subject: "PartInfo", action: "update" },
+	{ code: "delete:PartInfo", subject: "PartInfo", action: "delete" },
+
+	{ code: "read:WorkOrderInvoice", subject: "WorkOrderInvoice", action: "read" },
+	{ code: "create:WorkOrderInvoice", subject: "WorkOrderInvoice", action: "create" },
+	{ code: "update:WorkOrderInvoice", subject: "WorkOrderInvoice", action: "update" },
+	{ code: "delete:WorkOrderInvoice", subject: "WorkOrderInvoice", action: "delete" },
+
+	{ code: "read:SupplierInvoice", subject: "SupplierInvoice", action: "read" },
+	{ code: "create:SupplierInvoice", subject: "SupplierInvoice", action: "create" },
+	{ code: "update:SupplierInvoice", subject: "SupplierInvoice", action: "update" },
+	{ code: "delete:SupplierInvoice", subject: "SupplierInvoice", action: "delete" },
 
 	{ code: "read:Ability", subject: "Ability", action: "read" },
 	{ code: "update:Ability", subject: "Ability", action: "update" },
@@ -228,11 +211,15 @@ async function loadAllPermissions() {
 				})),
 			).filter((p) => !isManageAllPermission(p));
 		} else {
-			allPermissions.value = defaultSystemPermissions;
+			allPermissions.value = normalizePermissionCatalog(defaultSystemPermissions).filter(
+				(p) => !isManageAllPermission(p),
+			);
 		}
 	} catch (e) {
 		console.error("Failed to load abilities", e);
-		allPermissions.value = defaultSystemPermissions;
+		allPermissions.value = normalizePermissionCatalog(defaultSystemPermissions).filter(
+			(p) => !isManageAllPermission(p),
+		);
 	}
 }
 
@@ -346,10 +333,10 @@ async function saveGroupPermissions() {
 		});
 		originalPermissionCodes.value = new Set(selectedPermissionCodes.value);
 		isEditingPermissions.value = false;
-		alert(`Successfully updated permissions for ${selectedGroup.value.name}!`);
+		snackbar.success(`Successfully updated permissions for ${selectedGroup.value.name}!`);
 	} catch (e) {
 		console.error("Failed to save group permissions", e);
-		alert("Failed to save permissions.");
+		snackbar.error("Failed to save permissions.");
 	} finally {
 		isSaving.value = false;
 	}
@@ -390,7 +377,11 @@ onMounted(async () => {
 					Edit Permissions
 				</button>
 				<template v-else>
-					<button class="btn btn--secondary" :disabled="isSaving" @click="cancelEditingPermissions">
+					<button
+						class="btn btn--secondary"
+						:disabled="isSaving"
+						@click="cancelEditingPermissions"
+					>
 						Cancel
 					</button>
 					<button
@@ -451,9 +442,16 @@ onMounted(async () => {
 
 				<div v-else-if="showPermissionMatrix" class="matrix-container">
 					<div
-						v-if="selectedGroupEditMessage || permissionGuardMessage || !isEditingPermissions"
+						v-if="
+							selectedGroupEditMessage ||
+							permissionGuardMessage ||
+							!isEditingPermissions
+						"
 						class="permission-notice mb-md"
-						:class="{ 'permission-notice--warning': selectedGroupEditMessage || permissionGuardMessage }"
+						:class="{
+							'permission-notice--warning':
+								selectedGroupEditMessage || permissionGuardMessage,
+						}"
 					>
 						<i
 							class="mdi"
@@ -495,7 +493,9 @@ onMounted(async () => {
 						<div class="panel-card__header">
 							<div class="panel-card__header-title">
 								<i class="mdi mdi-folder-key-network-outline u-text-primary"></i>
-								<h2>{{ getPermissionSubjectLabel(String(subject)) }} Permissions</h2>
+								<h2>
+									{{ getPermissionSubjectLabel(String(subject)) }} Permissions
+								</h2>
 							</div>
 							<div class="panel-card__header-actions">
 								<button

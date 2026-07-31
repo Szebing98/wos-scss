@@ -53,7 +53,15 @@ function normalizeWorkOrderStatus(w: any) {
 }
 
 function userOptionDisplay(user: any) {
-	return userDisplayCode(user?.displayCode, user?.code, "");
+	const visibleName = user?.name?.trim();
+	const visibleCode = userDisplayCode(user?.displayCode, user?.code, "");
+	if (visibleName && visibleCode) {
+		if (visibleName.includes(`(${visibleCode})`) || visibleName === visibleCode) {
+			return visibleName;
+		}
+		return `${visibleName} (${visibleCode})`;
+	}
+	return visibleName || visibleCode || "";
 }
 
 function upsertUserOption(
@@ -108,8 +116,7 @@ const canEditForCurrentAssignment = computed(() => {
 	}
 	if (["progress", "inprogress"].includes(normalizedStatus.value)) {
 		return (
-			formData.value.personInChargeCode === userCode ||
-			formData.value.leaderCode === userCode
+			formData.value.personInChargeCode === userCode || formData.value.leaderCode === userCode
 		);
 	}
 	return false;
@@ -123,14 +130,31 @@ const canEditReadOnlyWorkOrder = computed(() => {
 	};
 	const action = actionByStatus[normalizedStatus.value];
 	return Boolean(
-		action &&
-			authStore.can(action, "WorkOrder") &&
-			canEditForCurrentAssignment.value,
+		action && authStore.can(action, "WorkOrder") && canEditForCurrentAssignment.value,
 	);
 });
 const isPendingApproval = computed(() =>
 	["pending", "pendingapproval"].includes(normalizedStatus.value),
 );
+
+function isFieldDisabled(fieldName: string): boolean {
+	if (isReadOnly.value) return true;
+	if (isPendingApproval.value) {
+		const allowedFields = [
+			"jobPriority",
+			"personInChargeCode",
+			"estimatedEndDate",
+			"leaderCode",
+			"leaderIICode",
+			"description",
+			"location",
+			"latitude",
+			"longitude",
+		];
+		return !allowedFields.includes(fieldName);
+	}
+	return false;
+}
 
 const now = new Date();
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -1379,6 +1403,11 @@ async function submitChanges() {
 }
 
 function cancel() {
+	const id = route.params.id;
+	if (!isReadOnly.value && typeof id === "string") {
+		goToWorkOrderReadOnly(id);
+		return;
+	}
 	router.back();
 }
 
@@ -1461,6 +1490,14 @@ const priorityColors: Record<string, string> = {
 						"
 					>
 						<i class="mdi mdi-note-edit-outline"></i> Edit
+					</Button>
+					<Button
+						v-if="isNewStatus && canEditReadOnlyWorkOrder"
+						variant="primary"
+						:disabled="loading"
+						@click="submitAndRequestApproval"
+					>
+						<i class="mdi mdi-check"></i> Request For Approval
 					</Button>
 					<template v-if="isPendingApproval">
 						<Button
@@ -1551,8 +1588,8 @@ const priorityColors: Record<string, string> = {
 				<div class="helper-line">
 					<span class="helper-bullet">-</span>
 					<span
-						><strong>Request For Approval</strong> submits the work order for
-						approval with status <strong>Pending Approval</strong>.</span
+						><strong>Request For Approval</strong> submits the work order for approval
+						with status <strong>Pending Approval</strong>.</span
 					>
 				</div>
 			</div>
@@ -1587,7 +1624,7 @@ const priorityColors: Record<string, string> = {
 						<div class="grid-row">
 							<!-- Row 1: Job Priority + Work Type Item -->
 							<div class="col-6">
-								<Select v-model="formData.jobPriority" label="Job Priority">
+								<Select v-model="formData.jobPriority" label="Job Priority" :disabled="isFieldDisabled('jobPriority')">
 									<option value="">Select Priority</option>
 									<option
 										v-for="p in JOB_PRIORITIES"
@@ -1601,6 +1638,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<Autocomplete
 									v-model="formData.orderTypeItemCode"
+									:disabled="isFieldDisabled('orderTypeItemCode')"
 									:options="
 										workTypeItems.map((item) => ({
 											id: item.code,
@@ -1616,6 +1654,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-12">
 								<Textbox
 									v-model="formData.title"
+									:disabled="isFieldDisabled('title')"
 									label="Title *"
 									placeholder="Enter Title"
 									:error="formErrors.title"
@@ -1626,6 +1665,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<Autocomplete
 									v-model="formData.salesAgentCode"
+									:disabled="isFieldDisabled('salesAgentCode')"
 									:options="
 										salesAgentUsers.map((u) => ({
 											id: u.code,
@@ -1642,6 +1682,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<Autocomplete
 									v-model="formData.personInChargeCode"
+									:disabled="isFieldDisabled('personInChargeCode')"
 									:options="
 										projectPicUsers.map((u) => ({
 											id: u.code,
@@ -1660,6 +1701,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<DatePicker
 									v-model="formData.startDate"
+									:disabled="isFieldDisabled('startDate')"
 									label="Start Date *"
 									:error="formErrors.startDate"
 									:enableTime="false"
@@ -1668,6 +1710,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<DatePicker
 									v-model="formData.estimatedEndDate"
+									:disabled="isFieldDisabled('estimatedEndDate')"
 									label="Estimated Date of Completion *"
 									:min="formData.startDate"
 									:error="formErrors.estimatedEndDate"
@@ -1679,6 +1722,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<Autocomplete
 									v-model="formData.leaderCode"
+									:disabled="isFieldDisabled('leaderCode')"
 									:options="
 										leaderOptions.map((u) => ({
 											id: u.code,
@@ -1695,6 +1739,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<Autocomplete
 									v-model="formData.leaderIICode"
+									:disabled="isFieldDisabled('leaderIICode')"
 									:options="
 										leaderIIOptions.map((u) => ({
 											id: u.code,
@@ -1712,6 +1757,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-12 textbox-field">
 								<MultiSelect
 									v-model="formData.technicianCodes"
+									:disabled="isFieldDisabled('technicianCodes')"
 									:options="technicianOptions"
 									label="Technicians"
 									placeholder="Search to add technicians..."
@@ -1724,6 +1770,7 @@ const priorityColors: Record<string, string> = {
 								<label class="custom-label">Work Description *</label>
 								<textarea
 									v-model="formData.description"
+									:disabled="isFieldDisabled('description')"
 									class="custom-textarea"
 									:class="{ 'custom-textarea--error': formErrors.description }"
 									placeholder="Enter Description"
@@ -1814,6 +1861,7 @@ const priorityColors: Record<string, string> = {
 										<span v-else class="file-item__name">{{ file.name }}</span>
 									</div>
 									<button
+										v-if="!isFieldDisabled('siteInstructionsFiles')"
 										class="file-item__remove"
 										@click="removeSiteInstruction(idx)"
 										title="Remove file"
@@ -1824,7 +1872,10 @@ const priorityColors: Record<string, string> = {
 							</div>
 
 							<button
-								v-if="formData.siteInstructionsFiles.length < 3"
+								v-if="
+									!isFieldDisabled('siteInstructionsFiles') &&
+									formData.siteInstructionsFiles.length < 3
+								"
 								class="upload-trigger"
 								@click="triggerSiteInstructionsUpload"
 							>
@@ -1867,6 +1918,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<Textbox
 									v-model="formData.equipment.name"
+									:disabled="isFieldDisabled('equipment.name')"
 									label="Equipment Name *"
 									placeholder="Enter Equipment name"
 									:error="formErrors['equipment.name']"
@@ -1875,6 +1927,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<Textbox
 									v-model="formData.equipment.serialNo"
+									:disabled="isFieldDisabled('equipment.serialNo')"
 									label="Equipment Serial No *"
 									placeholder="Enter Equipment Serial No"
 									:error="formErrors['equipment.serialNo']"
@@ -1883,6 +1936,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-4">
 								<Textbox
 									v-model="formData.equipment.brand"
+									:disabled="isFieldDisabled('equipment.brand')"
 									label="Equipment Brand *"
 									placeholder="Enter Equipment Brand"
 									:error="formErrors['equipment.brand']"
@@ -1891,6 +1945,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-4">
 								<Textbox
 									v-model="formData.equipment.model"
+									:disabled="isFieldDisabled('equipment.model')"
 									label="Equipment Model *"
 									placeholder="Enter Equipment Model"
 									:error="formErrors['equipment.model']"
@@ -1899,6 +1954,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-4">
 								<Textbox
 									v-model="formData.equipment.equipmentType"
+									:disabled="isFieldDisabled('equipment.equipmentType')"
 									label="Equipment Type *"
 									placeholder="Enter Equipment Type"
 									:error="formErrors['equipment.equipmentType']"
@@ -1921,6 +1977,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-12">
 								<Textbox
 									v-model="formData.technical.flowHead"
+									:disabled="isFieldDisabled('technical.flowHead')"
 									label="Flow & Head *"
 									placeholder="Enter Flow & Head"
 									:error="formErrors['technical.flowHead']"
@@ -1935,6 +1992,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<Textbox
 									v-model="formData.technical.brandName"
+									:disabled="isFieldDisabled('technical.brandName')"
 									label="Brand Name *"
 									placeholder="Enter Brand Name"
 									:error="formErrors['technical.brandName']"
@@ -1943,6 +2001,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-6">
 								<Textbox
 									v-model="formData.technical.serialNo"
+									:disabled="isFieldDisabled('technical.serialNo')"
 									label="Serial No *"
 									placeholder="Enter Serial No"
 									:error="formErrors['technical.serialNo']"
@@ -1951,6 +2010,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-4">
 								<Textbox
 									v-model="formData.technical.ratedVoltage"
+									:disabled="isFieldDisabled('technical.ratedVoltage')"
 									label="Rated Voltage *"
 									placeholder="Enter Rated Voltage"
 									:error="formErrors['technical.ratedVoltage']"
@@ -1959,6 +2019,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-4">
 								<Textbox
 									v-model="formData.technical.ratedSpeed"
+									:disabled="isFieldDisabled('technical.ratedSpeed')"
 									label="Rated Speed *"
 									placeholder="Enter Rated Speed"
 									:error="formErrors['technical.ratedSpeed']"
@@ -1967,6 +2028,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-4">
 								<Textbox
 									v-model="formData.technical.ratedCurrent"
+									:disabled="isFieldDisabled('technical.ratedCurrent')"
 									label="Rated Current *"
 									placeholder="Enter Rated Current"
 									:error="formErrors['technical.ratedCurrent']"
@@ -1975,6 +2037,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-4">
 								<Textbox
 									v-model="formData.technical.ratedPower"
+									:disabled="isFieldDisabled('technical.ratedPower')"
 									label="Rated Power *"
 									placeholder="Enter Rated Power"
 									:error="formErrors['technical.ratedPower']"
@@ -1983,6 +2046,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-4">
 								<Select
 									v-model="formData.technical.phase"
+									:disabled="isFieldDisabled('technical.phase')"
 									label="Phase *"
 									:error="formErrors['technical.phase']"
 								>
@@ -1999,6 +2063,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-4">
 								<Textbox
 									v-model="formData.technical.frameSize"
+									:disabled="isFieldDisabled('technical.frameSize')"
 									label="Frame Size *"
 									placeholder="Enter Frame Size"
 									:error="formErrors['technical.frameSize']"
@@ -2019,6 +2084,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-12">
 								<Select
 									v-model="formData.customerCode"
+									:disabled="isFieldDisabled('customerCode')"
 									label="Customer *"
 									:error="formErrors.customerCode"
 									@change="onCustomerChange"
@@ -2039,7 +2105,9 @@ const priorityColors: Record<string, string> = {
 									:options="contractSelectOptions"
 									label="Contract No *"
 									placeholder="Select Contract"
-									:disabled="!formData.customerCode"
+									:disabled="
+										!formData.customerCode || isFieldDisabled('contractNo')
+									"
 									:error="formErrors.contractNo"
 									@change="(e: any) => onContractChange(e.target.value)"
 								>
@@ -2118,9 +2186,7 @@ const priorityColors: Record<string, string> = {
 												? 'Go to Customer Form to renew contract'
 												: 'Go to Customer Form to extend contract'
 										"
-										@click="
-											redirectToCustomerRenew(selectedContractInfo)
-										"
+										@click="redirectToCustomerRenew(selectedContractInfo)"
 									>
 										<i class="mdi mdi-open-in-new"></i>
 										{{
@@ -2134,6 +2200,7 @@ const priorityColors: Record<string, string> = {
 							<div class="col-12">
 								<Textbox
 									v-model="formData.customerPic"
+									:disabled="isFieldDisabled('customerPic')"
 									label="Customer PIC"
 									placeholder="Enter Customer Person In Charge"
 								/>
@@ -2141,13 +2208,13 @@ const priorityColors: Record<string, string> = {
 							<div class="col-12">
 								<Textbox
 									v-model="formData.customerPicPhone"
+									:disabled="isFieldDisabled('customerPicPhone')"
 									label="PIC Phone No."
 									placeholder="e.g. +60123456789"
 								/>
 							</div>
 						</div>
 					</Card>
-
 				</div>
 			</div>
 
@@ -2176,6 +2243,7 @@ const priorityColors: Record<string, string> = {
 						</div>
 						<Autocomplete
 							v-model="formData.siteCode"
+							:disabled="isFieldDisabled('siteCode')"
 							:options="
 								sites.map((site) => ({
 									id: site.code,
@@ -2201,6 +2269,7 @@ const priorityColors: Record<string, string> = {
 							v-model:location="formData.location"
 							v-model:latitude="formData.latitude"
 							v-model:longitude="formData.longitude"
+							:readonly="isFieldDisabled('location')"
 							height="320px"
 						/>
 					</div>

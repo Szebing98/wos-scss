@@ -39,13 +39,13 @@ const routes = [
 				path: "dashboard",
 				name: "Dashboard",
 				component: () => import("@/views/Dashboard/index.vue"),
-				meta: { requiresAuth: true, permission: ["read", "Audit"] },
+				meta: { requiresAuth: true },
 			},
 			{
 				path: "audit-log",
 				name: "Audit Log",
 				component: () => import("@/views/AuditLog/index.vue"),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, permission: ["read", "Audit"] },
 			},
 			{
 				path: "settings",
@@ -58,7 +58,7 @@ const routes = [
 				name: "Notifications",
 				component: () => import("@/views/Notifications/index.vue"),
 				meta: { requiresAuth: true, breadcrumb: "Notifications" },
-			}
+			},
 		],
 	},
 	{
@@ -70,19 +70,31 @@ const routes = [
 				path: "list",
 				name: "Customer List",
 				component: () => import("@/views/Customer/CustomerList.vue"),
-				meta: { requiresAuth: true, breadcrumb: "Customer List", permission: ["read", "Customer"] },
+				meta: {
+					requiresAuth: true,
+					breadcrumb: "Customer List",
+					permission: ["read", "Customer"],
+				},
 			},
 			{
 				path: "profile",
 				name: "Customer Profile",
 				component: () => import("@/views/Customer/CustomerProfile.vue"),
-				meta: { requiresAuth: true, breadcrumb: "Customer Profile", permission: ["read", "Customer"] },
+				meta: {
+					requiresAuth: true,
+					breadcrumb: "Customer Profile",
+					permission: ["read", "Customer"],
+				},
 			},
 			{
 				path: "form",
 				name: "Customer Form",
 				component: () => import("@/views/Customer/CustomerForm.vue"),
-				meta: { requiresAuth: true, breadcrumb: "Customer Form", permission: ["read", "Customer"] },
+				meta: {
+					requiresAuth: true,
+					breadcrumb: "Customer Form",
+					permission: ["read", "Customer"],
+				},
 			},
 		],
 	},
@@ -149,13 +161,21 @@ const routes = [
 				path: "list",
 				name: "User List",
 				component: () => import("@/views/User/UserList.vue"),
-				meta: { requiresAuth: true, breadcrumb: "Employee List", permission: ["read", "User"] },
+				meta: {
+					requiresAuth: true,
+					breadcrumb: "Employee List",
+					permission: ["read", "User"],
+				},
 			},
 			{
 				path: "profile",
 				name: "User Profile",
 				component: () => import("@/views/User/UserProfile.vue"),
-				meta: { requiresAuth: true, breadcrumb: "User Profile", permission: ["read", "User"] },
+				meta: {
+					requiresAuth: true,
+					breadcrumb: "User Profile",
+					permission: ["read", "User"],
+				},
 			},
 			{
 				path: "form",
@@ -205,10 +225,10 @@ router.beforeEach(async (to) => {
 		"/account/login",
 		"/account/forgot-password",
 		"/account/reset-password",
-		"/account/activate"
+		"/account/activate",
 	];
 
-	const isPublic = publicPaths.some(path => to.path.startsWith(path));
+	const isPublic = publicPaths.some((path) => to.path.startsWith(path));
 
 	if (!isPublic && !token) {
 		return "/account/login";
@@ -218,7 +238,16 @@ router.beforeEach(async (to) => {
 	if (token && permission) {
 		const authStore = useAuthStore();
 		if (!authStore.currentUser) await authStore.fetchMe();
-		if (!authStore.can(permission[0], permission[1])) return "/dashboard";
+
+		// Bypass permission check if viewing own profile
+		const isOwnProfile =
+			to.path === "/user/profile" &&
+			(!to.query.code ||
+				to.query.code === authStore.currentUser?.guid ||
+				to.query.code === authStore.currentUser?.code ||
+				to.query.code === authStore.currentUser?.displayCode);
+
+		if (!isOwnProfile && !authStore.can(permission[0], permission[1])) return "/dashboard";
 	}
 });
 

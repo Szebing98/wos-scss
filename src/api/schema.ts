@@ -1921,6 +1921,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-order/{guid}/files/{fileGuid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuidFilesByFileGuidDownload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-order/files/{fileGuid}/preview": {
         parameters: {
             query?: never;
@@ -1929,6 +1945,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getApiWork-orderFilesByFileGuidPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/files/{fileGuid}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuidFilesByFileGuidPreview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1948,6 +1980,22 @@ export interface paths {
         put: operations["putApiWork-orderFilesByFileGuid"];
         post?: never;
         delete: operations["deleteApiWork-orderFilesByFileGuid"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-order/{guid}/files/{fileGuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiWork-orderByGuidFilesByFileGuid"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -8459,6 +8507,7 @@ export interface operations {
                      * @enum {string}
                      */
                     type: "list" | "detailed" | "summary";
+                    columns?: string[];
                     filters?: {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
@@ -8477,6 +8526,7 @@ export interface operations {
                      * @enum {string}
                      */
                     type: "list" | "detailed" | "summary";
+                    columns?: string[];
                     filters?: {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
@@ -8495,6 +8545,7 @@ export interface operations {
                      * @enum {string}
                      */
                     type: "list" | "detailed" | "summary";
+                    columns?: string[];
                     filters?: {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
@@ -8607,6 +8658,7 @@ export interface operations {
                      * @enum {string}
                      */
                     type: "list" | "detailed" | "summary";
+                    columns?: string[];
                     filters?: {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
@@ -8625,6 +8677,7 @@ export interface operations {
                      * @enum {string}
                      */
                     type: "list" | "detailed" | "summary";
+                    columns?: string[];
                     filters?: {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
@@ -8643,6 +8696,7 @@ export interface operations {
                      * @enum {string}
                      */
                     type: "list" | "detailed" | "summary";
+                    columns?: string[];
                     filters?: {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
@@ -8754,6 +8808,7 @@ export interface operations {
                      * @enum {string}
                      */
                     type: "list" | "detailed" | "summary";
+                    columns?: string[];
                     filters?: {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
@@ -8772,6 +8827,7 @@ export interface operations {
                      * @enum {string}
                      */
                     type: "list" | "detailed" | "summary";
+                    columns?: string[];
                     filters?: {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
@@ -8790,6 +8846,7 @@ export interface operations {
                      * @enum {string}
                      */
                     type: "list" | "detailed" | "summary";
+                    columns?: string[];
                     filters?: {
                         /** @enum {string} */
                         approvalStatus: "pending" | "approved" | "rejected";
@@ -12901,6 +12958,8 @@ export interface operations {
             content: {
                 "application/json": {
                     /** Format: date-time */
+                    startDate: string;
+                    /** Format: date-time */
                     estimatedEndDate: string;
                     description?: string;
                     /** @enum {string} */
@@ -12918,6 +12977,8 @@ export interface operations {
                 };
                 "application/x-www-form-urlencoded": {
                     /** Format: date-time */
+                    startDate: string;
+                    /** Format: date-time */
                     estimatedEndDate: string;
                     description?: string;
                     /** @enum {string} */
@@ -12934,6 +12995,8 @@ export interface operations {
                     assistantEngineerCodes?: string[];
                 };
                 "multipart/form-data": {
+                    /** Format: date-time */
+                    startDate: string;
                     /** Format: date-time */
                     estimatedEndDate: string;
                     description?: string;
@@ -14271,11 +14334,37 @@ export interface operations {
         requestBody?: never;
         responses: never;
     };
+    "getApiWork-orderByGuidFilesByFileGuidDownload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
+                fileGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
     "getApiWork-orderFilesByFileGuidPreview": {
         parameters: {
             query?: never;
             header?: never;
             path: {
+                fileGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderByGuidFilesByFileGuidPreview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
                 fileGuid: string;
             };
             cookie?: never;
@@ -14307,85 +14396,34 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description File category (e.g. invoice, receipt, image, quotation) */
-                    category?: string;
-                    /** @description Image category */
-                    subcategory?: string;
-                    /** @description File name */
+                    /** @description Displayed file name */
                     fileName?: string;
-                    /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
-                    mimeType?: string;
-                    /** @description Internal storage path or object key */
-                    storagePath?: string;
-                    /** @description Public or signed URL for accessing uploaded file */
-                    storageUrl?: string | null;
-                    /** @description Uploaded file size in bytes */
-                    fileSize?: number;
-                    /** @description Additional remarks or notes related to uploaded file */
-                    notes?: string;
-                    /** @description Document number extracted from uploaded file */
-                    docNo?: string;
-                    /**
-                     * Format: date-time
-                     * @description Document date extracted from uploaded file
-                     */
-                    docDate?: string;
-                    /** @description Document amount extracted or linked from uploaded file */
-                    docAmount?: number;
+                    /** @description Corrected document number */
+                    docNo?: string | null;
+                    /** @description Corrected document date */
+                    docDate?: string | null;
+                    /** @description Corrected document amount */
+                    docAmount?: number | null;
                 };
                 "application/x-www-form-urlencoded": {
-                    /** @description File category (e.g. invoice, receipt, image, quotation) */
-                    category?: string;
-                    /** @description Image category */
-                    subcategory?: string;
-                    /** @description File name */
+                    /** @description Displayed file name */
                     fileName?: string;
-                    /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
-                    mimeType?: string;
-                    /** @description Internal storage path or object key */
-                    storagePath?: string;
-                    /** @description Public or signed URL for accessing uploaded file */
-                    storageUrl?: string | null;
-                    /** @description Uploaded file size in bytes */
-                    fileSize?: number;
-                    /** @description Additional remarks or notes related to uploaded file */
-                    notes?: string;
-                    /** @description Document number extracted from uploaded file */
-                    docNo?: string;
-                    /**
-                     * Format: date-time
-                     * @description Document date extracted from uploaded file
-                     */
-                    docDate?: string;
-                    /** @description Document amount extracted or linked from uploaded file */
-                    docAmount?: number;
+                    /** @description Corrected document number */
+                    docNo?: string | null;
+                    /** @description Corrected document date */
+                    docDate?: string | null;
+                    /** @description Corrected document amount */
+                    docAmount?: number | null;
                 };
                 "multipart/form-data": {
-                    /** @description File category (e.g. invoice, receipt, image, quotation) */
-                    category?: string;
-                    /** @description Image category */
-                    subcategory?: string;
-                    /** @description File name */
+                    /** @description Displayed file name */
                     fileName?: string;
-                    /** @description Uploaded file MIME type (e.g. image/jpeg, application/pdf) */
-                    mimeType?: string;
-                    /** @description Internal storage path or object key */
-                    storagePath?: string;
-                    /** @description Public or signed URL for accessing uploaded file */
-                    storageUrl?: string | null;
-                    /** @description Uploaded file size in bytes */
-                    fileSize?: number;
-                    /** @description Additional remarks or notes related to uploaded file */
-                    notes?: string;
-                    /** @description Document number extracted from uploaded file */
-                    docNo?: string;
-                    /**
-                     * Format: date-time
-                     * @description Document date extracted from uploaded file
-                     */
-                    docDate?: string;
-                    /** @description Document amount extracted or linked from uploaded file */
-                    docAmount?: number;
+                    /** @description Corrected document number */
+                    docNo?: string | null;
+                    /** @description Corrected document date */
+                    docDate?: string | null;
+                    /** @description Corrected document amount */
+                    docAmount?: number | null;
                 };
             };
         };
@@ -14396,6 +14434,19 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                fileGuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: never;
+    };
+    "getApiWork-orderByGuidFilesByFileGuid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guid: string;
                 fileGuid: string;
             };
             cookie?: never;

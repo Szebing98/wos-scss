@@ -5,7 +5,9 @@ export const useAuthStore = defineStore("auth", {
 	state: () => ({
 		token: localStorage.getItem("authToken") as string | null,
 		// Basic user info persisted from login response
-		user: localStorage.getItem("authUser") ? JSON.parse(localStorage.getItem("authUser")!) : null,
+		user: localStorage.getItem("authUser")
+			? JSON.parse(localStorage.getItem("authUser")!)
+			: null,
 		// Full /me profile — fetched on app boot, shared across all components
 		currentUser: null as any | null,
 	}),
@@ -25,7 +27,7 @@ export const useAuthStore = defineStore("auth", {
 
 	actions: {
 		async login(email: string, password: string, remember: boolean) {
-			const { data, error } = await authApi.login({ email, password, remember }) as any;
+			const { data, error } = (await authApi.login({ email, password, remember })) as any;
 
 			if (error) {
 				throw new Error(error.error.message);
@@ -59,7 +61,7 @@ export const useAuthStore = defineStore("auth", {
 		},
 
 		async forgotPassword(email: string) {
-			const { data, error } = await authApi.forgotPassword({ email }) as any;
+			const { data, error } = (await authApi.forgotPassword({ email })) as any;
 
 			if (error) {
 				throw new Error(error.error.message);
@@ -69,11 +71,11 @@ export const useAuthStore = defineStore("auth", {
 		},
 
 		async activateAccount(token: string, password: string, passwordConfirm: string) {
-			const { data, error } = await authApi.activate({
+			const { data, error } = (await authApi.activate({
 				token,
 				password,
 				passwordConfirm,
-			}) as any;
+			})) as any;
 
 			if (error) {
 				throw new Error(error.error.message);
@@ -83,11 +85,11 @@ export const useAuthStore = defineStore("auth", {
 		},
 
 		async resetPassword(token: string, password: string, passwordConfirm: string) {
-			const { data, error } = await authApi.resetPassword({
+			const { data, error } = (await authApi.resetPassword({
 				token,
 				password,
 				passwordConfirm,
-			}) as any;
+			})) as any;
 
 			if (error) {
 				throw new Error(error.error.message);

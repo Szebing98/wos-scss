@@ -132,13 +132,9 @@ async function loadLogs() {
 		} else if (error) {
 			throw new Error(error.error.message);
 		}
-	} catch {
-		// Fallback mock data
-		logs.value = [
-			{ guid: "1", module: "WorkOrder", moduleCode: "WO-2023-001", auditType: "create", createdAt: new Date(Date.now() - 3600000).toISOString(), createdBy: "USR-001" },
-			{ guid: "2", module: "Customer", moduleCode: "CUST-008", auditType: "update", createdAt: new Date(Date.now() - 7200000).toISOString(), createdBy: "USR-002" },
-			{ guid: "3", module: "System", moduleCode: "CONFIG", auditType: "delete", createdAt: new Date(Date.now() - 86400000).toISOString(), createdBy: "SYSTEM" },
-		];
+	} catch (error) {
+		console.error("Failed to load audit logs:", error);
+		logs.value = [];
 	}
 }
 

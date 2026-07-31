@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
 import Table from "@/components/Table.vue";
@@ -16,15 +16,6 @@ import HighlightText from "@/components/HighlightText.vue";
 import { reportApi } from "@/api/report/report.api";
 import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
 
-const headers: TableHeader[] = [
-	{ key: "status", label: "Status" },
-	{ key: "employee", label: "Employee" },
-	{ key: "code", label: "Code" },
-	{ key: "role", label: "Assigned Role" },
-	{ key: "email", label: "Contact Email" },
-	{ key: "actions", label: "Actions", align: "right", width: "120px", sortable: false },
-];
-
 interface UserModel {
 	guid: string;
 	code: string;
@@ -40,6 +31,26 @@ const authStore = useAuthStore();
 const searchQuery = ref("");
 const roleFilter = ref("all");
 const filterStatus = ref("all");
+
+const headers = computed<TableHeader[]>(() => {
+	const cols: TableHeader[] = [
+		{ key: "status", label: "Status" },
+		{ key: "employee", label: "Employee" },
+		{ key: "code", label: "Code" },
+		{ key: "role", label: "Assigned Role" },
+		{ key: "email", label: "Contact Email" },
+	];
+	if (authStore.can("edit", "User")) {
+		cols.push({
+			key: "actions",
+			label: "Actions",
+			align: "right",
+			width: "120px",
+			sortable: false,
+		});
+	}
+	return cols;
+});
 
 const users = ref<UserModel[]>([]);
 const loading = ref(false);
@@ -135,8 +146,6 @@ function getRoleChipType(role: string) {
 watch([searchQuery, roleFilter, filterStatus], () => {
 	fetchUsers();
 });
-
-import { computed } from "vue";
 
 const totalEmployees = computed(() => users.value.length);
 const activeEmployees = computed(() => users.value.filter((u) => u.isActive).length);
@@ -257,12 +266,17 @@ function getRandomAvatarBg(name: string) {
 				</p>
 			</div>
 			<div style="display: flex; gap: 8px">
-				<button class="btn btn--outlined" :disabled="exporting" @click="handleExport('CSV')">
+				<!-- <button class="btn btn--outlined" :disabled="exporting" @click="handleExport('CSV')">
 					<i class="mdi mdi-file-delimited-outline"></i>
 					{{ exporting ? "Exporting..." : "CSV" }}
-				</button>
-				<button class="btn btn--outlined" :disabled="exporting" @click="handleExport('PDF')">
-					<i class="mdi mdi-file-pdf-box"></i> PDF
+				</button> -->
+				<button
+					v-if="authStore.can('export', 'Report')"
+					class="btn btn--outlined"
+					:disabled="exporting"
+					@click="handleExport('PDF')"
+				>
+					<i class="mdi mdi-file-pdf-box"></i> Export
 				</button>
 				<button
 					v-if="authStore.can('create', 'User')"
@@ -369,17 +383,17 @@ function getRandomAvatarBg(name: string) {
 			</div>
 		</Card>
 
-		<Card class="table-scroll-container" style="padding: 0">
+		<Card style="padding: 0">
 			<Table
 				paginate
-				hover
+				:hover="authStore.can('edit', 'User')"
 				storageKey="employee-directory"
 				:headers="headers"
 				:items="users"
 				:loading="loading"
 				:search-query="searchQuery"
 				emptyMessage="No employees found matching the search matrix."
-				@row-click="(user) => viewUserProfile(user.guid)"
+				@row-click="(user) => authStore.can('edit', 'User') && viewUserProfile(user.guid)"
 			>
 				<template #item-employee="{ item: user }">
 					<div class="employee-cell">
@@ -412,8 +426,8 @@ function getRandomAvatarBg(name: string) {
 									"
 									type="info"
 									style="margin-left: 6px; font-size: 10px; padding: 2px 6px"
-									>You</Badge
-								>
+									>You
+								</Badge>
 							</div>
 						</div>
 					</div>
@@ -436,12 +450,12 @@ function getRandomAvatarBg(name: string) {
 						{{ item.isActive ? "Active" : "Inactive" }}
 					</Badge>
 				</template>
-				<template #item-actions="{ item: user }">
+				<template #item-actions="{ item: user }" v-if="authStore.can('edit', 'User')">
 					<div style="display: flex; gap: 4px; justify-content: flex-end">
 						<button
 							class="btn btn--icon"
 							@click.stop="viewUserProfile(user.guid)"
-							title="View Profile / Edit"
+							title="Edit Profile"
 						>
 							<i class="mdi mdi-account-edit-outline"></i>
 						</button>
@@ -454,7 +468,7 @@ function getRandomAvatarBg(name: string) {
 								isSelf(user)
 									? 'You cannot deactivate your own account'
 									: user.isActive
-										? 'Suspend'
+										? 'Deactivated'
 										: 'Activate'
 							"
 						>

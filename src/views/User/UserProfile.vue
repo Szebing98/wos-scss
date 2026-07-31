@@ -74,6 +74,11 @@ const isOwnProfile = computed(() => {
 	return false;
 });
 
+const isSuperadmin = computed(() => {
+	const groups = authStore.currentUser?.userGroups || authStore.user?.userGroups || [];
+	return groups.some((group: any) => String(group.code || "").toUpperCase() === "SA");
+});
+
 interface ProfileForm {
 	code: string;
 	name: string;
@@ -609,7 +614,7 @@ async function confirmAvatarUpload() {
 
 						<div class="form-group">
 							<label class="form-group__label">Email Address <span class="u-required">*</span></label>
-							<Textbox v-model="profileData.email" type="email" :disabled="!isEditMode" placeholder="username@gstech.com" />
+							<Textbox v-model="profileData.email" type="email" :disabled="!isEditMode || (!isNewMode && !isSuperadmin)" placeholder="username@gstech.com" />
 						</div>
 
 						<div class="form-group">

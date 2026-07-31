@@ -7,7 +7,9 @@ import { useDateFormatStore } from "@/stores/dateFormat.store";
 import WorkOrderList from "@/views/WorkOrder/WorkOrderList.vue";
 import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
 import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useAuthStore } from "@/stores/auth.store";
 
+const authStore = useAuthStore();
 const themeStore = useThemeStore();
 const dateFormatStore = useDateFormatStore();
 const router = useRouter();
@@ -266,14 +268,25 @@ onMounted(() => {
 				<p class="dashboard__updated-time">Last updated: {{ lastUpdatedTime }}</p>
 			</div>
 			<div style="display: flex; gap: 8px">
-				<button class="btn btn--outlined" :disabled="loadingCounts" @click="exportCountReport('CSV')">
-					<i class="mdi mdi-file-delimited-outline"></i> Count CSV
-				</button>
-				<button class="btn btn--outlined" :disabled="loadingCounts" @click="exportCountReport('PDF')">
-					<i class="mdi mdi-file-pdf-box"></i> Count PDF
-				</button>
+				<!-- <button
+					class="btn btn--outlined"
+					:disabled="loadingCounts"
+					@click="exportCountReport('CSV')"
+				>
+					<i class="mdi mdi-file-delimited-outline"></i> CSV
+				</button> -->
+
 				<button class="btn btn--icon" :disabled="loadingCounts" @click="refreshData">
 					<i class="mdi mdi-refresh"></i>
+				</button>
+
+				<button
+					v-if="authStore.can('export', 'Report')"
+					class="btn btn--outlined"
+					:disabled="loadingCounts"
+					@click="exportCountReport('PDF')"
+				>
+					<i class="mdi mdi-file-pdf-box"></i>Export PDF
 				</button>
 			</div>
 		</div>
@@ -361,8 +374,13 @@ onMounted(() => {
 			<div class="dashboard__panel" style="margin-top: 24px">
 				<div class="dashboard__panel-header">
 					<h2 class="dashboard__panel-title">All Work Orders</h2>
-					<button class="btn btn--primary" @click="handleCreateClick">
-						<i class="mdi mdi-plus"></i> Create New Work Order
+					<button
+						class="btn btn--primary"
+						v-if="authStore.can('create', 'WorkOrder')"
+						@click="handleCreateClick"
+					>
+						<i class="mdi mdi-plus"></i>
+						Create New Work Order
 					</button>
 				</div>
 				<WorkOrderList ref="workOrderListRef" status="All" hideHeader />

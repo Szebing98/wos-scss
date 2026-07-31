@@ -29,18 +29,26 @@ const formData = ref<Partial<SiteModel>>({
 	isActive: true,
 });
 
+import { useAuthStore } from "@/stores/auth.store";
 import http from "@/utils/http";
+
+const authStore = useAuthStore();
 
 const sites = ref<SiteModel[]>([]);
 
-const tableHeaders: TableHeader[] = [
-	{ key: "code", label: "Site Code", width: "150px", minWidth: "130px" },
-	{ key: "name", label: "Site Name", width: "220px", minWidth: "170px" },
-	{ key: "description", label: "Description", width: "auto", minWidth: "200px" },
-	{ key: "createdAt", label: "Added", width: "140px", minWidth: "120px" },
-	{ key: "status", label: "Status", width: "130px", minWidth: "110px" },
-	{ key: "actions", label: "Actions", align: "right", width: "130px", minWidth: "110px" },
-];
+const tableHeaders = computed<TableHeader[]>(() => {
+	const baseHeaders: TableHeader[] = [
+		{ key: "code", label: "Site Code", width: "150px", minWidth: "130px" },
+		{ key: "name", label: "Site Name", width: "220px", minWidth: "170px" },
+		{ key: "description", label: "Description", width: "auto", minWidth: "200px" },
+		{ key: "createdAt", label: "Added", width: "140px", minWidth: "120px" },
+		{ key: "status", label: "Status", width: "130px", minWidth: "110px" },
+	];
+	if (authStore.can("update", "Site")) {
+		baseHeaders.push({ key: "actions", label: "Actions", align: "right", width: "130px", minWidth: "110px" });
+	}
+	return baseHeaders;
+});
 
 async function fetchSites() {
 	isLoading.value = true;
@@ -179,7 +187,7 @@ async function confirmToggleStatus() {
 					Configure facility locations, service branches, and work order operational sites
 				</p>
 			</div>
-			<button class="btn btn--primary add-site-btn" @click="openCreateModal" style="display: flex; align-items: center; gap: 6px;">
+			<button v-if="authStore.can('create', 'Site')" class="btn btn--primary add-site-btn" @click="openCreateModal" style="display: flex; align-items: center; gap: 6px;">
 				<i class="mdi mdi-plus"></i>
 				<span class="btn-text">New Site</span>
 			</button>
@@ -287,10 +295,11 @@ async function confirmToggleStatus() {
 						Added: {{ dateFormatStore.formatDate(site.createdAt) }}
 					</span>
 					<div class="site-card__actions">
-						<button class="btn btn--icon" @click="openEditModal(site)" title="Edit Site">
+						<button v-if="authStore.can('update', 'Site')" class="btn btn--icon" @click="openEditModal(site)" title="Edit Site">
 							<i class="mdi mdi-pencil"></i>
 						</button>
 						<button
+							v-if="authStore.can('update', 'Site')"
 							class="btn btn--icon"
 							@click="requestToggleStatus(site)"
 							:title="site.isActive ? 'Deactivate Site' : 'Activate Site'"
@@ -336,10 +345,11 @@ async function confirmToggleStatus() {
 					</template>
 					<template #item-actions="{ item }">
 						<div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
-							<button class="btn btn--icon" @click="openEditModal(item)" title="Edit Site">
+							<button v-if="authStore.can('update', 'Site')" class="btn btn--icon" @click="openEditModal(item)" title="Edit Site">
 								<i class="mdi mdi-pencil"></i>
 							</button>
 							<button
+								v-if="authStore.can('update', 'Site')"
 								class="btn btn--icon"
 								@click="requestToggleStatus(item)"
 								:title="item.isActive ? 'Deactivate Site' : 'Activate Site'"

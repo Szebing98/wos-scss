@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import Button from "@/components/Button.vue";
+import { useAuthStore } from "@/stores/auth.store";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
 
+const authStore = useAuthStore();
 const props = defineProps<{
 	workOrder: any;
 	isManager: boolean;
@@ -28,21 +30,6 @@ function formatDateString(dateStr: string) {
 				Manager verification and approval of completed work. No signature upload required.
 			</p>
 		</div>
-		<div class="role-selector">
-			<label style="margin-right: 8px; font-size: 14px">Simulate Role:</label>
-			<select
-				:value="currentUserRole"
-				@change="emit('updateRole', ($event.target as HTMLSelectElement).value)"
-				style="
-					padding: 4px 8px;
-					border-radius: 4px;
-					border: 1px solid var(--colors-surface-border);
-				"
-			>
-				<option value="Manager">Manager</option>
-				<option value="Technician">Non-Manager</option>
-			</select>
-		</div>
 	</div>
 
 	<div
@@ -55,7 +42,14 @@ function formatDateString(dateStr: string) {
 		"
 	>
 		<div v-if="workOrder?.status === 'Done'">
-			<div class="verification-actions-box" v-if="isManager">
+			<div
+				class="verification-actions-box"
+				v-if="
+					isManager &&
+					(authStore.can('mark_as_completed', 'WorkOrder') ||
+						authStore.can('reject', 'WorkOrder'))
+				"
+			>
 				<div class="verification-actions-box__icon">
 					<i class="mdi mdi-shield-check-outline"></i>
 				</div>
@@ -68,10 +62,20 @@ function formatDateString(dateStr: string) {
 					class="verification-buttons-row"
 					style="margin-top: 16px; display: flex; gap: 12px; justify-content: center"
 				>
-					<Button variant="primary" @click="emit('approve')" style="min-width: 140px">
+					<Button
+						v-if="authStore.can('mark_as_completed', 'WorkOrder')"
+						variant="primary"
+						@click="emit('approve')"
+						style="min-width: 140px"
+					>
 						<i class="mdi mdi-check-circle" style="margin-right: 6px"></i> Approve
 					</Button>
-					<Button variant="danger" @click="emit('reject')" style="min-width: 140px">
+					<Button
+						v-if="authStore.can('reject', 'WorkOrder')"
+						variant="danger"
+						@click="emit('reject')"
+						style="min-width: 140px"
+					>
 						<i class="mdi mdi-close-circle" style="margin-right: 6px"></i> Reject
 					</Button>
 				</div>
@@ -107,9 +111,9 @@ function formatDateString(dateStr: string) {
 					class="mdi mdi-information-outline"
 					style="font-size: 52px; color: var(--colors-text-muted)"
 				></i>
-				<h4 style="margin: 8px 0 4px 0">No Verification Pending</h4>
+				<h4 style="margin: 8px 0 4px 0">Verification Pending</h4>
 				<p class="text-muted" style="margin: 0">
-					Verification is only required when the work order is marked as done.
+					Verification is required to mark the work order as completed.
 				</p>
 			</div>
 		</div>
