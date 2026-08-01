@@ -221,5 +221,5 @@ function getTruncatedContent(content: string) {
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_work-order-tabs-notes-tab.scss";
+@use "@/styles/pages/WorkOrder/tabs/_notes-tab.scss";
 </style>

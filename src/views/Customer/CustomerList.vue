@@ -493,5 +493,5 @@ function getClassificationBadge(individualType: string, identityNo: string = "")
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_customer-customer-list.scss";
+@use "@/styles/pages/Customer/_customer-list.scss";
 </style>

@@ -1254,5 +1254,5 @@ async function handleSubmitForm() {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_customer-customer-form.scss";
+@use "@/styles/pages/Customer/_customer-form.scss";
 </style>

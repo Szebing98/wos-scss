@@ -280,5 +280,5 @@ function formatPrice(value: number) {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_maintenance-part-info.scss";
+@use "@/styles/pages/Maintenance/_part-info.scss";
 </style>

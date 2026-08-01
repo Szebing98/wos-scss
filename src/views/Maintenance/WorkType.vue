@@ -715,5 +715,5 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_maintenance-work-type.scss";
+@use "@/styles/pages/Maintenance/_work-type.scss";
 </style>

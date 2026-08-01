@@ -458,5 +458,5 @@ async function executeDelete() {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_maintenance-doc-no-format.scss";
+@use "@/styles/pages/Maintenance/_doc-no-format.scss";
 </style>

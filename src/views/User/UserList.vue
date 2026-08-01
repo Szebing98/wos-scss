@@ -531,5 +531,5 @@ function getRandomAvatarBg(name: string) {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_user-user-list.scss";
+@use "@/styles/pages/User/_user-list.scss";
 </style>

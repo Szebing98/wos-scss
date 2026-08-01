@@ -105,5 +105,5 @@ function handleFileChange(event: Event) {
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_work-order-tabs-images-tab.scss";
+@use "@/styles/pages/WorkOrder/tabs/_images-tab.scss";
 </style>

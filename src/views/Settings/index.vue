@@ -196,5 +196,5 @@ function handleDateFormatChange(val: string) {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_settings.scss";
+@use "@/styles/pages/Settings/_settings.scss";
 </style>

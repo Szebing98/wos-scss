@@ -313,5 +313,5 @@ onMounted(loadNotifications);
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_notifications.scss";
+@use "@/styles/pages/Notifications/_notifications.scss";
 </style>

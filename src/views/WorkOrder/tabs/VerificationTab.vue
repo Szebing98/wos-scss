@@ -121,5 +121,5 @@ function formatDateString(dateStr: string) {
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_work-order-tabs-verification-tab.scss";
+@use "@/styles/pages/WorkOrder/tabs/_verification-tab.scss";
 </style>

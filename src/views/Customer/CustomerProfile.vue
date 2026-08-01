@@ -656,5 +656,5 @@ function formatDate(iso: string) {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_customer-customer-profile.scss";
+@use "@/styles/pages/Customer/_customer-profile.scss";
 </style>

@@ -438,5 +438,5 @@ async function syncWithLhdn() {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_maintenance-location.scss";
+@use "@/styles/pages/Maintenance/_location.scss";
 </style>

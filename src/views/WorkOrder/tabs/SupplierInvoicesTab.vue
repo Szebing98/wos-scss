@@ -97,5 +97,5 @@ function isPdfFile(fileName: string) {
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_work-order-tabs-supplier-invoices-tab.scss";
+@use "@/styles/pages/WorkOrder/tabs/_supplier-invoices-tab.scss";
 </style>

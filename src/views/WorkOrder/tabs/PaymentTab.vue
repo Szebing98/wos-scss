@@ -318,5 +318,5 @@ const dateFormatStore = useDateFormatStore();
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_work-order-tabs-payment-tab.scss";
+@use "@/styles/pages/WorkOrder/tabs/_payment-tab.scss";
 </style>

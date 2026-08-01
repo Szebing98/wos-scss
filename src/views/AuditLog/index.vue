@@ -329,5 +329,5 @@ onMounted(() => {
 
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_audit-log.scss";
+@use "@/styles/pages/AuditLog/_audit-log.scss";
 </style>

@@ -675,5 +675,5 @@ function openImageModal(url: string) {
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_work-order-tabs-general-tab.scss";
+@use "@/styles/pages/WorkOrder/tabs/_general-tab.scss";
 </style>

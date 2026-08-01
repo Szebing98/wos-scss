@@ -634,5 +634,5 @@ async function saveOverrides() {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_maintenance-user-permission.scss";
+@use "@/styles/pages/Maintenance/_user-permission.scss";
 </style>

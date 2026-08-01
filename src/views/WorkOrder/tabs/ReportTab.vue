@@ -430,5 +430,5 @@ function photosFor(category: string) {
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_work-order-tabs-report-tab.scss";
+@use "@/styles/pages/WorkOrder/tabs/_report-tab.scss";
 </style>

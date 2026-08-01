@@ -1766,5 +1766,5 @@ defineExpose({
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_work-order-work-order-list.scss";
+@use "@/styles/pages/WorkOrder/_work-order-list.scss";
 </style>

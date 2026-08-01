@@ -347,5 +347,5 @@ function formatPrice(value: number) {
 
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_maintenance-service-provided.scss";
+@use "@/styles/pages/Maintenance/_service-provided.scss";
 </style>

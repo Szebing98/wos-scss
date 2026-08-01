@@ -2343,5 +2343,5 @@ const priorityColors: Record<string, string> = {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_work-order-work-order-form.scss";
+@use "@/styles/pages/WorkOrder/_work-order-form.scss";
 </style>

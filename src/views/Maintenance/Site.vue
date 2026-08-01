@@ -441,5 +441,5 @@ async function confirmToggleStatus() {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_maintenance-site.scss";
+@use "@/styles/pages/Maintenance/_site.scss";
 </style>

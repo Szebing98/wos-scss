@@ -122,5 +122,5 @@ const canUpload = computed(() => {
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_work-order-tabs-finance-tab.scss";
+@use "@/styles/pages/WorkOrder/tabs/_finance-tab.scss";
 </style>

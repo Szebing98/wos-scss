@@ -566,5 +566,5 @@ onMounted(async () => {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_maintenance-role-permission.scss";
+@use "@/styles/pages/Maintenance/_role-permission.scss";
 </style>

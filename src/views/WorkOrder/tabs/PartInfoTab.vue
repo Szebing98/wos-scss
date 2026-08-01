@@ -106,5 +106,5 @@ const partInfoCameraInput = ref<HTMLInputElement | null>(null);
 </template>
 
 <style scoped lang="scss">
-@use "@/styles/pages/_work-order-tabs-part-info-tab.scss";
+@use "@/styles/pages/WorkOrder/tabs/_part-info-tab.scss";
 </style>

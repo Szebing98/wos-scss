@@ -720,5 +720,5 @@ async function confirmAvatarUpload() {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/pages/_user-user-profile.scss";
+@use "@/styles/pages/User/_user-profile.scss";
 </style>
