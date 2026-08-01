@@ -927,16 +927,20 @@
 			width: 100%;
 		}
 
-		> button,
-		> .btn,
 		> .header-actions,
-		> div:last-child:not(:first-child) {
+		> div:last-child:not(:first-child):not(button):not(.btn) {
 			display: flex;
 			flex-wrap: wrap;
 			gap: 8px;
 			align-items: center;
 			justify-content: flex-start;
 			width: 100%;
+		}
+
+		> button,
+		> .btn {
+			width: 100%;
+			justify-content: center;
 		}
 	}
 
