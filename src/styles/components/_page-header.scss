@@ -62,7 +62,12 @@
 			flex-direction: row;
 			align-items: center;
 
-			&__actions {
+			.page-header__title-area {
+				width: auto;
+				flex: 1;
+			}
+
+			.page-header__actions {
 				width: auto;
 				flex-direction: row;
 
