@@ -11,8 +11,8 @@
 	color: var(--colors-text-inverse);
 
 	display: flex;
-	align-items: center;
-	justify-content: left;
+	align-items: flex-start;
+	justify-content: flex-start;
 	gap: var(--spacing-sm);
 
 	animation: slideIn 0.2s ease;
@@ -35,6 +35,13 @@
 		background: transparent;
 		font-size: var(--font-size-xxl);
 		color: currentColor;
+	}
+
+	&__message {
+		flex: 1;
+		word-break: break-word;
+		overflow-wrap: break-word;
+		line-height: 1.4;
 	}
 
 	&--error {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
 import { ref, computed, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
@@ -1011,7 +1012,7 @@ async function handleExport(format: "CSV" | "PDF") {
 			type: "list",
 			...(Object.keys(filters).length ? { filters: filters as any } : {}),
 		});
-		if (error) throw new Error((error as any).error?.message || "Export request failed.");
+		if (error) throw new Error(getApiErrorMessage(error, "Export request failed."));
 
 		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
 		const date = new Date().toISOString().slice(0, 10);
@@ -1072,7 +1073,7 @@ async function executeAction() {
 					break;
 			}
 			if (res && res.error) {
-				alert(`Action failed: ${res.error.error.message}`);
+				snackbar.error(getApiErrorMessage(res.error, "An error occurred"));
 			} else {
 				fetchWorkOrders();
 			}
@@ -1092,7 +1093,7 @@ async function executeReject() {
 				rejectedReason: rejectReason.value,
 			});
 			if (error) {
-				alert(`Failed to reject work order: ${error.error.message}`);
+				alert(getApiErrorMessage(error, "Failed to reject work order"));
 			} else {
 				fetchWorkOrders();
 			}
@@ -1404,7 +1405,7 @@ defineExpose({
 
 <template>
 	<div class="maintenance-view" :class="{ 'maintenance-view--embedded': hideHeader }">
-		<PageHeader v-if="!hideHeader" :title="pageTitle">
+		<PageHeader v-if="!hideHeader" :title="pageTitle" mobile-icon-only>
 			<template #subtitle>
 				<p class="page-header__subtitle">
 					Manage and track work orders across your facilities

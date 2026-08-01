@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
 import { ref, computed, watch, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Textbox from "@/components/Textbox.vue";
@@ -1102,7 +1103,7 @@ async function submitDraft() {
 		if (id && typeof id === "string") {
 			const { error } = await workOrderApi.updateDraft(id, body);
 			if (error) {
-				snackbar.error(`Failed to update draft: ${error.error?.message || error.message}`);
+				snackbar.error(getApiErrorMessage(error, "Failed to update draft"));
 				return;
 			}
 			await uploadSelectedSiteInstructions(id);
@@ -1111,7 +1112,7 @@ async function submitDraft() {
 			const result = await workOrderApi.createDraft(body as any);
 			const { error } = result;
 			if (error) {
-				snackbar.error(`Failed to save draft: ${error.error?.message || error.message}`);
+				snackbar.error(getApiErrorMessage(error, "Failed to save draft"));
 				return;
 			}
 			const workOrderGuid = extractWorkOrderGuid(result);
@@ -1148,7 +1149,7 @@ async function submitNew() {
 				const updateRes = await workOrderApi.updateDraft(id, body);
 				if (updateRes.error) {
 					snackbar.error(
-						`Failed to update draft: ${updateRes.error.error?.message || updateRes.error.message}`,
+						getApiErrorMessage(updateRes.error, "Failed to update draft"),
 					);
 					return;
 				}
@@ -1158,7 +1159,7 @@ async function submitNew() {
 				} as any);
 				if (error) {
 					snackbar.error(
-						`Failed to submit work order: ${error.error?.message || error.message}`,
+						getApiErrorMessage(error, "Failed to submit work order"),
 					);
 					return;
 				}
@@ -1166,7 +1167,7 @@ async function submitNew() {
 				const { error } = await workOrderApi.updateNew(id, body);
 				if (error) {
 					snackbar.error(
-						`Failed to update work order: ${error.error?.message || error.message}`,
+						getApiErrorMessage(error, "Failed to update work order"),
 					);
 					return;
 				}
@@ -1178,7 +1179,7 @@ async function submitNew() {
 			const { error } = result;
 			if (error) {
 				snackbar.error(
-					`Failed to submit work order: ${error.error?.message || error.message}`,
+					getApiErrorMessage(error, "Failed to submit work order"),
 				);
 				return;
 			}
@@ -1219,7 +1220,7 @@ async function submitAndRequestApproval() {
 				const updateRes = await workOrderApi.updateDraft(id, body);
 				if (updateRes.error) {
 					snackbar.error(
-						`Failed to update draft: ${updateRes.error.error?.message || updateRes.error.message}`,
+						getApiErrorMessage(updateRes.error, "Failed to update draft"),
 					);
 					return;
 				}
@@ -1229,7 +1230,7 @@ async function submitAndRequestApproval() {
 				} as any);
 				if (error) {
 					snackbar.error(
-						`Failed to request approval: ${error.error?.message || error.message}`,
+						getApiErrorMessage(error, "Failed to request approval"),
 					);
 					return;
 				}
@@ -1237,7 +1238,7 @@ async function submitAndRequestApproval() {
 				const updateRes = await workOrderApi.updateNew(id, body);
 				if (updateRes.error) {
 					snackbar.error(
-						`Failed to update work order: ${updateRes.error.error?.message || updateRes.error.message}`,
+						getApiErrorMessage(updateRes.error, "Failed to update work order"),
 					);
 					return;
 				}
@@ -1247,7 +1248,7 @@ async function submitAndRequestApproval() {
 				} as any);
 				if (error) {
 					snackbar.error(
-						`Failed to request approval: ${error.error?.message || error.message}`,
+						getApiErrorMessage(error, "Failed to request approval"),
 					);
 					return;
 				}
@@ -1255,7 +1256,7 @@ async function submitAndRequestApproval() {
 				const { error } = await workOrderApi.updatePending(id, body);
 				if (error) {
 					snackbar.error(
-						`Failed to request approval: ${error.error?.message || error.message}`,
+						getApiErrorMessage(error, "Failed to request approval"),
 					);
 					return;
 				}
@@ -1266,7 +1267,7 @@ async function submitAndRequestApproval() {
 			const { error } = pendingResult;
 			if (error) {
 				snackbar.error(
-					`Failed to request approval: ${error.error?.message || error.message}`,
+					getApiErrorMessage(error, "Failed to request approval"),
 				);
 				return;
 			}
@@ -1304,7 +1305,7 @@ async function saveNew() {
 			const { error } = await workOrderApi.updateNew(id, buildBody());
 			if (error) {
 				snackbar.error(
-					`Failed to save work order: ${error.error?.message || error.message}`,
+					getApiErrorMessage(error, "Failed to save work order"),
 				);
 				return;
 			}
@@ -1332,7 +1333,7 @@ async function updatePending(options: { stayInEdit?: boolean; silent?: boolean }
 			const { error } = await workOrderApi.updatePending(id, buildPendingBody());
 			if (error) {
 				alert(
-					`Failed to update pending approval work order: ${error.error?.message || error.message}`,
+					getApiErrorMessage(error, "Failed to update pending approval work order"),
 				);
 				return false;
 			}
@@ -1360,7 +1361,7 @@ async function approvePendingFromEdit() {
 	if (!updated) return;
 	const { error } = await workOrderApi.approve(id);
 	if (error) {
-		snackbar.error(`Failed to approve work order: ${error.error?.message || error.message}`);
+		snackbar.error(getApiErrorMessage(error, "Failed to approve work order"));
 		return;
 	}
 	snackbar.success("Work order approved successfully!");
@@ -1389,7 +1390,7 @@ async function submitChanges() {
 				res = await workOrderApi.updateProgress(id, buildBody());
 			}
 			if (res && res.error) {
-				snackbar.error(`Failed to save changes: ${res.error.error.message}`);
+				snackbar.error(getApiErrorMessage(res.error, "Failed to save changes"));
 				return;
 			}
 			snackbar.success("Work order updated successfully!");
@@ -1416,7 +1417,7 @@ async function approvePendingReadOnly() {
 	if (typeof id !== "string") return;
 	const { error } = await workOrderApi.approve(id);
 	if (error) {
-		snackbar.error(`Failed to approve work order: ${error.error?.message || error.message}`);
+		snackbar.error(getApiErrorMessage(error, "Failed to approve work order"));
 		return;
 	}
 	snackbar.success("Work order approved successfully!");
@@ -1433,7 +1434,7 @@ async function rejectPendingReadOnly() {
 		rejectedReason: rejectReason.value.trim(),
 	});
 	if (error) {
-		snackbar.error(`Failed to reject work order: ${error.error?.message || error.message}`);
+		snackbar.error(getApiErrorMessage(error, "Failed to reject work order"));
 		return;
 	}
 	snackbar.success("Work order rejected successfully!");

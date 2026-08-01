@@ -485,6 +485,7 @@
 			line-height: 1.4;
 			display: -webkit-box;
 			-webkit-line-clamp: 2;
+			line-clamp: 2;
 			-webkit-box-orient: vertical;
 			overflow: hidden;
 		}
@@ -819,12 +820,12 @@
 	// padding-left was causing double-spacing in rail mode.
 
 	&--rail {
-		:global(.header-left) {
+		.header-left {
 			width: calc(var(--rail-w) - var(--spacing-md)) !important;
 			justify-content: center !important;
 			gap: 0 !important;
 
-			:global(.header__logo) {
+			.header__logo {
 				display: none !important;
 			}
 		}

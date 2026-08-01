@@ -344,7 +344,7 @@ $status-colors: (
 		}
 	}
 
-	:global([data-theme="dark"]) .status-card--#{$status} {
+	[data-theme="dark"] .status-card--#{$status} {
 		background: linear-gradient(135deg, #1e1e2d 0%, #151521 100%);
 		border-left: 5px solid $color;
 		color: var(--colors-text-primary);

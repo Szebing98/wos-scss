@@ -1,5 +1,6 @@
 
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
 import { ref } from 'vue';
 import Dialog from "@/components/Dialog.vue";
 import Textbox from "@/components/Textbox.vue";
@@ -42,7 +43,7 @@ async function submit() {
 			docDate,
 		});
 		if (error) {
-			snackbar.error(`Failed to update payment: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to update payment"));
 		} else {
 			snackbar.success("Edit Payment updated successfully!");
 			isOpen.value = false;

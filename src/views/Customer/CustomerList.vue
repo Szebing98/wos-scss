@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
+import PageHeader from "@/components/PageHeader.vue";
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import Table from "@/components/Table.vue";
@@ -167,7 +169,7 @@ async function handleExport(format: "CSV" | "PDF") {
 			format,
 			type: "list",
 		});
-		if (error) throw new Error((error as any).error?.message || "Export request failed.");
+		if (error) throw new Error(getApiErrorMessage(error, "Export request failed."));
 		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
 		const date = new Date().toISOString().slice(0, 10);
 		if (format === "CSV") downloadCsv(`customers-${date}.csv`, rows);
@@ -229,36 +231,28 @@ function getClassificationBadge(individualType: string, identityNo: string = "")
 <template>
 	<div class="customer-view">
 		<!-- Header -->
-		<div class="page-header">
-			<div class="page-header__title-area">
-				<h1>Customer List</h1>
-				<p class="page-header__subtitle">
-					Manage debtors, individual tax identities, contract references, and LHDN
-					MyInvois profiles
-				</p>
-			</div>
-			<div style="display: flex; gap: 8px">
-				<!-- <button class="btn btn--outlined" :disabled="exporting" @click="handleExport('CSV')">
-					<i class="mdi mdi-file-delimited-outline"></i>
-					{{ exporting ? "Exporting..." : "CSV" }}
-				</button> -->
+		<PageHeader title="Customer List">
+			<template #subtitle>
+				<p class="page-header__subtitle">Manage debtors, individual tax identities, contract references, and LHDN MyInvois profiles</p>
+			</template>
+			<template #actions>
 				<button
 					v-if="authStore.can('export', 'Report')"
-					class="btn btn--outlined"
+					class="btn btn--primary"
 					:disabled="exporting"
 					@click="handleExport('PDF')"
 				>
-					<i class="mdi mdi-file-pdf-box"></i> Export
+					<i class="mdi mdi-file-pdf-box"></i> <span class="btn-text">Export</span>
 				</button>
 				<button
 					v-if="authStore.can('create', 'Customer')"
 					class="btn btn--primary"
 					@click="handleCreateCustomer"
 				>
-					<i class="mdi mdi-plus"></i> Add Customer
+					<i class="mdi mdi-plus"></i> <span class="btn-text">Create Customer</span>
 				</button>
-			</div>
-		</div>
+			</template>
+		</PageHeader>
 
 		<!-- KPI Metric Cards -->
 		<div class="metrics-grid">

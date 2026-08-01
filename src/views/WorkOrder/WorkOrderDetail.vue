@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "@/components/Button.vue";
@@ -629,7 +630,7 @@ async function submitExtend() {
 			extensionReason: extendForm.value.extensionReason || undefined,
 		});
 		if (error) {
-			snackbar.error(`Failed to extend: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to extend"));
 		} else {
 			snackbar.success("Estimated end date extended successfully!");
 			isExtendDialogOpen.value = false;
@@ -676,7 +677,7 @@ async function submitRepeat() {
 				: undefined,
 		});
 		if (error) {
-			snackbar.error(`Failed to repeat: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to repeat"));
 		} else {
 			snackbar.success("Work order repeated successfully! A new sub-order has been created.");
 			isRepeatDialogOpen.value = false;
@@ -712,7 +713,7 @@ async function submitTransfer() {
 				: undefined,
 		});
 		if (error) {
-			snackbar.error(`Failed to transfer: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to transfer"));
 		} else {
 			snackbar.success(
 				"Work order transferred successfully! A new work order has been created.",
@@ -756,7 +757,7 @@ async function markAsDone() {
 	try {
 		const { error } = await workOrderApi.complete(woNumber);
 		if (error) {
-			snackbar.error(`Failed to mark as done: ${error.error.message}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to mark as done"));
 		} else {
 			snackbar.success("Work order marked as done!");
 			fetchWorkOrderDetails();
@@ -786,7 +787,7 @@ function requestApprovalForNewWorkOrder() {
 				} as any);
 				if (error) {
 					snackbar.error(
-						`Failed to request approval: ${error.error?.message || error.message}`,
+						getApiErrorMessage(error, "Failed to request approval"),
 					);
 					return;
 				}
@@ -807,7 +808,7 @@ async function reopenWorkOrder() {
 	try {
 		const { error } = await workOrderApi.reopen(woNumber);
 		if (error) {
-			snackbar.error(`Failed to reopen work order: ${error.error?.message || error.message}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to reopen work order"));
 		} else {
 			snackbar.success("Work order reopened successfully!");
 			await fetchWorkOrderDetails();
@@ -874,7 +875,7 @@ async function saveEditQuotation() {
 		});
 		if (error) {
 			snackbar.error(
-				`Failed to update quotation: ${error.error?.message || "Unknown error"}`,
+				getApiErrorMessage(error, "Failed to update quotation"),
 			);
 		} else {
 			snackbar.success("Quotation details updated successfully!");
@@ -945,7 +946,7 @@ async function saveEditInvoice() {
 			docDate,
 		});
 		if (error) {
-			snackbar.error(`Failed to update invoice: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to update invoice"));
 		} else {
 			snackbar.success("Invoice details updated successfully!");
 			isEditInvoiceDialogOpen.value = false;
@@ -982,7 +983,7 @@ async function saveEditPayment() {
 			docDate,
 		});
 		if (error) {
-			snackbar.error(`Failed to update payment: ${error.error?.message || "Unknown error"}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to update payment"));
 		} else {
 			snackbar.success("Payment details updated successfully!");
 			isEditPaymentDialogOpen.value = false;
@@ -1005,7 +1006,7 @@ async function markAsClaimed() {
 			invoiceAmount: totalInvoiceIssued.value,
 		});
 		if (error) {
-			snackbar.error(`Failed to mark as claimed: ${error.error.message}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to mark as claimed"));
 		} else {
 			snackbar.success("Work order marked as claimed!");
 			fetchWorkOrderDetails();
@@ -1027,7 +1028,7 @@ function markAsClosed() {
 				const { error } = await workOrderApi.close(woNumber);
 				if (error) {
 					snackbar.error(
-						`Failed to close work order: ${error.error?.message || error.message}`,
+						getApiErrorMessage(error, "Failed to close work order"),
 					);
 					return;
 				}
@@ -1315,7 +1316,7 @@ async function saveGeneralFormChanges() {
 		}
 		const { error } = res;
 		if (error) {
-			snackbar.error(`Failed to save changes: ${error.error.message}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to save changes"));
 		} else {
 			snackbar.success("Changes saved successfully!");
 			isGeneralEditMode.value = false;
@@ -1340,7 +1341,7 @@ function approveDoneWorkOrder() {
 			try {
 				const { error } = await workOrderApi.complete(woNumber);
 				if (error) {
-					snackbar.error(`Failed to approve work order: ${error.error.message}`);
+					snackbar.error(getApiErrorMessage(error, "Failed to approve work order"));
 				} else {
 					snackbar.success("Work order approved successfully!");
 					await fetchWorkOrderDetails();
@@ -1366,7 +1367,7 @@ function approvePendingWorkOrder() {
 				const { error } = await workOrderApi.approve(woNumber);
 				if (error) {
 					snackbar.error(
-						`Failed to approve work order: ${error.error?.message || error.message}`,
+						getApiErrorMessage(error, "Failed to approve work order"),
 					);
 					return;
 				}
@@ -1408,7 +1409,7 @@ async function submitReject() {
 			rejectedReason: rejectForm.value.rejectedReason,
 		});
 		if (error) {
-			snackbar.error(`Failed to reject work order: ${error.error.message}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to reject work order"));
 		} else {
 			snackbar.success(
 				isPendingApproval.value
@@ -1473,7 +1474,7 @@ async function submitWorkNote() {
 		}
 
 		if (error) {
-			snackbar.error(`Failed to save note: ${error.error.message}`);
+			snackbar.error(getApiErrorMessage(error, "Failed to save note"));
 		} else {
 			snackbar.success("Note saved successfully!");
 			isNoteDialogOpen.value = false;
@@ -1498,7 +1499,7 @@ function deleteWorkNote(noteGuid: string) {
 			try {
 				const { error } = await workOrderApi.deleteNote(noteGuid);
 				if (error) {
-					snackbar.error(`Failed to delete note: ${error.error.message}`);
+					snackbar.error(getApiErrorMessage(error, "Failed to delete note"));
 				} else {
 					snackbar.success("Note deleted successfully!");
 					await fetchWorkNotes();
@@ -1786,7 +1787,7 @@ function handleDeleteFile(fileGuid: string) {
 			try {
 				const { error } = await workOrderApi.deleteFile(fileGuid);
 				if (error) {
-					snackbar.error(`Failed to delete file: ${error.error.message}`);
+					snackbar.error(getApiErrorMessage(error, "Failed to delete file"));
 				} else {
 					snackbar.success("File deleted successfully!");
 					await fetchWorkOrderFiles();

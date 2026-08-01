@@ -1,5 +1,6 @@
 
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
 import { ref } from 'vue';
 import Dialog from "@/components/Dialog.vue";
 import Textbox from "@/components/Textbox.vue";
@@ -48,7 +49,7 @@ async function submit() {
             });
         }
         if (res?.error) {
-            snackbar.error(res.error.error?.message || "Failed to save note");
+            snackbar.error(getApiErrorMessage(res.error, "Failed to save note"));
             return;
         }
         snackbar.success(isEditing.value ? "Note updated." : "Note added.");

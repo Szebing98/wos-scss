@@ -32,33 +32,56 @@
 		flex-shrink: 0;
 	}
 
-	/* Mobile overrides */
+	/* Default Mobile behavior: Stack like Location page */
 	@media (max-width: 767px) {
-		/* Enforce left-right layout on mobile */
-		flex-direction: row;
-		align-items: center;
+		flex-direction: column;
+		align-items: flex-start;
 
 		&__title-area {
+			width: 100%;
 			h1, h2 {
 				font-size: 20px; /* Slightly smaller title on mobile */
 			}
 		}
 
 		&__actions {
+			width: 100%;
+			flex-direction: column;
+			align-items: stretch;
+
 			.btn {
-				/* Hide text inside buttons on mobile to save space */
-				.btn-text {
-					display: none !important;
-				}
-				
-				/* Adjust padding so it looks like a nice square/circle icon button */
-				padding: 8px 12px;
-				min-width: 40px;
+				width: 100%;
 				justify-content: center;
-				
-				/* Make sure icon has no margin if it's the only thing visible */
-				i {
-					margin-right: 0 !important;
+			}
+		}
+	}
+
+	/* Opt-in Mobile behavior: Keep left-right layout and hide text */
+	&--mobile-icon-only {
+		@media (max-width: 767px) {
+			flex-direction: row;
+			align-items: center;
+
+			&__actions {
+				width: auto;
+				flex-direction: row;
+
+				.btn {
+					width: auto;
+					/* Hide text inside buttons on mobile to save space */
+					.btn-text {
+						display: none !important;
+					}
+					
+					/* Adjust padding so it looks like a nice square/circle icon button */
+					padding: 8px 12px;
+					min-width: 40px;
+					justify-content: center;
+					
+					/* Make sure icon has no margin if it's the only thing visible */
+					i {
+						margin-right: 0 !important;
+					}
 				}
 			}
 		}

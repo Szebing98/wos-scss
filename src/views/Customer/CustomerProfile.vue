@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
 import Badge from "@/components/Badge.vue";
 import Chip from "@/components/Chip.vue";
 import Dialog from "@/components/Dialog.vue";
@@ -138,7 +139,7 @@ async function handleSaveContract() {
 				contractForm.value,
 			);
 			if (error) {
-				snackbar.error("Failed to save contract edit: " + (error.error?.message || error));
+				snackbar.error(getApiErrorMessage(error, "Failed to save contract edit"));
 				return;
 			}
 			snackbar.success("Contract updated successfully!");
@@ -148,7 +149,7 @@ async function handleSaveContract() {
 				contractForm.value,
 			);
 			if (error) {
-				snackbar.error("Failed to create contract: " + (error.error?.message || error));
+				snackbar.error(getApiErrorMessage(error, "Failed to create contract"));
 				return;
 			}
 			snackbar.success("New contract added successfully!");
@@ -189,7 +190,7 @@ async function handleRenewContractSubmit() {
 			renewForm.value,
 		);
 		if (error) {
-			snackbar.error("Failed to renew contract: " + (error.error?.message || error));
+			snackbar.error(getApiErrorMessage(error, "Failed to renew contract"));
 			return;
 		}
 		snackbar.success("Contract renewed successfully!");

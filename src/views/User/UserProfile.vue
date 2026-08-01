@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from "@/components/PageHeader.vue";
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
@@ -503,19 +504,22 @@ async function confirmAvatarUpload() {
 
 <template>
 	<div class="maintenance-view">
-		<div class="page-header">
-			<div class="page-header__title-area">
-				<h1>
+		<PageHeader>
+        <template #title>
+            
+                <h1>
 					{{ isNewMode ? "Create New Profile" : isOwnProfile ? "My Profile" : "Employee Profile" }}
 				</h1>
-			</div>
-			<div class="page-header__actions">
-				<button v-if="isEditMode" class="btn btn--primary" @click="handleSaveProfile">
+                
+            </template>
+        
+        <template #actions>
+            <button v-if="isEditMode" class="btn btn--primary" @click="handleSaveProfile">
 					<i class="mdi mdi-content-save-outline"></i> <span class="btn-text">Save Changes</span> </button>
-				<button v-else class="btn btn--outlined" @click="isEditMode = true">
+				<button v-else class="btn btn--primary" @click="isEditMode = true">
 					<i class="mdi mdi-pencil-outline"></i> <span class="btn-text">Edit Profile</span> </button>
-			</div>
-		</div>
+        </template>
+    </PageHeader>
 
 		<div class="profile-grid">
 			<div class="profile-grid__left">

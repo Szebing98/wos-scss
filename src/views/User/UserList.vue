@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
+import PageHeader from "@/components/PageHeader.vue";
 import { ref, onMounted, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
@@ -195,7 +197,7 @@ async function handleExport(format: "CSV" | "PDF") {
 			format,
 			type: "list",
 		});
-		if (error) throw new Error((error as any).error?.message || "Export request failed.");
+		if (error) throw new Error(getApiErrorMessage(error, "Export request failed."));
 		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
 		const date = new Date().toISOString().slice(0, 10);
 		if (format === "CSV") downloadCsv(`employees-${date}.csv`, rows);
@@ -258,37 +260,28 @@ function getRandomAvatarBg(name: string) {
 
 <template>
 	<div class="maintenance-view">
-		<div class="page-header">
-			<div class="page-header__title-area">
-				<h1>Employee Directory</h1>
-				<p class="page-header__subtitle">
-					Manage internal technicians, support staff, and system administrative roles
-				</p>
-			</div>
-			<div style="display: flex; gap: 8px">
-				<!-- <button class="btn btn--outlined" :disabled="exporting" @click="handleExport('CSV')">
-					<i class="mdi mdi-file-delimited-outline"></i>
-					{{ exporting ? "Exporting..." : "CSV" }}
-				</button> -->
+		<PageHeader title="Employee Directory">
+			<template #subtitle>
+				<p class="page-header__subtitle">Manage internal technicians, support staff, and system administrative roles</p>
+			</template>
+			<template #actions>
 				<button
 					v-if="authStore.can('export', 'Report')"
-					class="btn btn--outlined"
+					class="btn btn--primary"
 					:disabled="exporting"
 					@click="handleExport('PDF')"
 				>
-					<i class="mdi mdi-file-pdf-box"></i> Export
+					<i class="mdi mdi-file-pdf-box"></i> <span class="btn-text">Export</span>
 				</button>
 				<button
 					v-if="authStore.can('create', 'User')"
-					class="btn btn--primary add-employee-btn"
+					class="btn btn--primary"
 					@click="handleCreateUser"
-					title="Add Employee"
 				>
-					<i class="mdi mdi-plus"></i>
-					<span class="btn-text">Add Employee</span>
+					<i class="mdi mdi-plus"></i> <span class="btn-text">Create Employee</span>
 				</button>
-			</div>
-		</div>
+			</template>
+		</PageHeader>
 
 		<!-- Metric Summary Cards -->
 		<div class="metrics-grid mb-md">

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
+import PageHeader from "@/components/PageHeader.vue";
 import { computed, ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Chip from "@/components/Chip.vue";
@@ -403,7 +405,7 @@ async function handleSaveContract() {
 				contractForm.value,
 			);
 			if (error) {
-				snackbar.error("Failed to save edit: " + (error.error?.message || error));
+				snackbar.error(getApiErrorMessage(error, "Failed to save edit"));
 				return;
 			}
 			snackbar.success("Contract updated successfully!");
@@ -411,7 +413,7 @@ async function handleSaveContract() {
 			// Create new contract on backend
 			const { error } = await customerApi.createContract(targetGuid, contractForm.value);
 			if (error) {
-				snackbar.error("Failed to create contract: " + (error.error?.message || error));
+				snackbar.error(getApiErrorMessage(error, "Failed to create contract"));
 				return;
 			}
 			snackbar.success("New contract added successfully!");
@@ -485,7 +487,7 @@ async function handleRenewContractSubmit() {
 				renewForm.value,
 			);
 			if (error) {
-				snackbar.error("Failed to renew contract: " + (error.error?.message || error));
+				snackbar.error(getApiErrorMessage(error, "Failed to renew contract"));
 				return;
 			}
 			snackbar.success("Contract renewed successfully!");
@@ -670,7 +672,7 @@ async function handleSubmitForm() {
 		if (isNewMode.value) {
 			const { data, error } = await customerApi.createCustomer(payload as never);
 			if (error) {
-				snackbar.error(`Failed to create customer: ${error.error?.message || error}`);
+				snackbar.error(getApiErrorMessage(error, "Failed to create customer"));
 				return;
 			}
 			const newGuid = data?.data?.guid || data?.guid;
@@ -681,7 +683,7 @@ async function handleSubmitForm() {
 		} else if (customerGuid.value) {
 			const { error } = await customerApi.updateCustomer(customerGuid.value, payload as never);
 			if (error) {
-				snackbar.error(`Failed to update customer: ${error.error?.message || error}`);
+				snackbar.error(getApiErrorMessage(error, "Failed to update customer"));
 				return;
 			}
 			snackbar.success("Customer configuration updated successfully!");
@@ -699,18 +701,21 @@ async function handleSubmitForm() {
 <template>
 	<div class="maintenance-view">
 		<!-- Header -->
-		<div class="page-header">
-			<div class="page-header__title-area">
-				<h1>
+		<PageHeader>
+        <template #title>
+            
+                <h1>
 					{{ isNewMode ? "Register New Customer Account" : "Edit Customer Account" }}
 				</h1>
-			</div>
-			<button class="btn btn--primary" :disabled="loading" @click="handleSubmitForm">
+                
+            </template>
+        
+        <template #actions>
+            <button class="btn btn--primary" :disabled="loading" @click="handleSubmitForm">
 				<i v-if="!loading" class="mdi mdi-content-save-check-outline"></i>
-				<i v-else class="mdi mdi-loading mdi-spin"></i>
-				{{ loading ? "Saving..." : isNewMode ? "Register Customer" : "Commit Changes" }}
-			</button>
-		</div>
+				<i v-else class="mdi mdi-loading mdi-spin"></i><span class="btn-text">{{ loading ? "Saving..." : isNewMode ? "Register Customer" : "Commit Changes" }}</span></button>
+        </template>
+    </PageHeader>
 
 		<div class="form-scroll-layout">
 			<!-- Core Primary Block -->

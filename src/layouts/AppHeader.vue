@@ -5,6 +5,7 @@ import type { MeResponse } from "@/api/auth/auth.types";
 import { notificationApi } from "@/api/notification/notification.api";
 import type { NotificationItem } from "@/api/notification/notification.types";
 import { getAvatarUrl } from "@/utils/User/avatar";
+import { getApiErrorMessage } from "@/utils/error";
 
 const props = defineProps<{
 	currentUser: MeResponse | null;
@@ -127,15 +128,7 @@ async function openNotification(notification: NotificationItem) {
 	}
 }
 
-function getApiErrorMessage(error: unknown, fallback: string) {
-	if (error && typeof error === "object") {
-		const errorRecord = error as Record<string, any>;
-		if (typeof errorRecord.message === "string") return errorRecord.message;
-		if (typeof errorRecord.error?.message === "string") return errorRecord.error.message;
-	}
 
-	return fallback;
-}
 
 function getNotificationTitle(notification: NotificationItem) {
 	const payload = getPayloadRecord(notification.payload);

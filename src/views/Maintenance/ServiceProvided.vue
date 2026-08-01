@@ -9,6 +9,9 @@ import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import NumericField from "@/components/NumericField.vue";
 import Badge from "@/components/Badge.vue";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+
+const snackbar = useSnackbarStore();
 
 interface ServiceProvided {
 	id: number;
@@ -137,7 +140,7 @@ function saveService() {
 		!editingService.value.code ||
 		!editingService.value.name
 	) {
-		alert("Please fill in all mandatory fields.");
+		snackbar.error("Please fill in all mandatory fields.");
 		return;
 	}
 

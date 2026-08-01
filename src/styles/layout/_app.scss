@@ -9,7 +9,7 @@ body {
 	background-color: var(--card-color);
 	color: white;
 
-	:global([data-theme="dark"]) & {
+	[data-theme="dark"] & {
 		background: linear-gradient(135deg, #1e1e2d 0%, #151521 100%);
 		color: #ffffff;
 		border-left: 5px solid var(--card-color);

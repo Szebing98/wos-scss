@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { authApi } from "@/api/auth/auth.api";
+import { getApiErrorMessage } from "@/utils/error";
 
 export const useAuthStore = defineStore("auth", {
 	state: () => ({
@@ -30,7 +31,7 @@ export const useAuthStore = defineStore("auth", {
 			const { data, error } = (await authApi.login({ email, password, remember })) as any;
 
 			if (error) {
-				throw new Error(error.error.message);
+				throw new Error(getApiErrorMessage(error, "An error occurred"));
 			}
 
 			this.token = data.token;
@@ -64,7 +65,7 @@ export const useAuthStore = defineStore("auth", {
 			const { data, error } = (await authApi.forgotPassword({ email })) as any;
 
 			if (error) {
-				throw new Error(error.error.message);
+				throw new Error(getApiErrorMessage(error, "An error occurred"));
 			}
 
 			return data;
@@ -78,7 +79,7 @@ export const useAuthStore = defineStore("auth", {
 			})) as any;
 
 			if (error) {
-				throw new Error(error.error.message);
+				throw new Error(getApiErrorMessage(error, "An error occurred"));
 			}
 
 			return data;
@@ -92,7 +93,7 @@ export const useAuthStore = defineStore("auth", {
 			})) as any;
 
 			if (error) {
-				throw new Error(error.error.message);
+				throw new Error(getApiErrorMessage(error, "An error occurred"));
 			}
 
 			return data;

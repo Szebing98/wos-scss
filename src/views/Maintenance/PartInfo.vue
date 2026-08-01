@@ -8,6 +8,9 @@ import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import Badge from "@/components/Badge.vue";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+
+const snackbar = useSnackbarStore();
 
 interface PartInfo {
     id: number;
@@ -85,7 +88,7 @@ function prepareEdit(part: PartInfo) {
 
 function savePart() {
     if (!editingPart.value.partNo || !editingPart.value.code || !editingPart.value.name) {
-        alert("Please fill in all required fields.");
+        snackbar.error("Please fill in all required fields.");
         return;
     }
 

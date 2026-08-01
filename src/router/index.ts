@@ -209,6 +209,16 @@ const routes = [
 			},
 		],
 	},
+	{
+		path: "/error",
+		name: "Error",
+		component: () => import("@/views/Error/index.vue"),
+		meta: { requiresAuth: false },
+	},
+	{
+		path: "/:pathMatch(.*)*",
+		redirect: "/error?code=404",
+	},
 ];
 
 const router = createRouter({
@@ -226,6 +236,7 @@ router.beforeEach(async (to) => {
 		"/account/forgot-password",
 		"/account/reset-password",
 		"/account/activate",
+		"/error",
 	];
 
 	const isPublic = publicPaths.some((path) => to.path.startsWith(path));
@@ -247,7 +258,7 @@ router.beforeEach(async (to) => {
 				to.query.code === authStore.currentUser?.code ||
 				to.query.code === authStore.currentUser?.displayCode);
 
-		if (!isOwnProfile && !authStore.can(permission[0], permission[1])) return "/dashboard";
+		if (!isOwnProfile && !authStore.can(permission[0], permission[1])) return "/error?code=403";
 	}
 });
 

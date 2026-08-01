@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from "@/components/PageHeader.vue";
 import { ref, computed, onMounted } from "vue";
 import Dialog from "@/components/Dialog.vue";
 import Card from "@/components/Card.vue";
@@ -6,8 +7,10 @@ import FilterPanel from "@/components/FilterPanel.vue";
 import Select from "@/components/Select.vue";
 import Textbox from "@/components/Textbox.vue";
 import type { DocNoFormatModel } from "@/api/maintenance/doc-no-format/doc-no-format.types";
-
 import http from "@/utils/http";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+
+const snackbar = useSnackbarStore();
 
 const searchString = ref("");
 const filterActive = ref("all");
@@ -157,7 +160,7 @@ function openEditModal() {
 
 async function saveFormat() {
 	if (!formData.value.module?.trim() || !formData.value.prefix?.trim()) {
-		alert("Module Code and Prefix are mandatory fields.");
+		snackbar.error("Module Code and Prefix are mandatory fields.");
 		return;
 	}
 
@@ -209,17 +212,21 @@ async function executeDelete() {
 
 <template>
 	<div class="maintenance-view">
-		<div class="page-header">
-			<div class="page-header__title-area">
-				<h1>Document Number Format</h1>
-				<p class="page-header__subtitle">
+		<PageHeader>
+        <template #title>
+            <h1>Document Number Format</h1>
+                
+        </template>
+        <template #subtitle>
+            <p class="page-header__subtitle">
 					Configure numbering rules and generation patterns for system modules
 				</p>
-			</div>
-			<button class="btn btn--primary" @click="prepareNewFormat">
-				<i class="mdi mdi-plus"></i> New Format Rule
-			</button>
-		</div>
+        </template>
+        <template #actions>
+            <button class="btn btn--primary" @click="prepareNewFormat">
+				<i class="mdi mdi-plus"></i><span class="btn-text">New Format Rule</span></button>
+        </template>
+    </PageHeader>
 
 		<div class="maintenance-grid">
 			<Card class="maintenance-grid__left-panel">

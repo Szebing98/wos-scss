@@ -45,7 +45,7 @@
 		box-sizing: border-box;
 	}
 
-	:global([data-theme="dark"]) & {
+	[data-theme="dark"] & {
 		background-color: #333336;
 
 		.mud-table-cell {
@@ -86,11 +86,11 @@
 	cursor: pointer;
 }
 
-:global([data-theme="dark"]) .mud-table-row-striped:nth-of-type(odd) {
+[data-theme="dark"] .mud-table-row-striped:nth-of-type(odd) {
 	background-color: rgba(255, 255, 255, 0.02);
 }
 
-:global([data-theme="dark"]) .mud-table-row:nth-of-type(even) {
+[data-theme="dark"] .mud-table-row:nth-of-type(even) {
 	background-color: rgba(255, 255, 255, 0.03);
 }
 
@@ -456,7 +456,7 @@
 		}
 	}
 
-	:global([data-theme="dark"]) .resizer {
+	[data-theme="dark"] .resizer {
 		&:hover::after,
 		&.resizing::after {
 			background-color: rgba(255, 255, 255, 0.4);

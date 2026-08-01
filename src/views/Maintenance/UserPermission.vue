@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from "@/components/PageHeader.vue";
 import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import Textbox from "@/components/Textbox.vue";
@@ -11,7 +12,9 @@ import {
 	normalizePermissionCatalog,
 } from "@/utils/Settings/permission-label";
 import { getHighestRoleLevel } from "@/utils/Settings/role";
+import { useSnackbarStore } from "@/stores/snackbar.store";
 
+const snackbar = useSnackbarStore();
 const route = useRoute();
 
 interface UserModel {
@@ -391,10 +394,9 @@ async function saveOverrides() {
 		});
 		originalUserOverrides.value = new Map(userOverrides.value);
 		isEditingOverrides.value = false;
-		alert(`Authorization overrides for ${selectedUser.value.name} successfully deployed!`);
-	} catch (e) {
-		console.error("Failed to save user overrides", e);
-		alert("Deployment failed: An error occurred.");
+		snackbar.success(`Authorization overrides for ${selectedUser.value.name} successfully deployed!`);
+	} catch (error) {
+		snackbar.error("Deployment failed: An error occurred.");
 	} finally {
 		isSaving.value = false;
 	}
@@ -403,15 +405,19 @@ async function saveOverrides() {
 
 <template>
 	<div class="maintenance-view">
-		<div class="page-header">
-			<div class="page-header__title-area">
-				<h1>User Permission Overrides</h1>
-				<p class="page-header__subtitle">
+		<PageHeader>
+        <template #title>
+            
+                <h1>User Permission Overrides</h1>
+                
+            </template>
+        <template #subtitle>
+            <p class="page-header__subtitle">
 					Directly override inherited group permissions for specific users
 				</p>
-			</div>
-			<div class="maintenance-view__actions">
-				<button
+        </template>
+        <template #actions>
+            <button
 					v-if="!isEditingOverrides"
 					class="btn btn--primary"
 					:disabled="
@@ -423,9 +429,7 @@ async function saveOverrides() {
 					:title="selectedUserEditMessage || 'Edit Overrides'"
 					@click="startEditingOverrides"
 				>
-					<i class="mdi mdi-pencil-outline"></i>
-					Edit Overrides
-				</button>
+					<i class="mdi mdi-pencil-outline"></i><span class="btn-text">Edit Overrides</span></button>
 				<template v-else>
 					<button class="btn btn--secondary" :disabled="isSaving" @click="cancelEditingOverrides">
 						Cancel
@@ -438,12 +442,10 @@ async function saveOverrides() {
 						<i
 							class="mdi"
 							:class="isSaving ? 'mdi-loading mdi-spin' : 'mdi-content-save-outline'"
-						></i>
-						Save Overrides
-					</button>
+						></i><span class="btn-text">Save Overrides</span></button>
 				</template>
-			</div>
-		</div>
+        </template>
+    </PageHeader>
 
 		<div class="overrides-container">
 			<div class="panel-card panel-card--selector mb-md">

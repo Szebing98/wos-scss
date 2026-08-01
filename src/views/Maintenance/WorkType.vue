@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from "@/components/PageHeader.vue";
 import { ref, computed, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Badge from "@/components/Badge.vue";
@@ -10,6 +11,9 @@ import Textbox from "@/components/Textbox.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import { useAuthStore } from "@/stores/auth.store";
 import http from "@/utils/http";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+
+const snackbar = useSnackbarStore();
 
 const authStore = useAuthStore();
 
@@ -183,7 +187,7 @@ function openEditTypeModal(type: WorkType) {
 
 async function saveTypeModal() {
 	if (!workTypeFormData.value.code?.trim() || !workTypeFormData.value.name?.trim()) {
-		alert("Work Type Code and Name are required.");
+		snackbar.error("Work Type Code and Name are required.");
 		return;
 	}
 
@@ -296,23 +300,28 @@ onMounted(() => {
 
 <template>
 	<div class="maintenance-view">
-		<div class="page-header">
-			<div class="page-header__title-area">
-				<h1>Work Type Maintenance</h1>
-				<p class="page-header__subtitle">
+		<PageHeader>
+        <template #title>
+            <h1>Work Type Maintenance</h1>
+                
+        </template>
+        <template #subtitle>
+            <p class="page-header__subtitle">
 					Define service categories and their specific task items
 				</p>
-			</div>
-			<button
+        </template>
+        <template #actions>
+            <button
 				v-if="authStore.can('create', 'WorkType')"
-				class="action-btn action-btn--primary add-worktype-btn"
+				class="btn btn--primary add-worktype-btn"
 				@click="openCreateTypeModal"
 				style="display: flex; align-items: center; gap: 6px"
 			>
 				<i class="mdi mdi-plus"></i>
 				<span class="btn-text">New Work Type</span>
 			</button>
-		</div>
+        </template>
+    </PageHeader>
 
 		<div class="maintenance-grid">
 			<div class="maintenance-grid__left-panel">
@@ -486,14 +495,17 @@ onMounted(() => {
 
 					<Card class="mt-lg">
 						<template #header>
-							<h2>Work Type Items</h2>
-							<button
-								v-if="authStore.can('create', 'WorkTypeItem')"
-								class="action-btn action-btn--outlined action-btn--sm"
-								@click="addNewItem"
-							>
-								<i class="mdi mdi-plus"></i> Add Item
-							</button>
+							<PageHeader title="Work Type Items" mobile-icon-only style="margin-bottom: 0; width: 100%;">
+								<template #actions>
+									<button
+										v-if="authStore.can('create', 'WorkTypeItem')"
+										class="btn btn--primary btn--sm"
+										@click="addNewItem"
+									>
+										<i class="mdi mdi-plus"></i> <span class="btn-text">Add Item</span>
+									</button>
+								</template>
+							</PageHeader>
 						</template>
 
 						<div class="list-controls" style="margin-bottom: 16px">

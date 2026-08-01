@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiErrorMessage } from "@/utils/error";
 import { ref, computed, onMounted } from "vue";
 import { auditApi } from "@/api/audit/audit.api";
 import Card from "@/components/Card.vue";
@@ -101,7 +102,7 @@ async function loadModules() {
 		if (data) {
 			modules.value = data as string[];
 		} else if (error) {
-			throw new Error(error.error.message);
+			throw new Error(getApiErrorMessage(error, "An error occurred"));
 		}
 	} catch {
 		modules.value = ["WorkOrder", "Customer", "User", "System"];
@@ -130,7 +131,7 @@ async function loadLogs() {
 				createdBy: item.createdBy,
 			}));
 		} else if (error) {
-			throw new Error(error.error.message);
+			throw new Error(getApiErrorMessage(error, "An error occurred"));
 		}
 	} catch (error) {
 		console.error("Failed to load audit logs:", error);
@@ -153,7 +154,7 @@ async function viewDetails(log: AuditLog) {
 				new: c.new,
 			}));
 		} else if (error) {
-			throw new Error(error.error.message);
+			throw new Error(getApiErrorMessage(error, "An error occurred"));
 		}
 	} catch {
 		// Mock changes based on action

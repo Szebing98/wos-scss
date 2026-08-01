@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from "@/components/PageHeader.vue";
 import { ref, computed, onMounted } from "vue";
 import Textbox from "@/components/Textbox.vue";
 import Badge from "@/components/Badge.vue";
@@ -357,15 +358,19 @@ onMounted(async () => {
 
 <template>
 	<div class="maintenance-view">
-		<div class="page-header">
-			<div class="page-header__title-area">
-				<h1>Role & Group Permissions</h1>
-				<p class="page-header__subtitle">
+		<PageHeader>
+        <template #title>
+            
+                <h1>Role & Group Permissions</h1>
+                
+            </template>
+        <template #subtitle>
+            <p class="page-header__subtitle">
 					Configure permissions and global authorization policies for user groups
 				</p>
-			</div>
-			<div class="maintenance-view__actions">
-				<button
+        </template>
+        <template #actions>
+            <button
 					v-if="!isEditingPermissions"
 					class="btn btn--primary"
 					:disabled="
@@ -377,9 +382,7 @@ onMounted(async () => {
 					:title="selectedGroupEditMessage || 'Edit Permissions'"
 					@click="startEditingPermissions"
 				>
-					<i class="mdi mdi-pencil-outline"></i>
-					Edit Permissions
-				</button>
+					<i class="mdi mdi-pencil-outline"></i><span class="btn-text">Edit Permissions</span></button>
 				<template v-else>
 					<button
 						class="btn btn--secondary"
@@ -396,12 +399,10 @@ onMounted(async () => {
 						<i
 							class="mdi"
 							:class="isSaving ? 'mdi-loading mdi-spin' : 'mdi-content-save-outline'"
-						></i>
-						Save Permissions
-					</button>
+						></i><span class="btn-text">Save Permissions</span></button>
 				</template>
-			</div>
-		</div>
+        </template>
+    </PageHeader>
 
 		<div class="maintenance-grid">
 			<div class="maintenance-grid__left-panel">
@@ -494,30 +495,30 @@ onMounted(async () => {
 						:key="subject"
 						class="panel-card mb-md"
 					>
-						<div class="panel-card__header">
-							<div class="panel-card__header-title">
-								<i class="mdi mdi-folder-key-network-outline u-text-primary"></i>
-								<h2>
-									{{ getPermissionSubjectLabel(String(subject)) }} Permissions
-								</h2>
-							</div>
-							<div class="panel-card__header-actions">
+						<PageHeader mobile-icon-only style="padding: 16px; border-bottom: 1px solid var(--colors-surface-border);">
+							<template #title>
+								<div class="title-with-badge">
+									<i class="mdi mdi-folder-key-network-outline u-text-primary"></i>
+									<h2>{{ getPermissionSubjectLabel(String(subject)) }} Permissions</h2>
+								</div>
+							</template>
+							<template #actions>
 								<button
-									class="btn btn--text"
+									class="btn btn--primary btn--sm"
 									:disabled="!isEditingPermissions"
 									@click="toggleAllInSubject(String(subject), true)"
 								>
-									Select All
+									<i class="mdi mdi-check-all"></i> <span class="btn-text">Select All</span>
 								</button>
 								<button
-									class="btn btn--text"
+									class="btn btn--primary btn--sm"
 									:disabled="!isEditingPermissions"
 									@click="toggleAllInSubject(String(subject), false)"
 								>
-									Clear All
+									<i class="mdi mdi-close-box-outline"></i> <span class="btn-text">Clear All</span>
 								</button>
-							</div>
-						</div>
+							</template>
+						</PageHeader>
 
 						<div class="permission-item-grid">
 							<div

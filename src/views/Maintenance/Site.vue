@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from "@/components/PageHeader.vue";
 import { ref, computed, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Table from "@/components/Table.vue";
@@ -10,6 +11,9 @@ import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
 import type { SiteModel } from "@/api/maintenance/site/site.types";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+
+const snackbar = useSnackbarStore();
 
 const viewMode = ref<"card" | "table">("card");
 const searchString = ref("");
@@ -122,7 +126,7 @@ function openEditModal(site: SiteModel) {
 
 async function saveSite() {
 	if (!formData.value.code?.trim() || !formData.value.name?.trim()) {
-		alert("Site Code and Site Name are required.");
+		snackbar.error("Site Code and Site Name are required.");
 		return;
 	}
 
@@ -177,21 +181,25 @@ async function confirmToggleStatus() {
 <template>
 	<div class="maintenance-view">
 		<!-- Header with Title, Badge next to title, and Action Button on the right -->
-		<div class="page-header">
-			<div class="page-header__title-area">
-				<div class="title-with-badge">
-					<h1>Site Management</h1>
-					<Badge type="info" icon="mdi-map-marker-multiple">{{ siteCountText }}</Badge>
-				</div>
-				<p class="page-header__subtitle">
+		<PageHeader>
+        <template #title>
+            <div class="title-with-badge">
+                <h1>Site Management</h1>
+                <Badge type="info" icon="mdi-map-marker-multiple">{{ siteCountText }}</Badge>
+            </div>
+        </template>
+        <template #subtitle>
+            <p class="page-header__subtitle">
 					Configure facility locations, service branches, and work order operational sites
 				</p>
-			</div>
-			<button v-if="authStore.can('create', 'Site')" class="btn btn--primary add-site-btn" @click="openCreateModal" style="display: flex; align-items: center; gap: 6px;">
+        </template>
+        <template #actions>
+            <button v-if="authStore.can('create', 'Site')" class="btn btn--primary add-site-btn" @click="openCreateModal" style="display: flex; align-items: center; gap: 6px;">
 				<i class="mdi mdi-plus"></i>
 				<span class="btn-text">New Site</span>
 			</button>
-		</div>
+        </template>
+    </PageHeader>
 
 		<!-- Overview Centered Stat Cards -->
 		<div class="stats-grid">

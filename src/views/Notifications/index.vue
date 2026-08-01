@@ -5,6 +5,7 @@ import { notificationApi } from "@/api/notification/notification.api";
 import type { NotificationItem } from "@/api/notification/notification.types";
 import Button from "@/components/Button.vue";
 import Card from "@/components/Card.vue";
+import { getApiErrorMessage } from "@/utils/error";
 
 type Filter = "all" | "unread" | "read";
 
@@ -127,14 +128,7 @@ async function openNotification(notification: NotificationItem) {
 	}
 }
 
-function getApiErrorMessage(error: unknown, fallback: string) {
-	if (error && typeof error === "object") {
-		const value = error as Record<string, any>;
-		if (typeof value.message === "string") return value.message;
-		if (typeof value.error?.message === "string") return value.error.message;
-	}
-	return fallback;
-}
+
 
 function getPayloadRecord(payload: unknown) {
 	if (payload && typeof payload === "object" && !Array.isArray(payload)) {
