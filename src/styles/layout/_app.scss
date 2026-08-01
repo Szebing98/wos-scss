@@ -1,3 +1,4 @@
+@use "../components/_page-header.scss";
 body {
 	margin: 0;
 	padding: 0;
@@ -15,3 +16,4 @@ body {
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 	}
 }
+

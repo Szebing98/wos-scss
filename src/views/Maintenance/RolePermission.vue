@@ -357,10 +357,10 @@ onMounted(async () => {
 
 <template>
 	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1>Role & Group Permissions</h1>
-				<p class="maintenance-view__subtitle">
+				<p class="page-header__subtitle">
 					Configure permissions and global authorization policies for user groups
 				</p>
 			</div>

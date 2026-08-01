@@ -699,8 +699,8 @@ async function handleSubmitForm() {
 <template>
 	<div class="maintenance-view">
 		<!-- Header -->
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1>
 					{{ isNewMode ? "Register New Customer Account" : "Edit Customer Account" }}
 				</h1>

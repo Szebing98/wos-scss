@@ -403,10 +403,10 @@ async function saveOverrides() {
 
 <template>
 	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1>User Permission Overrides</h1>
-				<p class="maintenance-view__subtitle">
+				<p class="page-header__subtitle">
 					Directly override inherited group permissions for specific users
 				</p>
 			</div>

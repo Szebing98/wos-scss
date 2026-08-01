@@ -194,7 +194,7 @@ onMounted(loadNotifications);
 
 <template>
 	<div class="notifications-page">
-		<header class="notifications-page__header">
+		<header class="page-header">
 			<div>
 				<h1>Notifications</h1>
 				<p>Review all your updates, including notifications you have already read.</p>

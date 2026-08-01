@@ -261,8 +261,8 @@ onMounted(() => {
 
 <template>
 	<div class="dashboard">
-		<div class="dashboard__header">
-			<div class="dashboard__header-title">
+		<div class="page-header">
+			<div class="page-header-title">
 				<h1>Dashboard</h1>
 				<p class="dashboard__updated-time">All Work Orders: {{ totalWorkOrders }}</p>
 				<p class="dashboard__updated-time">Last updated: {{ lastUpdatedTime }}</p>

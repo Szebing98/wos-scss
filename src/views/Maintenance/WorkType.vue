@@ -296,10 +296,10 @@ onMounted(() => {
 
 <template>
 	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1>Work Type Maintenance</h1>
-				<p class="maintenance-view__subtitle">
+				<p class="page-header__subtitle">
 					Define service categories and their specific task items
 				</p>
 			</div>

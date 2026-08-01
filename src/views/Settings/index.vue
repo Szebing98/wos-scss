@@ -86,7 +86,7 @@ function handleDateFormatChange(val: string) {
 
 <template>
 	<div class="settings-page page">
-		<div class="settings-page__header">
+		<div class="page-header">
 			<h1>Settings</h1>
 			<p class="u-text-muted">Manage your application preferences, date formats, and security</p>
 		</div>

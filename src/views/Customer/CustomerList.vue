@@ -229,10 +229,10 @@ function getClassificationBadge(individualType: string, identityNo: string = "")
 <template>
 	<div class="customer-view">
 		<!-- Header -->
-		<div class="customer-view__header">
-			<div class="customer-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1>Customer List</h1>
-				<p class="customer-view__subtitle">
+				<p class="page-header__subtitle">
 					Manage debtors, individual tax identities, contract references, and LHDN
 					MyInvois profiles
 				</p>

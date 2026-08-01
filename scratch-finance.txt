@@ -1,0 +1,401 @@
+function scrollTabs(direction: "left" | "right") {
+	if (tabsWrapperRef.value) {
+		const amount = 200;
+		tabsWrapperRef.value.scrollBy({
+			left: direction === "left" ? -amount : amount,
+			behavior: "smooth",
+		});
+	}
+}
+
+// Quotation State
+const quotations = ref<QuotationRecord[]>([]);
+// const isAddQuotationDialogOpen = ref(false);
+const isEditQuotationDialogOpen = ref(false);
+const isSavingQuotation = ref(false);
+// const isUploadingQuotation = ref(false);
+// const editingQuotationId = ref<number | null>(null);
+const quotationForm = ref({ refNo: "", date: "", amount: 0, name: "" });
+
+const editingQuotationGuid = ref("");
+
+function openEditQuotation(guid: string) {
+	const found = quotations.value.find((q) => q.guid === guid);
+	if (!found) return;
+	editingQuotationGuid.value = guid;
+	quotationForm.value = {
+		refNo: found.refNo,
+		date: found.date,
+		amount: found.amount,
+		name: found.name,
+	};
+	isEditQuotationDialogOpen.value = true;
+}
+
+async function saveEditQuotation() {
+	if (!editingQuotationGuid.value || !quotationForm.value.name.trim()) return;
+	isSavingQuotation.value = true;
+	try {
+		const docDate = quotationForm.value.date
+			? new Date(quotationForm.value.date).toISOString()
+			: null;
+		const { error } = await workOrderApi.updateFile(editingQuotationGuid.value, {
+			fileName: quotationForm.value.name.trim(),
+			docNo: quotationForm.value.refNo.trim() || null,
+			docAmount: quotationForm.value.amount ?? null,
+			docDate,
+		});
+		if (error) {
+			snackbar.error(
+				`Failed to update quotation: ${error.error?.message || "Unknown error"}`,
+			);
+		} else {
+			snackbar.success("Quotation details updated successfully!");
+			isEditQuotationDialogOpen.value = false;
+			await fetchWorkOrderFiles();
+			await fetchWorkOrderDetails();
+		}
+	} catch (e) {
+		console.error(e);
+		snackbar.error("Failed to update quotation");
+	} finally {
+		isSavingQuotation.value = false;
+	}
+}
+
+const totalQuotationAmount = computed(() => quotations.value.reduce((sum, q) => sum + q.amount, 0));
+
+// Payment & Invoice State
+const invoices = ref<InvoiceRecord[]>([]);
+const payments = ref<PaymentRecord[]>([]);
+
+// const isAddInvoiceDialogOpen = ref(false);
+const isEditInvoiceDialogOpen = ref(false);
+const isSavingInvoice = ref(false);
+const isEditPaymentDialogOpen = ref(false);
+const isSavingPayment = ref(false);
+
+const invoiceForm = ref({ refNo: "", date: "", amount: 0, name: "" });
+const paymentForm = ref({ reference: "", date: "", amount: 0, fileName: "" });
+
+const totalInvoiceIssued = computed(() => invoices.value.reduce((sum, inv) => sum + inv.amount, 0));
+const totalPaymentReceived = computed(() =>
+	payments.value.reduce((sum, pay) => sum + pay.amount, 0),
+);
+const balanceRemaining = computed(() => totalInvoiceIssued.value - totalPaymentReceived.value);
+const isFullyPaid = computed(() => invoices.value.length > 0 && balanceRemaining.value <= 0);
+const canMarkAsClosed = computed(() => {
+	const invoiceCents = Math.round(totalInvoiceIssued.value * 100);
+	const paymentCents = Math.round(totalPaymentReceived.value * 100);
+	return paymentCents >= invoiceCents;
+});
+
+const editingInvoiceGuid = ref("");
+
+function openEditInvoice(guid: string) {
+	const found = invoices.value.find((inv) => inv.guid === guid);
+	if (!found) return;
+	editingInvoiceGuid.value = guid;
+	invoiceForm.value = {
+		refNo: found.refNo,
+		date: found.date,
+		amount: found.amount,
+		name: found.name,
+	};
+	isEditInvoiceDialogOpen.value = true;
+}
+
+async function saveEditInvoice() {
+	if (!editingInvoiceGuid.value || !invoiceForm.value.name.trim()) return;
+	isSavingInvoice.value = true;
+	try {
+		const docDate = invoiceForm.value.date
+			? new Date(invoiceForm.value.date).toISOString()
+			: null;
+		const { error } = await workOrderApi.updateFile(editingInvoiceGuid.value, {
+			fileName: invoiceForm.value.name.trim(),
+			docNo: invoiceForm.value.refNo.trim() || null,
+			docAmount: invoiceForm.value.amount ?? null,
+			docDate,
+		});
+		if (error) {
+			snackbar.error(`Failed to update invoice: ${error.error?.message || "Unknown error"}`);
+		} else {
+			snackbar.success("Invoice details updated successfully!");
+			isEditInvoiceDialogOpen.value = false;
+			await fetchWorkOrderFiles();
+			await fetchWorkOrderDetails();
+		}
+	} catch (e) {
+		console.error(e);
+		snackbar.error("Failed to update invoice");
+	} finally {
+		isSavingInvoice.value = false;
+	}
+}
+
+const editingPaymentGuid = ref("");
+
+function openEditPayment(guid: string) {
+	const found = payments.value.find((payment) => payment.guid === guid);
+	if (!found) return;
+	editingPaymentGuid.value = guid;
+	paymentForm.value = {
+		reference: found.reference,
+		date: found.date,
+		amount: found.amount,
+		fileName: found.fileName,
+	};
+	isEditPaymentDialogOpen.value = true;
+}
+
+async function saveEditPayment() {
+	if (!editingPaymentGuid.value || !paymentForm.value.fileName.trim()) return;
+	isSavingPayment.value = true;
+	try {
+		const docDate = paymentForm.value.date
+			? new Date(paymentForm.value.date).toISOString()
+			: null;
+		const { error } = await workOrderApi.updateFile(editingPaymentGuid.value, {
+			fileName: paymentForm.value.fileName.trim(),
+			docNo: paymentForm.value.reference.trim() || null,
+			docAmount: paymentForm.value.amount ?? null,
+			docDate,
+		});
+		if (error) {
+			snackbar.error(`Failed to update payment: ${error.error?.message || "Unknown error"}`);
+		} else {
+			snackbar.success("Payment details updated successfully!");
+			isEditPaymentDialogOpen.value = false;
+			await fetchWorkOrderFiles();
+			await fetchWorkOrderDetails();
+		}
+	} catch (e) {
+		console.error(e);
+		snackbar.error("Failed to update payment");
+	} finally {
+		isSavingPayment.value = false;
+	}
+}
+
+async function markAsClaimed() {
+	if (totalInvoiceIssued.value <= 0) return;
+	try {
+		const { error } = await workOrderApi.claim(woNumber, {
+			invoiceAmount: totalInvoiceIssued.value,
+		});
+		if (error) {
+			snackbar.error(`Failed to mark as claimed: ${error.error.message}`);
+		} else {
+			snackbar.success("Work order marked as claimed!");
+			fetchWorkOrderDetails();
+		}
+	} catch (e) {
+		console.error(e);
+	}
+}
+
+function markAsClosed() {
+	if (!canMarkAsClosed.value) return;
+	triggerConfirmation({
+		title: "Closed Work Order",
+		message: "Invoice and payment totals match. Mark this work order as complete?",
+		confirmText: "Mark as Closed",
+		action: async () => {
+			loading.value = true;
+			try {
+				const { error } = await workOrderApi.close(woNumber);
+				if (error) {
+					snackbar.error(
+						`Failed to close work order: ${error.error?.message || error.message}`,
+					);
+					return;
+				}
+				snackbar.success("Work order closed successfully!");
+				await fetchWorkOrderDetails();
+				await fetchActivityLogs();
+			} catch (e) {
+				console.error(e);
+				snackbar.error("Failed to close work order");
+			} finally {
+				loading.value = false;
+			}
+		},
+	});
+}
+
+function printReport() {
+	const report = document.querySelector(".report-document");
+
+	if (!report) return;
+
+	const win = window.open("", "_blank");
+
+	win!.document.write(`
+<html>
+<head>
+    <title>Report</title>
+    ${document.head.innerHTML}
+</head>
+<body>
+${report.outerHTML}
+</body>
+</html>
+    `);
+
+	win!.document.close();
+	win!.focus();
+	win!.print();
+	win!.close();
+}
+
+// New states and variables
+const activityLogs = ref<any[]>([]);
+const workNotes = ref<any[]>([]);
+const images = ref<any[]>([]);
+
+// Date format helper
+function formatDateString(dateStr: string | Date | null) {
+	if (!dateStr) return "";
+	return dateFormatStore.formatDate(dateStr);
+}
+
+// computedSteps mapping based on real dates
+const computedSteps = computed(() => {
+	const w = workOrder.value;
+	return [
+		{ label: "New Request", date: w?.createdAt ? formatDateString(w.createdAt) : "" },
+		{
+			label: isRejected.value ? "Rejected" : "Pending Approval",
+			date: w?.requestApprovalDate ? formatDateString(w.requestApprovalDate) : "",
+		},
+		{ label: "In Progress", date: w?.approvedDate ? formatDateString(w.approvedDate) : "" },
+		{ label: "Verifying", date: w?.doneDate ? formatDateString(w.doneDate) : "" },
+		{ label: "Completed", date: w?.completedDate ? formatDateString(w.completedDate) : "" },
+		{
+			label: "Payment",
+			date: activityLogs.value.find((log) => log.newStatus === "Claimed")?.createdAt
+				? formatDateString(
+						activityLogs.value.find((log) => log.newStatus === "Claimed")?.createdAt,
+					)
+				: "",
+		},
+		{ label: "Closed", date: w?.closedDate ? formatDateString(w.closedDate) : "" },
+	];
+});
+
+// fetchActivityLogs
+async function fetchActivityLogs() {
+	if (!woNumber) return;
+	try {
+		const { data } = await workOrderApi.getActivities(woNumber);
+		if (data) {
+			const logsList = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
+			activityLogs.value = logsList;
+		}
+	} catch (e) {
+		console.error("Failed to fetch activity logs:", e);
+	}
+}
+
+// fetchWorkOrderFiles
+async function fetchWorkOrderFiles() {
+	if (!woNumber) return;
+	try {
+		const { data } = await workOrderApi.getFiles(woNumber);
+		if (data) {
+			const items = Array.isArray(data)
+				? data
+				: Array.isArray(data.data)
+					? data.data
+					: Array.isArray(data.items)
+						? data.items
+						: [];
+			// Revoke previous blob URLs to avoid memory leaks
+			siteInstructionsFiles.value.forEach((f: any) => {
+				if (f.url && f.url.startsWith("blob:")) {
+					URL.revokeObjectURL(f.url);
+				}
+			});
+			partInfoPhotos.value.forEach((f: any) => {
+				if (f.url && f.url.startsWith("blob:")) {
+					URL.revokeObjectURL(f.url);
+				}
+			});
+			supplierInvoicePhotos.value.forEach((f: any) => {
+				if (f.url && f.url.startsWith("blob:")) {
+					URL.revokeObjectURL(f.url);
+				}
+			});
+			images.value.forEach((f: any) => {
+				if (f.url && f.url.startsWith("blob:")) {
+					URL.revokeObjectURL(f.url);
+				}
+			});
+
+			const siteInstructionsList = items.filter(
+				(f: any) => f.category === "SiteInstructions" || f.category === "site_instructions",
+			);
+			siteInstructionsFiles.value = await Promise.all(
+				siteInstructionsList.map(async (f: any) => {
+					const isImage =
+						(f.mimeType || "").startsWith("image/") ||
+						/\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.fileName || "");
+					const isPdf =
+						f.mimeType === "application/pdf" || /\.(pdf)$/i.test(f.fileName || "");
+					const rawUrl = getFileUrl(f.storageUrl, isImage || isPdf);
+					const url = await loadFileBlobUrl(rawUrl, isImage || isPdf);
+					return {
+						id: f.id,
+						guid: f.guid,
+						category: f.category,
+						url,
+						name: f.fileName,
+						type: f.mimeType || "",
+					};
+				}),
+			);
+
+			const partInfoList = items.filter(
+				(f: any) => f.category === "PartInfo" || f.category === "part_info",
+			);
+			partInfoPhotos.value = await Promise.all(
+				partInfoList.map(async (f: any) => {
+					const rawUrl = getFileUrl(f.storageUrl, true);
+					const url = await loadFileBlobUrl(rawUrl, true);
+					return {
+						id: f.id,
+						guid: f.guid,
+						category: f.category,
+						url,
+						name: f.fileName,
+					};
+				}),
+			);
+
+			const supplierInvoiceList = items.filter(
+				(f: any) => f.category === "SupplierInvoice" || f.category === "supplier_invoices",
+			);
+			supplierInvoicePhotos.value = await Promise.all(
+				supplierInvoiceList.map(async (f: any) => {
+					const rawUrl = getFileUrl(f.storageUrl, true);
+					const url = await loadFileBlobUrl(rawUrl, true);
+					return {
+						id: f.id,
+						guid: f.guid,
+						category: f.category,
+						url,
+						name: f.fileName,
+					};
+				}),
+			);
+
+			const imagesList = items.filter((f: any) => f.category === "Image");
+			images.value = await Promise.all(
+				imagesList.map(async (f: any) => {
+					const rawUrl = getFileUrl(f.storageUrl, true);
+					const url = await loadFileBlobUrl(rawUrl, true);
+					return {
+						id: f.id,
+						guid: f.guid,
+						category: f.subcategory || "Before",

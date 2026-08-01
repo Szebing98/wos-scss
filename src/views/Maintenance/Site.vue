@@ -177,13 +177,13 @@ async function confirmToggleStatus() {
 <template>
 	<div class="maintenance-view">
 		<!-- Header with Title, Badge next to title, and Action Button on the right -->
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<div class="title-with-badge">
 					<h1>Site Management</h1>
 					<Badge type="info" icon="mdi-map-marker-multiple">{{ siteCountText }}</Badge>
 				</div>
-				<p class="maintenance-view__subtitle">
+				<p class="page-header__subtitle">
 					Configure facility locations, service branches, and work order operational sites
 				</p>
 			</div>

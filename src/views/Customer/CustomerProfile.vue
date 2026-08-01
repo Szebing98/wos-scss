@@ -217,14 +217,13 @@ function formatDate(iso: string) {
 <template>
 	<div class="maintenance-view">
 		<!-- Navigation Header -->
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1 class="mt-xs">Customer Profile</h1>
 			</div>
-			<div class="header-actions">
+			<div class="page-header__actions">
 				<button class="btn btn--primary" @click="handleEditCustomer">
-					<i class="mdi mdi-pencil-outline"></i> Edit Profile
-				</button>
+					<i class="mdi mdi-pencil-outline"></i> <span class="btn-text">Edit Profile</span> </button>
 			</div>
 		</div>
 
@@ -306,8 +305,7 @@ function formatDate(iso: string) {
 								Customer Contracts
 							</h2>
 							<button class="btn btn--sm btn--primary" @click="openAddContractModal">
-								<i class="mdi mdi-plus"></i> New Contract
-							</button>
+								<i class="mdi mdi-plus"></i> <span class="btn-text">New Contract</span> </button>
 						</div>
 
 						<div v-if="contracts.length > 0" class="contracts-list">
@@ -389,23 +387,20 @@ function formatDate(iso: string) {
 										title="Edit Contract Details"
 										@click="openEditContractModal(c)"
 									>
-										<i class="mdi mdi-pencil-outline"></i> Edit
-									</button>
+										<i class="mdi mdi-pencil-outline"></i> <span class="btn-text">Edit</span> </button>
 
 									<button
 										v-if="c.status === 'ExpiringSoon' || c.status === 'Expired'"
 										class="btn btn--sm btn--warning"
 										@click="openRenewModal(c)"
 									>
-										<i class="mdi mdi-autorenew"></i> Renew
-									</button>
+										<i class="mdi mdi-autorenew"></i> <span class="btn-text">Renew</span> </button>
 									<button
 										v-else
 										class="btn btn--sm btn--secondary"
 										@click="openRenewModal(c)"
 									>
-										<i class="mdi mdi-calendar-plus"></i> Extend
-									</button>
+										<i class="mdi mdi-calendar-plus"></i> <span class="btn-text">Extend</span> </button>
 								</div>
 							</div>
 						</div>

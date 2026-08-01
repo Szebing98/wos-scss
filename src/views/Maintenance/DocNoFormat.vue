@@ -209,10 +209,10 @@ async function executeDelete() {
 
 <template>
 	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1>Document Number Format</h1>
-				<p class="maintenance-view__subtitle">
+				<p class="page-header__subtitle">
 					Configure numbering rules and generation patterns for system modules
 				</p>
 			</div>

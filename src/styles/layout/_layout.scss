@@ -908,42 +908,9 @@
 	}
 }
 
+
 // Global mobile overrides for common view classes
 @media (max-width: 767px) {
-	.maintenance-view__header,
-	.customer-view__header,
-	.user-view__header,
-	.workorder-view__header,
-	.services-view__header,
-	.notifications-page__header,
-	.dashboard__header {
-		display: flex;
-		flex-direction: column !important;
-		align-items: flex-start !important;
-		gap: var(--spacing-sm) !important;
-		height: auto !important;
-
-		> div:first-child {
-			width: 100%;
-		}
-
-		> .header-actions,
-		> div:last-child:not(:first-child):not(button):not(.btn) {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 8px;
-			align-items: center;
-			justify-content: flex-start;
-			width: 100%;
-		}
-
-		> button,
-		> .btn {
-			width: 100%;
-			justify-content: center;
-		}
-	}
-
 	.filter-bar {
 		flex-direction: row;
 		align-items: center !important;

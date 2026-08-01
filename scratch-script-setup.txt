@@ -3,7 +3,11 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "@/components/Button.vue";
 import Card from "@/components/Card.vue";
+import Textbox from "@/components/Textbox.vue";
+import DatePicker from "@/components/DatePicker.vue";
+import Dialog from "@/components/Dialog.vue";
 import Badge from "@/components/Badge.vue";
+import GoogleMapPicker from "@/components/GoogleMapPicker.vue";
 import { workOrderApi } from "@/api/work-order/work-order.api";
 import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
@@ -11,18 +15,6 @@ import { useDateFormatStore } from "@/stores/dateFormat.store";
 import { useAuthStore } from "@/stores/auth.store";
 
 // Sub-tab Components
-import RejectDialog from "./dialogs/RejectDialog.vue";
-import NoteDialog from "./dialogs/NoteDialog.vue";
-import RepeatDialog from "./dialogs/RepeatDialog.vue";
-import TransferDialog from "./dialogs/TransferDialog.vue";
-import ExtendDialog from "./dialogs/ExtendDialog.vue";
-import ConfirmDialog from "./dialogs/ConfirmDialog.vue";
-import QuotationDialog from "./dialogs/QuotationDialog.vue";
-import InvoiceDialog from "./dialogs/InvoiceDialog.vue";
-import PaymentDialog from "./dialogs/PaymentDialog.vue";
-import LocationMapDialog from "./dialogs/LocationMapDialog.vue";
-import UploadConfirmDialog from "./dialogs/UploadConfirmDialog.vue";
-import FilePreviewDialog from "./dialogs/FilePreviewDialog.vue";
 import GeneralTab from "./tabs/GeneralTab.vue";
 import PartInfoTab from "./tabs/PartInfoTab.vue";
 import SupplierInvoicesTab from "./tabs/SupplierInvoicesTab.vue";
@@ -34,7 +26,7 @@ import PaymentTab from "./tabs/PaymentTab.vue";
 import ReportTab from "./tabs/ReportTab.vue";
 import { useSnackbarStore } from "@/stores/snackbar.store.ts";
 import http from "@/utils/http";
-import { userDisplayCode } from "@/utils/User/user-display";
+import { userDisplayCode } from "@/utils/user-display";
 
 const route = useRoute();
 const router = useRouter();
@@ -366,24 +358,6 @@ const workOrder = ref<any>({
 });
 
 const loading = ref(false);
-const rejectDialogRef = ref<InstanceType<typeof RejectDialog> | null>(null);
-const noteDialogRef = ref<InstanceType<typeof NoteDialog> | null>(null);
-// @ts-ignore
-const repeatDialogRef = ref<InstanceType<typeof RepeatDialog> | null>(null);
-// @ts-ignore
-const transferDialogRef = ref<InstanceType<typeof TransferDialog> | null>(null);
-const extendDialogRef = ref<InstanceType<typeof ExtendDialog> | null>(null);
-// @ts-ignore
-const confirmDialogRef = ref<InstanceType<typeof ConfirmDialog> | null>(null);
-const quotationDialogRef = ref<InstanceType<typeof QuotationDialog> | null>(null);
-const invoiceDialogRef = ref<InstanceType<typeof InvoiceDialog> | null>(null);
-const paymentDialogRef = ref<InstanceType<typeof PaymentDialog> | null>(null);
-// @ts-ignore
-const locationMapDialogRef = ref<InstanceType<typeof LocationMapDialog> | null>(null);
-// @ts-ignore
-const uploadConfirmDialogRef = ref<InstanceType<typeof UploadConfirmDialog> | null>(null);
-// @ts-ignore
-const filePreviewDialogRef = ref<InstanceType<typeof FilePreviewDialog> | null>(null);
 
 function formatUserDisplay(name?: string | null, code?: string | null) {
 	const visibleName = name?.trim();
@@ -609,17 +583,20 @@ const activeTab = ref<string>("general");
 const currentUserRole = ref<"Manager" | "Technician">("Manager");
 
 // Extend EndDate Dialog
-// @ts-ignore
 const isExtendDialogOpen = ref(false);
-// @ts-ignore
 const extendForm = ref({ newEstimatedEndDate: "", extensionReason: "" });
-// @ts-ignore
 const isExtending = ref(false);
 
-// @ts-ignore
-function openExtendDialog() { extendDialogRef.value?.open(); }
+function openExtendDialog() {
+	extendForm.value = {
+		newEstimatedEndDate: workOrder.value.estimatedEndDate
+			? new Date(workOrder.value.estimatedEndDate).toISOString().split("T")[0]
+			: "",
+		extensionReason: "",
+	};
+	isExtendDialogOpen.value = true;
+}
 
-/*
 async function submitExtend() {
 	if (!extendForm.value.newEstimatedEndDate) return;
 	isExtending.value = true;
@@ -643,7 +620,6 @@ async function submitExtend() {
 		isExtending.value = false;
 	}
 }
-*/
 
 function formatActivityType(value?: string | null) {
 	if (!value) return "";
@@ -654,14 +630,10 @@ function formatActivityType(value?: string | null) {
 }
 
 // Repeat Work Order Dialog
-// @ts-ignore
 const isRepeatDialogOpen = ref(false);
-// @ts-ignore
 const repeatForm = ref({ title: "", description: "", startDate: "", estimatedEndDate: "" });
-// @ts-ignore
 const isRepeating = ref(false);
 
-/*
 async function submitRepeat() {
 	isRepeating.value = true;
 	try {
@@ -687,17 +659,12 @@ async function submitRepeat() {
 		isRepeating.value = false;
 	}
 }
-*/
 
 // Transfer Work Order Dialog
-// @ts-ignore
 const isTransferDialogOpen = ref(false);
-// @ts-ignore
 const transferForm = ref({ title: "", description: "", startDate: "", estimatedEndDate: "" });
-// @ts-ignore
 const isTransferring = ref(false);
 
-/*
 async function submitTransfer() {
 	isTransferring.value = true;
 	try {
@@ -725,7 +692,6 @@ async function submitTransfer() {
 		isTransferring.value = false;
 	}
 }
-*/
 
 // Part Info Photos (12 max)
 const partInfoPhotos = ref<ImageRecord[]>([]);
@@ -843,22 +809,27 @@ function scrollTabs(direction: "left" | "right") {
 // Quotation State
 const quotations = ref<QuotationRecord[]>([]);
 // const isAddQuotationDialogOpen = ref(false);
-// @ts-ignore
 const isEditQuotationDialogOpen = ref(false);
-// @ts-ignore
 const isSavingQuotation = ref(false);
 // const isUploadingQuotation = ref(false);
 // const editingQuotationId = ref<number | null>(null);
-// @ts-ignore
 const quotationForm = ref({ refNo: "", date: "", amount: 0, name: "" });
 
-// @ts-ignore
 const editingQuotationGuid = ref("");
 
-// @ts-ignore
-function openEditQuotation(guid: string) { quotationDialogRef.value?.open(guid); }
+function openEditQuotation(guid: string) {
+	const found = quotations.value.find((q) => q.guid === guid);
+	if (!found) return;
+	editingQuotationGuid.value = guid;
+	quotationForm.value = {
+		refNo: found.refNo,
+		date: found.date,
+		amount: found.amount,
+		name: found.name,
+	};
+	isEditQuotationDialogOpen.value = true;
+}
 
-/*
 async function saveEditQuotation() {
 	if (!editingQuotationGuid.value || !quotationForm.value.name.trim()) return;
 	isSavingQuotation.value = true;
@@ -889,7 +860,6 @@ async function saveEditQuotation() {
 		isSavingQuotation.value = false;
 	}
 }
-*/
 
 const totalQuotationAmount = computed(() => quotations.value.reduce((sum, q) => sum + q.amount, 0));
 
@@ -898,18 +868,12 @@ const invoices = ref<InvoiceRecord[]>([]);
 const payments = ref<PaymentRecord[]>([]);
 
 // const isAddInvoiceDialogOpen = ref(false);
-// @ts-ignore
 const isEditInvoiceDialogOpen = ref(false);
-// @ts-ignore
 const isSavingInvoice = ref(false);
-// @ts-ignore
 const isEditPaymentDialogOpen = ref(false);
-// @ts-ignore
 const isSavingPayment = ref(false);
 
-// @ts-ignore
 const invoiceForm = ref({ refNo: "", date: "", amount: 0, name: "" });
-// @ts-ignore
 const paymentForm = ref({ reference: "", date: "", amount: 0, fileName: "" });
 
 const totalInvoiceIssued = computed(() => invoices.value.reduce((sum, inv) => sum + inv.amount, 0));
@@ -924,13 +888,21 @@ const canMarkAsClosed = computed(() => {
 	return paymentCents >= invoiceCents;
 });
 
-// @ts-ignore
 const editingInvoiceGuid = ref("");
 
-// @ts-ignore
-function openEditInvoice(guid: string) { invoiceDialogRef.value?.open(guid); }
+function openEditInvoice(guid: string) {
+	const found = invoices.value.find((inv) => inv.guid === guid);
+	if (!found) return;
+	editingInvoiceGuid.value = guid;
+	invoiceForm.value = {
+		refNo: found.refNo,
+		date: found.date,
+		amount: found.amount,
+		name: found.name,
+	};
+	isEditInvoiceDialogOpen.value = true;
+}
 
-/*
 async function saveEditInvoice() {
 	if (!editingInvoiceGuid.value || !invoiceForm.value.name.trim()) return;
 	isSavingInvoice.value = true;
@@ -959,15 +931,22 @@ async function saveEditInvoice() {
 		isSavingInvoice.value = false;
 	}
 }
-*/
 
-// @ts-ignore
 const editingPaymentGuid = ref("");
 
-// @ts-ignore
-function openEditPayment(guid: string) { paymentDialogRef.value?.open(guid); }
+function openEditPayment(guid: string) {
+	const found = payments.value.find((payment) => payment.guid === guid);
+	if (!found) return;
+	editingPaymentGuid.value = guid;
+	paymentForm.value = {
+		reference: found.reference,
+		date: found.date,
+		amount: found.amount,
+		fileName: found.fileName,
+	};
+	isEditPaymentDialogOpen.value = true;
+}
 
-/*
 async function saveEditPayment() {
 	if (!editingPaymentGuid.value || !paymentForm.value.fileName.trim()) return;
 	isSavingPayment.value = true;
@@ -996,7 +975,6 @@ async function saveEditPayment() {
 		isSavingPayment.value = false;
 	}
 }
-*/
 
 async function markAsClaimed() {
 	if (totalInvoiceIssued.value <= 0) return;
@@ -1383,23 +1361,20 @@ function approvePendingWorkOrder() {
 }
 
 // Reject dialog triggers & handlers
-// @ts-ignore
 const isRejectDialogOpen = ref(false);
-// @ts-ignore
 const rejectForm = ref({
 	rejectedReason: "",
 });
 
-// @ts-ignore
-function openRejectDoneDialog() { rejectDialogRef.value?.open(); }
+function openRejectDoneDialog() {
+	rejectForm.value = { rejectedReason: "" };
+	isRejectDialogOpen.value = true;
+}
 
-/*
 function closeRejectDialog() {
 	isRejectDialogOpen.value = false;
 }
-*/
 
-/*
 async function submitReject() {
 	if (!rejectForm.value.rejectedReason) return;
 	loading.value = true;
@@ -1425,34 +1400,40 @@ async function submitReject() {
 		loading.value = false;
 	}
 }
-*/
 
 // Notes CRUD triggers & handlers
-// @ts-ignore
 const isNoteDialogOpen = ref(false);
-// @ts-ignore
 const isEditingNote = ref(false);
-// @ts-ignore
 const editingNoteGuid = ref("");
-// @ts-ignore
 const noteForm = ref({
 	content: "",
 	viewLevel: "customer",
 });
 
-// @ts-ignore
-function openAddNoteDialog() { noteDialogRef.value?.openAdd(); }
+function openAddNoteDialog() {
+	isEditingNote.value = false;
+	editingNoteGuid.value = "";
+	noteForm.value = {
+		content: "",
+		viewLevel: "customer",
+	};
+	isNoteDialogOpen.value = true;
+}
 
-// @ts-ignore
-function openEditNoteDialog(note: any) { noteDialogRef.value?.openEdit(note); }
+function openEditNoteDialog(note: any) {
+	isEditingNote.value = true;
+	editingNoteGuid.value = note.guid;
+	noteForm.value = {
+		content: note.content || "",
+		viewLevel: note.viewLevel || "customer",
+	};
+	isNoteDialogOpen.value = true;
+}
 
-/*
 function closeNoteDialog() {
 	isNoteDialogOpen.value = false;
 }
-*/
 
-/*
 async function submitWorkNote() {
 	if (!noteForm.value.content) return;
 	loading.value = true;
@@ -1485,7 +1466,6 @@ async function submitWorkNote() {
 		loading.value = false;
 	}
 }
-*/
 
 function deleteWorkNote(noteGuid: string) {
 	triggerConfirmation({
@@ -1535,7 +1515,6 @@ function triggerConfirmation(options: {
 	isConfirmDialogOpen.value = true;
 }
 
-/*
 function handleConfirmDialog() {
 	if (confirmAction.value) {
 		confirmAction.value();
@@ -1543,10 +1522,8 @@ function handleConfirmDialog() {
 	isConfirmDialogOpen.value = false;
 	confirmAction.value = null;
 }
-*/
 
 // File Upload & Deletion handlers
-// @ts-ignore
 function isPdfFile(fileName: string) {
 	return /\.(pdf)$/i.test(fileName || "");
 }
@@ -1568,7 +1545,6 @@ const isLoadingFilePreview = ref(false);
 const filePreviewError = ref("");
 const previewObjectUrl = ref("");
 
-/*
 function cancelFileUpload() {
 	isUploadConfirmOpen.value = false;
 	if (uploadPreviewUrl.value) {
@@ -1582,9 +1558,7 @@ function cancelFileUpload() {
 	uploadTargetFile.value = null;
 	uploadTargetEvent.value = null;
 }
-*/
 
-// @ts-ignore
 async function confirmFileUpload() {
 	if (!uploadTargetFile.value) return;
 	const file = uploadTargetFile.value;
@@ -1701,7 +1675,6 @@ watch(isPreviewDialogOpen, (isOpen) => {
 	filePreviewError.value = "";
 });
 
-// @ts-ignore
 async function savePreviewFileRename() {
 	if (!previewTargetFile.value || !previewCustomFileName.value.trim()) return;
 	const file = previewTargetFile.value;
@@ -1878,420 +1851,3 @@ onUnmounted(() => {
 	}
 	revokeAllFileUrls();
 });
-</script>
-
-<template>
-	<div class="wo-detail-page">
-		<!-- Header -->
-		<div class="page-header">
-			<div class="header-left">
-				<div class="header-title-row">
-					<h2>{{ workOrder.woNumber }} - {{ workOrder.title }}</h2>
-					<Badge
-						v-if="workOrder.status"
-						:type="getStatusChipType(workOrder.status) as any"
-					>
-						{{ formatStatusLabel(workOrder.status) }}
-					</Badge>
-				</div>
-			</div>
-			<div class="page-header__actions">
-				<Button variant="outlined" @click="router.back()">
-					<i class="mdi mdi-chevron-left" style="margin-right: 4px"></i> <span class="btn-text">Back</span> </Button>
-				<Button
-					v-if="
-						(isDraftOrNew &&
-							normalizedWorkOrderStatus === 'draft' &&
-							authStore.can('update_draft', 'WorkOrder') &&
-							canEditForCurrentAssignment) ||
-						(isDraftOrNew &&
-							normalizedWorkOrderStatus === 'new' &&
-							authStore.can('update_new', 'WorkOrder') &&
-							canEditForCurrentAssignment)
-					"
-					variant="primary"
-					@click="
-						router.push({
-							name: 'Work Order Form',
-							params: { id: workOrder.guid || woNumber },
-						})
-					"
-				>
-					<i class="mdi mdi-note-edit-outline" style="margin-right: 4px"></i> <span class="btn-text">Edit</span> </Button>
-				<Button
-					v-if="
-						normalizedWorkOrderStatus === 'new' &&
-						authStore.can('update_new', 'WorkOrder') &&
-						canEditForCurrentAssignment
-					"
-					variant="primary"
-					:disabled="loading"
-					@click="requestApprovalForNewWorkOrder"
-				>
-					<i class="mdi mdi-check"></i> <span class="btn-text">Request For Approval</span> </Button>
-				<template
-					v-if="
-						isPendingApproval &&
-						isManager &&
-						(authStore.can('approve', 'WorkOrder') ||
-							authStore.can('reject', 'WorkOrder'))
-					"
-				>
-					<Button
-						v-if="authStore.can('approve', 'WorkOrder')"
-						variant="primary"
-						@click="approvePendingWorkOrder"
-					>
-						<i class="mdi mdi-check-circle-outline" style="margin-right: 4px"></i> <span class="btn-text">Approve</span> </Button>
-					<Button
-						v-if="authStore.can('reject', 'WorkOrder')"
-						variant="outlined"
-						style="color: var(--colors-error); border-color: var(--colors-error)"
-						@click="openRejectDoneDialog"
-					>
-						<i class="mdi mdi-close-circle-outline" style="margin-right: 4px"></i> <span class="btn-text">Reject</span> </Button>
-				</template>
-
-				<!-- Repeat & Transfer Work Order (Commented out) -->
-				<!--
-				<Button variant="outlined" @click="repeatDialogRef?.open()" title="Create a repeat sub-order">
-					<i class="mdi mdi-repeat" style="margin-right: 4px"></i> <span class="btn-text">Repeat</span> </Button>
-				<Button variant="outlined" @click="transferDialogRef?.open()" title="Transfer to a new work order">
-					<i class="mdi mdi-transfer" style="margin-right: 4px"></i> <span class="btn-text">Transfer</span> </Button>
-				-->
-				<Button
-					v-if="
-						isEditing &&
-						authStore.can('mark_as_done', 'WorkOrder') &&
-						canEditForCurrentAssignment
-					"
-					variant="primary"
-					@click="markAsDone"
-				>
-					Mark as Done
-				</Button>
-				<Button
-					v-if="
-						normalizedWorkOrderStatus === 'done' &&
-						authStore.can('reopen', 'WorkOrder')
-					"
-					variant="primary"
-					@click="reopenWorkOrder"
-				>
-					<i class="mdi mdi-lock-open-variant-outline"></i> <span class="btn-text">Reopen</span> </Button>
-				<Button
-					v-slot:default
-					v-if="
-						normalizedWorkOrderStatus === 'completed' &&
-						authStore.can('mark_as_claimed', 'WorkOrder')
-					"
-					variant="primary"
-					:disabled="totalInvoiceIssued <= 0"
-					:title="
-						totalInvoiceIssued > 0
-							? 'Mark as Claimed'
-							: 'Upload an invoice with an amount before marking as claimed'
-					"
-					@click="markAsClaimed"
-					style="display: flex; align-items: center; gap: 6px"
-				>
-					<i class="mdi mdi-cash-check"></i> <span class="btn-text">Mark as Claimed</span> </Button>
-				<Button
-					v-if="
-						workOrder?.status === 'Claimed' &&
-						authStore.can('mark_as_closed', 'WorkOrder')
-					"
-					variant="primary"
-					:disabled="!canMarkAsClosed"
-					:title="
-						canMarkAsClosed
-							? 'Mark as Complete'
-							: 'Invoice total must equal payment total before completing'
-					"
-					@click="markAsClosed"
-					style="display: flex; align-items: center; gap: 6px"
-				>
-					<i class="mdi mdi-check-decagram-outline"></i> <span class="btn-text">Mark as Closed</span> </Button>
-			</div>
-		</div>
-
-		<!-- Horizontal Tabs -->
-		<div class="tabs-horizontal">
-			<button class="nav-arrow" v-show="showLeftArrow" @click="scrollTabs('left')">
-				<i class="mdi mdi-chevron-left"></i>
-			</button>
-			<div class="tabs-wrapper" ref="tabsWrapperRef">
-				<div
-					v-for="tab in visibleTabs"
-					:key="tab.id"
-					class="tab-item"
-					:class="{ 'is-active': activeTab === tab.id }"
-					@click="activeTab = tab.id"
-				>
-					{{ tab.label }}
-				</div>
-			</div>
-			<button class="nav-arrow" v-show="showRightArrow" @click="scrollTabs('right')">
-				<i class="mdi mdi-chevron-right"></i>
-			</button>
-		</div>
-
-		<!-- Main Workspace -->
-		<div class="workspace-area">
-			<!-- Alert -->
-			<div class="alert-box alert-info" v-if="isEditing">
-				<i class="mdi mdi-information"></i>
-				<span>
-					Part Info, Supplier Invoices, Images, Work Notes, and Finance tab are opened.
-					Mark the work order as done if ready.
-				</span>
-			</div>
-
-			<!-- Warning Alert for Rejection Reason if state is InProgress -->
-			<div
-				class="alert-box alert-warning"
-				v-if="workOrder?.status === 'InProgress' && workOrder?.rejectedReason"
-			>
-				<i class="mdi mdi-alert-circle"></i>
-				<span>
-					This work order was rejected back to In Progress. Reason:
-					<strong>{{ workOrder.rejectedReason }}</strong>
-				</span>
-			</div>
-
-			<div class="alert-box alert-error" v-if="isRejected">
-				<i class="mdi mdi-alert-circle"></i>
-				<span>
-					<strong>Work Order Rejected.</strong>
-					Reason: {{ workOrder.rejectedReason || "No rejection reason provided." }}
-				</span>
-			</div>
-
-			<!-- Stepper -->
-			<div class="stepper-horizontal">
-				<div
-					v-for="(step, index) in computedSteps"
-					:key="step.label"
-					class="step"
-					:class="{
-						'is-active': index === currentStepIndex,
-						'is-completed': index < currentStepIndex,
-						'is-rejected': isRejected && index === currentStepIndex,
-					}"
-				>
-					<div class="step-icon-container">
-						<div
-							class="step-circle"
-							:class="{ 'step-circle-completed': index < currentStepIndex }"
-						>
-							<i
-								v-if="isRejected && index === currentStepIndex"
-								class="mdi mdi-close-circle-outline"
-							></i>
-							<i
-								v-else-if="index === currentStepIndex"
-								class="mdi mdi-clock-outline"
-							></i>
-							<i v-else-if="index === 0" class="mdi mdi-file-document-outline"></i>
-							<i v-else-if="index === 1" class="mdi mdi-check-decagram-outline"></i>
-							<i v-else-if="index === 2" class="mdi mdi-progress-wrench"></i>
-							<i v-else-if="index === 3" class="mdi mdi-file-sign"></i>
-							<i v-else-if="index === 4" class="mdi mdi-briefcase-check-outline"></i>
-							<i v-else-if="index === 5" class="mdi mdi-credit-card-outline"></i>
-							<i v-else class="mdi mdi-check-circle-outline"></i>
-						</div>
-					</div>
-					<div class="step-content">
-						<div class="step-label">{{ step.label }}</div>
-						<div class="step-date" v-if="step.date">{{ step.date }}</div>
-					</div>
-					<div class="step-line" v-if="index < computedSteps.length - 1"></div>
-				</div>
-			</div>
-
-			<div class="detail-columns-grid">
-				<!-- Content Card -->
-				<Card class="content-card">
-					<GeneralTab
-						v-if="activeTab === 'general'"
-						:workOrder="workOrder"
-						:users="users"
-						:workTypes="workTypes"
-						:isEditing="canEditGeneral"
-						:canEnterEdit="canEnterGeneralEdit"
-						:contractStatus="contractStatus"
-						:siteInstructionsFiles="siteInstructionsFiles"
-						:phases="phases"
-						:showEquipmentForm="showEquipmentForm"
-						:isMechanical="isMechanical"
-						@save="saveGeneralFormChanges"
-						@edit="isGeneralEditMode = true"
-						@cancelEdit="isGeneralEditMode = false"
-						@extend="openExtendDialog"
-						@openMap="isMapDialogOpen = true"
-					/>
-
-					<!-- PART INFO TAB (12 photos) -->
-					<PartInfoTab
-						v-if="activeTab === 'partInfo'"
-						:partInfoPhotos="partInfoPhotos"
-						:isEditing="isEditing && authStore.can('create', 'PartInfo')"
-						:isManager="isManager && authStore.can('create', 'PartInfo')"
-						:workOrderStatus="workOrder?.status"
-						@upload="handleFileUpload($event, 'PartInfo')"
-						@delete="handleDeleteFile"
-						@preview="openFilePreview"
-					/>
-
-					<!-- SUPPLIER INVOICES TAB (12 photos) -->
-					<SupplierInvoicesTab
-						v-if="activeTab === 'supplierInvoices'"
-						:supplierInvoicePhotos="supplierInvoicePhotos"
-						:isEditing="isEditing && authStore.can('create', 'SupplierInvoice')"
-						:isManager="isManager && authStore.can('create', 'SupplierInvoice')"
-						:workOrderStatus="workOrder?.status"
-						@upload="handleFileUpload($event, 'SupplierInvoice')"
-						@delete="handleDeleteFile"
-						@preview="openFilePreview"
-					/>
-
-					<!-- IMAGES -->
-					<ImagesTab
-						v-if="activeTab === 'images'"
-						:images="images"
-						:isEditing="isEditing && authStore.can('create', 'WorkOrderImage')"
-						:isManager="isManager && authStore.can('create', 'WorkOrderImage')"
-						:workOrderStatus="workOrder?.status"
-						@upload="uploadJobImage"
-						@delete="handleDeleteFile"
-						@preview="openFilePreview"
-					/>
-
-					<!-- WORK NOTES -->
-					<NotesTab
-						v-if="activeTab === 'notes'"
-						:workNotes="workNotes"
-						:users="users"
-						:workOrderStatus="workOrder?.status"
-						@addNote="openAddNoteDialog"
-						@editNote="openEditNoteDialog"
-						@deleteNote="deleteWorkNote"
-					/>
-
-					<!-- FINANCE -->
-					<FinanceTab
-						v-if="activeTab === 'finance'"
-						:quotations="quotations"
-						:totalQuotationAmount="totalQuotationAmount"
-						:workOrderStatus="workOrder?.status"
-						:isEditing="isEditing"
-						:isManager="isManager"
-						@upload="handleFileUpload($event, 'Quotation')"
-						@delete="handleDeleteFile"
-						@edit="openEditQuotation"
-						@preview="openFilePreview"
-					/>
-
-					<!-- VERIFICATION -->
-					<VerificationTab
-						v-if="activeTab === 'verification'"
-						:workOrder="workOrder"
-						:isManager="isManager"
-						:currentUserRole="currentUserRole"
-						:currentStepIndex="currentStepIndex"
-						@updateRole="currentUserRole = $event"
-						@approve="approveDoneWorkOrder"
-						@reject="openRejectDoneDialog"
-					/>
-
-					<!-- PAYMENT -->
-					<PaymentTab
-						v-if="activeTab === 'payment'"
-						:workOrder="workOrder"
-						:invoices="invoices"
-						:payments="payments"
-						:totalInvoiceIssued="totalInvoiceIssued"
-						:totalPaymentReceived="totalPaymentReceived"
-						:balanceRemaining="balanceRemaining"
-						:isFullyPaid="isFullyPaid"
-						@uploadInvoice="handleFileUpload($event, 'Invoice')"
-						@editInvoice="openEditInvoice"
-						@deleteFile="handleDeleteFile"
-						@uploadPayment="handleFileUpload($event, 'Payment')"
-						@deletePayment="handleDeleteFile"
-						@preview="openFilePreview"
-						@editPayment="openEditPayment"
-					/>
-
-					<!-- REPORT -->
-					<ReportTab
-						v-if="activeTab === 'report'"
-						:workOrder="workOrder"
-						:partReplacedImages="partInfoPhotos"
-						:images="images"
-						@print="printReport"
-					/>
-				</Card>
-
-				<!-- Activity Sidebar -->
-				<Card class="timeline-sidebar no-print">
-					<div class="timeline-sidebar__header">
-						<h4>Activity Timeline</h4>
-					</div>
-					<div class="timeline-sidebar__body">
-						<div v-if="activityLogs.length === 0" class="timeline-empty">
-							<i class="mdi mdi-timeline-text-outline"></i>
-							<p>No activity logs found.</p>
-						</div>
-						<div v-else class="timeline-list">
-							<div class="timeline-item" v-for="log in activityLogs" :key="log.id">
-								<div class="timeline-item__badge">
-									<i class="mdi mdi-record-circle-outline"></i>
-								</div>
-								<div class="timeline-item__content">
-									<div class="timeline-item__type">
-										{{ formatActivityType(log.activityType) }}
-									</div>
-									<div class="timeline-item__remarks">{{ log.remarks }}</div>
-									<div class="timeline-item__meta">
-										<span class="timeline-item__date">{{
-											formatDateString(log.createdAt)
-										}}</span>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</Card>
-			</div>
-		</div>
-
-		<QuotationDialog ref="quotationDialogRef" :items="quotations" @refresh="fetchWorkOrderFiles(); fetchWorkOrderDetails()" />
-
-		<InvoiceDialog ref="invoiceDialogRef" :items="invoices" @refresh="fetchWorkOrderFiles(); fetchWorkOrderDetails()" />
-
-		<PaymentDialog ref="paymentDialogRef" :items="payments" @refresh="fetchWorkOrderFiles(); fetchWorkOrderDetails()" />
-
-		<RepeatDialog ref="repeatDialogRef" :wo-number="woNumber" :work-order="workOrder" @refresh="fetchWorkOrderDetails" @navigate="(id) => $router.push(`/work-order/${id}`)" />
-
-		<TransferDialog ref="transferDialogRef" :wo-number="woNumber" :work-order="workOrder" @refresh="fetchWorkOrderDetails" @navigate="(id) => $router.push(`/work-order/${id}`)" />
-
-		<RejectDialog ref="rejectDialogRef" :wo-number="woNumber" @refresh="fetchWorkOrderDetails" />
-
-		<ExtendDialog ref="extendDialogRef" :wo-number="woNumber" :work-order="workOrder" @refresh="fetchWorkOrderDetails" />
-
-		<LocationMapDialog ref="locationMapDialogRef" :wo-number="woNumber" :work-order="workOrder" />
-
-		<NoteDialog ref="noteDialogRef" :wo-number="woNumber" @refresh="fetchWorkOrderDetails" />
-
-		<UploadConfirmDialog ref="uploadConfirmDialogRef"  />
-
-		<FilePreviewDialog ref="filePreviewDialogRef"  />
-
-		<ConfirmDialog ref="confirmDialogRef" />
-	</div>
-</template>
-
-<style lang="scss" scoped>
-@use "@/styles/pages/WorkOrder/_work-order-detail.scss";
-</style>

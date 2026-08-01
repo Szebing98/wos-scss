@@ -1469,7 +1469,7 @@ const priorityColors: Record<string, string> = {
 
 <template>
 	<div class="workorder-form-view">
-		<div class="workorder-form-view__header">
+		<div class="page-header">
 			<div class="title-area">
 				<h1>{{ pageTitle }}</h1>
 				<p>Set the work order details, assign the right schedule and resources.</p>

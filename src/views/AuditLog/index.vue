@@ -183,10 +183,10 @@ onMounted(() => {
 
 <template>
 	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1>System Audit Log</h1>
-				<p class="maintenance-view__subtitle">
+				<p class="page-header__subtitle">
 					Monitor and track all system operations and data modifications
 				</p>
 			</div>

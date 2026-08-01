@@ -254,13 +254,13 @@ async function syncWithLhdn() {
 
 <template>
 	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<div class="title-with-badge">
 					<h1>Global Locations</h1>
 					<Badge type="info" icon="mdi-public">{{ countries.length }} LHDN Countries</Badge>
 				</div>
-				<p class="maintenance-view__subtitle">
+				<p class="page-header__subtitle">
 					Official LHDN MyInvois Standard Country & State Reference Specifications
 				</p>
 			</div>

@@ -1403,14 +1403,14 @@ defineExpose({
 
 <template>
 	<div class="maintenance-view" :class="{ 'maintenance-view--embedded': hideHeader }">
-		<div class="maintenance-view__header" v-if="!hideHeader">
-			<div class="maintenance-view__title-area">
+		<div class="page-header" v-if="!hideHeader">
+			<div class="page-header__title-area">
 				<h1>{{ pageTitle }}</h1>
-				<p class="maintenance-view__subtitle">
+				<p class="page-header__subtitle">
 					Manage and track work orders across your facilities
 				</p>
 			</div>
-			<div class="header-actions">
+			<div class="page-header__actions">
 				<button
 					v-if="
 						authStore.can('create', 'WorkOrder') &&
@@ -1510,8 +1510,7 @@ defineExpose({
 					@click="handleExport('PDF')"
 					title="Export PDF"
 				>
-					<i class="mdi mdi-file-pdf-box" style="font-size: 18px"></i> Export
-				</Button>
+					<i class="mdi mdi-file-pdf-box" style="font-size: 18px"></i> <span class="btn-text">Export</span> </Button>
 			</div>
 		</Card>
 

@@ -167,10 +167,10 @@ function formatPrice(value: number) {
 
 <template>
 	<div class="services-view">
-		<div class="services-view__header">
-			<div class="services-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1>Service Catalog</h1>
-				<p class="services-view__subtitle">
+				<p class="page-header__subtitle">
 					Manage labor services, technical fees, and standard rates
 				</p>
 			</div>

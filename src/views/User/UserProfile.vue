@@ -503,19 +503,17 @@ async function confirmAvatarUpload() {
 
 <template>
 	<div class="maintenance-view">
-		<div class="maintenance-view__header">
-			<div class="maintenance-view__title-area">
+		<div class="page-header">
+			<div class="page-header__title-area">
 				<h1>
 					{{ isNewMode ? "Create New Profile" : isOwnProfile ? "My Profile" : "Employee Profile" }}
 				</h1>
 			</div>
-			<div class="header-actions">
+			<div class="page-header__actions">
 				<button v-if="isEditMode" class="btn btn--primary" @click="handleSaveProfile">
-					<i class="mdi mdi-content-save-outline"></i> Save Changes
-				</button>
+					<i class="mdi mdi-content-save-outline"></i> <span class="btn-text">Save Changes</span> </button>
 				<button v-else class="btn btn--outlined" @click="isEditMode = true">
-					<i class="mdi mdi-pencil-outline"></i> Edit Profile
-				</button>
+					<i class="mdi mdi-pencil-outline"></i> <span class="btn-text">Edit Profile</span> </button>
 			</div>
 		</div>
 
@@ -567,21 +565,17 @@ async function confirmAvatarUpload() {
 								As an Administrator, you can reset this user's password directly or resend account activation link.
 							</p>
 							<button class="btn btn--outlined security-card__btn mb-sm" @click="openPasswordDialog">
-								<i class="mdi mdi-lock-reset"></i> Reset User Password
-							</button>
+								<i class="mdi mdi-lock-reset"></i> <span class="btn-text">Reset User Password</span> </button>
 							<button class="btn btn--outlined security-card__btn" @click="handleReinviteUser" :disabled="reinviteLoading">
 								<i v-if="reinviteLoading" class="mdi mdi-loading mdi-spin"></i>
-								<i v-else class="mdi mdi-email-send-outline"></i>
-								{{ reinviteLoading ? "Sending..." : "Resend Invitation Link" }}
-							</button>
+								<i v-else class="mdi mdi-email-send-outline"></i> <span class="btn-text">{{ reinviteLoading ? "Sending..." : "Resend Invitation Link" }}</span> </button>
 						</div>
 						<div v-else class="security-action-item">
 							<p class="security-card__desc">
 								To update your own password and security credentials, please visit Settings.
 							</p>
 							<button class="btn btn--outlined security-card__btn" @click="router.push('/settings')">
-								<i class="mdi mdi-cog-outline"></i> Go to Settings
-							</button>
+								<i class="mdi mdi-cog-outline"></i> <span class="btn-text">Go to Settings</span> </button>
 						</div>
 
 						<div v-if="!isOwnProfile" class="security-card__override-box">
@@ -589,8 +583,7 @@ async function confirmAvatarUpload() {
 								Need custom overrides? You can adjust independent security matrix rules for this user.
 							</p>
 							<button class="btn btn--outlined security-card__btn" @click="goToOverrides">
-								<i class="mdi mdi-shield-key-outline"></i> Edit Individual Overrides
-							</button>
+								<i class="mdi mdi-shield-key-outline"></i> <span class="btn-text">Edit Individual Overrides</span> </button>
 						</div>
 					</div>
 				</div>
@@ -672,9 +665,7 @@ async function confirmAvatarUpload() {
 					</button>
 					<button class="btn btn--primary" @click="confirmAvatarUpload" :disabled="avatarLoading">
 						<i v-if="avatarLoading" class="mdi mdi-loading mdi-spin"></i>
-						<i v-else class="mdi mdi-check"></i>
-						{{ avatarLoading ? "Uploading..." : "Save as Photo" }}
-					</button>
+						<i v-else class="mdi mdi-check"></i> <span class="btn-text">{{ avatarLoading ? "Uploading..." : "Save as Photo" }}</span> </button>
 				</div>
 			</div>
 		</div>
@@ -693,8 +684,7 @@ async function confirmAvatarUpload() {
 		<template #footer>
 			<Button variant="outlined" @click="showPasswordModal = false" :disabled="passwordLoading">Cancel</Button>
 			<Button variant="primary" @click="handleConfirmResetPassword" :loading="passwordLoading">
-				<i v-if="!passwordLoading" class="mdi mdi-email-send-outline"></i> Send Reset Link
-			</Button>
+				<i v-if="!passwordLoading" class="mdi mdi-email-send-outline"></i> <span class="btn-text">Send Reset Link</span> </Button>
 		</template>
 	</Dialog>
 
@@ -713,8 +703,7 @@ async function confirmAvatarUpload() {
 		<template #footer>
 			<Button variant="outlined" @click="showSaveConfirmModal = false" :disabled="loading">Cancel</Button>
 			<Button variant="primary" @click="executeSaveProfile" :loading="loading">
-				<i v-if="!loading" class="mdi mdi-check"></i> Confirm & Save
-			</Button>
+				<i v-if="!loading" class="mdi mdi-check"></i> <span class="btn-text">Confirm & Save</span> </Button>
 		</template>
 	</Dialog>
 </template>

@@ -115,10 +115,10 @@ function formatPrice(value: number) {
 
 <template>
     <div class="maintenance-view">
-        <div class="maintenance-view__header">
-            <div class="maintenance-view__title-area">
+        <div class="page-header">
+            <div class="page-header__title-area">
                 <h1>Part Info</h1>
-                <p class="maintenance-view__subtitle">Manage replacement parts, pricing, and units of measure</p>
+                <p class="page-header__subtitle">Manage replacement parts, pricing, and units of measure</p>
             </div>
             <button class="btn btn--primary" @click="prepareCreate">
                 <i class="mdi mdi-plus"></i> Add Part
