@@ -33,7 +33,6 @@ const emit = defineEmits<{
 }>();
 
 const mapContainer = ref<HTMLDivElement | null>(null);
-const searchInput = ref<HTMLInputElement | null>(null);
 const searchWrapper = ref<HTMLDivElement | null>(null);
 
 const addressText = ref(props.location || "");

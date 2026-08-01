@@ -668,7 +668,7 @@ async function handleSubmitForm() {
 		};
 
 		if (isNewMode.value) {
-			const { data, error } = await customerApi.createCustomer(payload);
+			const { data, error } = await customerApi.createCustomer(payload as never);
 			if (error) {
 				snackbar.error(`Failed to create customer: ${error.error?.message || error}`);
 				return;
@@ -679,7 +679,7 @@ async function handleSubmitForm() {
 			snackbar.success("Customer registered successfully!");
 			showPostRegisterDialog.value = true;
 		} else if (customerGuid.value) {
-			const { error } = await customerApi.updateCustomer(customerGuid.value, payload);
+			const { error } = await customerApi.updateCustomer(customerGuid.value, payload as never);
 			if (error) {
 				snackbar.error(`Failed to update customer: ${error.error?.message || error}`);
 				return;
