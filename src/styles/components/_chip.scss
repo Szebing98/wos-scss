@@ -25,7 +25,7 @@
 	&--success {
 		background-color: #43A047;
 
-		:global([data-theme="dark"]) & {
+		[data-theme="dark"] & {
 			background-color: #2E7D32;
 			border-color: #43A047;
 		}
@@ -35,7 +35,7 @@
 	&--default {
 		background-color: #616161;
 
-		:global([data-theme="dark"]) & {
+		[data-theme="dark"] & {
 			background-color: #424242;
 			border-color: #616161;
 		}
@@ -45,7 +45,7 @@
 	&--info {
 		background-color: #1E88E5;
 
-		:global([data-theme="dark"]) & {
+		[data-theme="dark"] & {
 			background-color: #1565C0;
 			border-color: #1E88E5;
 		}
@@ -55,7 +55,7 @@
 	&--warning {
 		background-color: #FB8C00;
 
-		:global([data-theme="dark"]) & {
+		[data-theme="dark"] & {
 			background-color: #E65100;
 			border-color: #FB8C00;
 		}
@@ -65,7 +65,7 @@
 	&--error {
 		background-color: #E53935;
 
-		:global([data-theme="dark"]) & {
+		[data-theme="dark"] & {
 			background-color: #B71C1C;
 			border-color: #E53935;
 		}

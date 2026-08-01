@@ -75,7 +75,7 @@
 		border-top: 1px solid var(--colors-surface-border);
 	}
 
-	:global([data-theme="dark"]) & {
+	[data-theme="dark"] & {
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 	}
 

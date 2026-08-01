@@ -5,6 +5,7 @@ import { workOrderApi } from "@/api/work-order/work-order.api";
 import { useThemeStore } from "@/stores/theme.store";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
 import WorkOrderList from "@/views/WorkOrder/WorkOrderList.vue";
+import PageHeader from "@/components/PageHeader.vue";
 import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
 import { useSnackbarStore } from "@/stores/snackbar.store";
 import { useAuthStore } from "@/stores/auth.store";
@@ -261,13 +262,12 @@ onMounted(() => {
 
 <template>
 	<div class="dashboard">
-		<div class="page-header">
-			<div class="page-header-title">
-				<h1>Dashboard</h1>
+		<PageHeader title="Dashboard">
+			<template #subtitle>
 				<p class="dashboard__updated-time">All Work Orders: {{ totalWorkOrders }}</p>
 				<p class="dashboard__updated-time">Last updated: {{ lastUpdatedTime }}</p>
-			</div>
-			<div style="display: flex; gap: 8px">
+			</template>
+			<template #actions>
 				<!-- <button
 					class="btn btn--outlined"
 					:disabled="loadingCounts"
@@ -286,10 +286,10 @@ onMounted(() => {
 					:disabled="loadingCounts"
 					@click="exportCountReport('PDF')"
 				>
-					<i class="mdi mdi-file-pdf-box"></i>Export PDF
+					<i class="mdi mdi-file-pdf-box"></i><span class="btn-text">Export PDF</span>
 				</button>
-			</div>
-		</div>
+			</template>
+		</PageHeader>
 
 		<div class="dashboard__cards-grid">
 			<button

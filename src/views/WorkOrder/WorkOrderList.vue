@@ -7,6 +7,7 @@ import type { TableHeader } from "@/components/Table.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
 import FilterPanel from "@/components/FilterPanel.vue";
+import PageHeader from "@/components/PageHeader.vue";
 import Card from "@/components/Card.vue";
 import Checkbox from "@/components/Checkbox.vue";
 import Button from "@/components/Button.vue";
@@ -1403,14 +1404,13 @@ defineExpose({
 
 <template>
 	<div class="maintenance-view" :class="{ 'maintenance-view--embedded': hideHeader }">
-		<div class="page-header" v-if="!hideHeader">
-			<div class="page-header__title-area">
-				<h1>{{ pageTitle }}</h1>
+		<PageHeader v-if="!hideHeader" :title="pageTitle">
+			<template #subtitle>
 				<p class="page-header__subtitle">
 					Manage and track work orders across your facilities
 				</p>
-			</div>
-			<div class="page-header__actions">
+			</template>
+			<template #actions>
 				<button
 					v-if="
 						authStore.can('create', 'WorkOrder') &&
@@ -1424,8 +1424,8 @@ defineExpose({
 					<i class="mdi mdi-plus"></i>
 					<span class="btn-text">Create New Work Order</span>
 				</button>
-			</div>
-		</div>
+			</template>
+		</PageHeader>
 
 		<Card style="padding: var(--spacing-md)">
 			<div class="filter-bar">

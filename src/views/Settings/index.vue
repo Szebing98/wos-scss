@@ -5,6 +5,7 @@ import { useSnackbarStore } from "@/stores/snackbar.store";
 import { useDateFormatStore, type SystemDateFormat } from "@/stores/dateFormat.store";
 import { authApi } from "@/api/auth/auth.api";
 import Card from "@/components/Card.vue";
+import PageHeader from "@/components/PageHeader.vue";
 import Button from "@/components/Button.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
@@ -86,10 +87,11 @@ function handleDateFormatChange(val: string) {
 
 <template>
 	<div class="settings-page page">
-		<div class="page-header">
-			<h1>Settings</h1>
-			<p class="u-text-muted">Manage your application preferences, date formats, and security</p>
-		</div>
+		<PageHeader title="Settings">
+			<template #subtitle>
+				<p class="page-header__subtitle">Manage your application preferences, date formats, and security</p>
+			</template>
+		</PageHeader>
 
 		<div class="settings-grid">
 			<!-- Theme Preference -->
