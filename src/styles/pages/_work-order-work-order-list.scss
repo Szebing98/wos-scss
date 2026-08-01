@@ -1,0 +1,245 @@
+@mixin flex-row($align: stretch, $gap: 0) {
+	display: flex;
+	align-items: $align;
+	gap: $gap;
+}
+
+.maintenance-view {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-lg);
+
+	&--embedded {
+		gap: var(--spacing-md);
+	}
+
+	&__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: var(--spacing-md);
+	}
+	&__title-area {
+		h1 {
+			font-size: 24px;
+			font-weight: 700;
+			margin: 0 0 4px;
+			color: var(--colors-text-primary);
+		}
+		p {
+			font-size: 13px;
+			color: var(--colors-text-muted);
+			margin: 0;
+		}
+	}
+}
+
+.add-workorder-btn {
+	flex-shrink: 0;
+	white-space: nowrap;
+
+	@media (max-width: 640px) {
+		padding: 8px 12px !important;
+		min-width: 40px;
+
+		.btn-text {
+			display: none;
+		}
+	}
+}
+
+.header-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.filter-bar {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	flex-wrap: wrap;
+}
+
+.table-scroll-container {
+	max-height: 640px;
+	overflow-y: auto;
+	padding: 0 !important;
+}
+
+.actions-cell {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 4px;
+}
+
+.u-font-mono {
+	font-family: monospace;
+}
+.u-font-weight-medium {
+	font-weight: 500;
+}
+.u-text-muted {
+	color: var(--colors-text-muted);
+	font-style: italic;
+}
+.u-text-error {
+	color: #ef4444 !important;
+}
+.u-text-success {
+	color: #10b981 !important;
+}
+.u-text-warning {
+	color: #f59e0b !important;
+}
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+	opacity: 0;
+	transform: translateY(-10px);
+}
+
+.actions-cell .btn--icon {
+	width: 36px;
+	height: 36px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.bulk-action-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 20px;
+	background: var(--colors-surface-card);
+	border: 1px solid var(--colors-brand-primary);
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(var(--colors-brand-primary-rgb, 59, 130, 246), 0.15);
+	margin-bottom: -8px; // Pull it closer to the table
+	position: relative;
+	z-index: 10;
+
+	&__left {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	&__right {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	&__divider {
+		width: 1px;
+		height: 24px;
+		background: var(--colors-surface-border);
+	}
+}
+
+.form-grid-approve {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-md);
+}
+
+.custom-label {
+	display: block;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--colors-text-secondary);
+	text-transform: uppercase;
+	margin-bottom: 4px;
+}
+
+.custom-textarea {
+	width: 100%;
+	padding: 10px 12px;
+	border-radius: 4px;
+	border: 1px solid var(--colors-surface-border);
+	background: var(--colors-surface-card);
+	color: var(--colors-text-primary);
+	font-size: 13px;
+	outline: none;
+	resize: vertical;
+	transition: border-color 0.2s ease;
+	font-family: inherit;
+
+	&:focus {
+		border-color: var(--colors-brand-primary);
+	}
+}
+
+.wo-order-status-badge {
+	padding: 0 8px;
+	font-size: 10px;
+	line-height: 2;
+	color: #ffffff;
+	border-radius: var(--radius-xs, 4px);
+	text-align: center;
+	font-weight: 500;
+}
+
+.wo-order-status-badge.badge--new {
+	background-color: #3b82f6;
+}
+
+.wo-order-status-badge.badge--pending,
+.wo-order-status-badge.badge--pending-approval {
+	background-color: #f59e0b;
+}
+
+.wo-order-status-badge.badge--progress,
+.wo-order-status-badge.badge--in-progress {
+	background-color: #6366f1;
+}
+
+.wo-order-status-badge.badge--done {
+	background-color: #08aed8;
+}
+
+.wo-order-status-badge.badge--completed {
+	background-color: #23af5d;
+}
+
+.wo-order-status-badge.badge--claimed {
+	background-color: #00dada;
+}
+
+.wo-order-status-badge.badge--closed {
+	background-color: #629bc2;
+}
+
+.wo-order-status-badge.badge--cancelled {
+	background-color: #f0713f;
+}
+
+.wo-order-status-badge.badge--rejected {
+	background-color: #dc2626;
+}
+
+.wo-order-status-badge :deep(span) {
+	display: block;
+	white-space: normal;
+	line-height: 1.5;
+	padding: 2px;
+}
+
+.customer-cell-content {
+	line-height: 1.4;
+	text-align: left;
+}
+
+@media (max-width: 767px) {
+	.customer-cell-content {
+		text-align: right;
+	}
+}

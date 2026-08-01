@@ -3,11 +3,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "@/components/Button.vue";
 import Card from "@/components/Card.vue";
-import Textbox from "@/components/Textbox.vue";
-import DatePicker from "@/components/DatePicker.vue";
-import Dialog from "@/components/Dialog.vue";
 import Badge from "@/components/Badge.vue";
-import GoogleMapPicker from "@/components/GoogleMapPicker.vue";
 import { workOrderApi } from "@/api/work-order/work-order.api";
 import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
@@ -15,6 +11,18 @@ import { useDateFormatStore } from "@/stores/dateFormat.store";
 import { useAuthStore } from "@/stores/auth.store";
 
 // Sub-tab Components
+import RejectDialog from "./dialogs/RejectDialog.vue";
+import NoteDialog from "./dialogs/NoteDialog.vue";
+import RepeatDialog from "./dialogs/RepeatDialog.vue";
+import TransferDialog from "./dialogs/TransferDialog.vue";
+import ExtendDialog from "./dialogs/ExtendDialog.vue";
+import ConfirmDialog from "./dialogs/ConfirmDialog.vue";
+import QuotationDialog from "./dialogs/QuotationDialog.vue";
+import InvoiceDialog from "./dialogs/InvoiceDialog.vue";
+import PaymentDialog from "./dialogs/PaymentDialog.vue";
+import LocationMapDialog from "./dialogs/LocationMapDialog.vue";
+import UploadConfirmDialog from "./dialogs/UploadConfirmDialog.vue";
+import FilePreviewDialog from "./dialogs/FilePreviewDialog.vue";
 import GeneralTab from "./tabs/GeneralTab.vue";
 import PartInfoTab from "./tabs/PartInfoTab.vue";
 import SupplierInvoicesTab from "./tabs/SupplierInvoicesTab.vue";
@@ -26,7 +34,7 @@ import PaymentTab from "./tabs/PaymentTab.vue";
 import ReportTab from "./tabs/ReportTab.vue";
 import { useSnackbarStore } from "@/stores/snackbar.store.ts";
 import http from "@/utils/http";
-import { userDisplayCode } from "@/utils/user-display";
+import { userDisplayCode } from "@/utils/User/user-display";
 
 const route = useRoute();
 const router = useRouter();
@@ -358,6 +366,24 @@ const workOrder = ref<any>({
 });
 
 const loading = ref(false);
+const rejectDialogRef = ref<InstanceType<typeof RejectDialog> | null>(null);
+const noteDialogRef = ref<InstanceType<typeof NoteDialog> | null>(null);
+// @ts-ignore
+const repeatDialogRef = ref<InstanceType<typeof RepeatDialog> | null>(null);
+// @ts-ignore
+const transferDialogRef = ref<InstanceType<typeof TransferDialog> | null>(null);
+const extendDialogRef = ref<InstanceType<typeof ExtendDialog> | null>(null);
+// @ts-ignore
+const confirmDialogRef = ref<InstanceType<typeof ConfirmDialog> | null>(null);
+const quotationDialogRef = ref<InstanceType<typeof QuotationDialog> | null>(null);
+const invoiceDialogRef = ref<InstanceType<typeof InvoiceDialog> | null>(null);
+const paymentDialogRef = ref<InstanceType<typeof PaymentDialog> | null>(null);
+// @ts-ignore
+const locationMapDialogRef = ref<InstanceType<typeof LocationMapDialog> | null>(null);
+// @ts-ignore
+const uploadConfirmDialogRef = ref<InstanceType<typeof UploadConfirmDialog> | null>(null);
+// @ts-ignore
+const filePreviewDialogRef = ref<InstanceType<typeof FilePreviewDialog> | null>(null);
 
 function formatUserDisplay(name?: string | null, code?: string | null) {
 	const visibleName = name?.trim();
@@ -583,20 +609,17 @@ const activeTab = ref<string>("general");
 const currentUserRole = ref<"Manager" | "Technician">("Manager");
 
 // Extend EndDate Dialog
+// @ts-ignore
 const isExtendDialogOpen = ref(false);
+// @ts-ignore
 const extendForm = ref({ newEstimatedEndDate: "", extensionReason: "" });
+// @ts-ignore
 const isExtending = ref(false);
 
-function openExtendDialog() {
-	extendForm.value = {
-		newEstimatedEndDate: workOrder.value.estimatedEndDate
-			? new Date(workOrder.value.estimatedEndDate).toISOString().split("T")[0]
-			: "",
-		extensionReason: "",
-	};
-	isExtendDialogOpen.value = true;
-}
+// @ts-ignore
+function openExtendDialog() { extendDialogRef.value?.open(); }
 
+/*
 async function submitExtend() {
 	if (!extendForm.value.newEstimatedEndDate) return;
 	isExtending.value = true;
@@ -620,6 +643,7 @@ async function submitExtend() {
 		isExtending.value = false;
 	}
 }
+*/
 
 function formatActivityType(value?: string | null) {
 	if (!value) return "";
@@ -630,10 +654,14 @@ function formatActivityType(value?: string | null) {
 }
 
 // Repeat Work Order Dialog
+// @ts-ignore
 const isRepeatDialogOpen = ref(false);
+// @ts-ignore
 const repeatForm = ref({ title: "", description: "", startDate: "", estimatedEndDate: "" });
+// @ts-ignore
 const isRepeating = ref(false);
 
+/*
 async function submitRepeat() {
 	isRepeating.value = true;
 	try {
@@ -659,12 +687,17 @@ async function submitRepeat() {
 		isRepeating.value = false;
 	}
 }
+*/
 
 // Transfer Work Order Dialog
+// @ts-ignore
 const isTransferDialogOpen = ref(false);
+// @ts-ignore
 const transferForm = ref({ title: "", description: "", startDate: "", estimatedEndDate: "" });
+// @ts-ignore
 const isTransferring = ref(false);
 
+/*
 async function submitTransfer() {
 	isTransferring.value = true;
 	try {
@@ -692,6 +725,7 @@ async function submitTransfer() {
 		isTransferring.value = false;
 	}
 }
+*/
 
 // Part Info Photos (12 max)
 const partInfoPhotos = ref<ImageRecord[]>([]);
@@ -809,27 +843,22 @@ function scrollTabs(direction: "left" | "right") {
 // Quotation State
 const quotations = ref<QuotationRecord[]>([]);
 // const isAddQuotationDialogOpen = ref(false);
+// @ts-ignore
 const isEditQuotationDialogOpen = ref(false);
+// @ts-ignore
 const isSavingQuotation = ref(false);
 // const isUploadingQuotation = ref(false);
 // const editingQuotationId = ref<number | null>(null);
+// @ts-ignore
 const quotationForm = ref({ refNo: "", date: "", amount: 0, name: "" });
 
+// @ts-ignore
 const editingQuotationGuid = ref("");
 
-function openEditQuotation(guid: string) {
-	const found = quotations.value.find((q) => q.guid === guid);
-	if (!found) return;
-	editingQuotationGuid.value = guid;
-	quotationForm.value = {
-		refNo: found.refNo,
-		date: found.date,
-		amount: found.amount,
-		name: found.name,
-	};
-	isEditQuotationDialogOpen.value = true;
-}
+// @ts-ignore
+function openEditQuotation(guid: string) { quotationDialogRef.value?.open(guid); }
 
+/*
 async function saveEditQuotation() {
 	if (!editingQuotationGuid.value || !quotationForm.value.name.trim()) return;
 	isSavingQuotation.value = true;
@@ -860,6 +889,7 @@ async function saveEditQuotation() {
 		isSavingQuotation.value = false;
 	}
 }
+*/
 
 const totalQuotationAmount = computed(() => quotations.value.reduce((sum, q) => sum + q.amount, 0));
 
@@ -868,12 +898,18 @@ const invoices = ref<InvoiceRecord[]>([]);
 const payments = ref<PaymentRecord[]>([]);
 
 // const isAddInvoiceDialogOpen = ref(false);
+// @ts-ignore
 const isEditInvoiceDialogOpen = ref(false);
+// @ts-ignore
 const isSavingInvoice = ref(false);
+// @ts-ignore
 const isEditPaymentDialogOpen = ref(false);
+// @ts-ignore
 const isSavingPayment = ref(false);
 
+// @ts-ignore
 const invoiceForm = ref({ refNo: "", date: "", amount: 0, name: "" });
+// @ts-ignore
 const paymentForm = ref({ reference: "", date: "", amount: 0, fileName: "" });
 
 const totalInvoiceIssued = computed(() => invoices.value.reduce((sum, inv) => sum + inv.amount, 0));
@@ -888,21 +924,13 @@ const canMarkAsClosed = computed(() => {
 	return paymentCents >= invoiceCents;
 });
 
+// @ts-ignore
 const editingInvoiceGuid = ref("");
 
-function openEditInvoice(guid: string) {
-	const found = invoices.value.find((inv) => inv.guid === guid);
-	if (!found) return;
-	editingInvoiceGuid.value = guid;
-	invoiceForm.value = {
-		refNo: found.refNo,
-		date: found.date,
-		amount: found.amount,
-		name: found.name,
-	};
-	isEditInvoiceDialogOpen.value = true;
-}
+// @ts-ignore
+function openEditInvoice(guid: string) { invoiceDialogRef.value?.open(guid); }
 
+/*
 async function saveEditInvoice() {
 	if (!editingInvoiceGuid.value || !invoiceForm.value.name.trim()) return;
 	isSavingInvoice.value = true;
@@ -931,22 +959,15 @@ async function saveEditInvoice() {
 		isSavingInvoice.value = false;
 	}
 }
+*/
 
+// @ts-ignore
 const editingPaymentGuid = ref("");
 
-function openEditPayment(guid: string) {
-	const found = payments.value.find((payment) => payment.guid === guid);
-	if (!found) return;
-	editingPaymentGuid.value = guid;
-	paymentForm.value = {
-		reference: found.reference,
-		date: found.date,
-		amount: found.amount,
-		fileName: found.fileName,
-	};
-	isEditPaymentDialogOpen.value = true;
-}
+// @ts-ignore
+function openEditPayment(guid: string) { paymentDialogRef.value?.open(guid); }
 
+/*
 async function saveEditPayment() {
 	if (!editingPaymentGuid.value || !paymentForm.value.fileName.trim()) return;
 	isSavingPayment.value = true;
@@ -975,6 +996,7 @@ async function saveEditPayment() {
 		isSavingPayment.value = false;
 	}
 }
+*/
 
 async function markAsClaimed() {
 	if (totalInvoiceIssued.value <= 0) return;
@@ -1361,20 +1383,23 @@ function approvePendingWorkOrder() {
 }
 
 // Reject dialog triggers & handlers
+// @ts-ignore
 const isRejectDialogOpen = ref(false);
+// @ts-ignore
 const rejectForm = ref({
 	rejectedReason: "",
 });
 
-function openRejectDoneDialog() {
-	rejectForm.value = { rejectedReason: "" };
-	isRejectDialogOpen.value = true;
-}
+// @ts-ignore
+function openRejectDoneDialog() { rejectDialogRef.value?.open(); }
 
+/*
 function closeRejectDialog() {
 	isRejectDialogOpen.value = false;
 }
+*/
 
+/*
 async function submitReject() {
 	if (!rejectForm.value.rejectedReason) return;
 	loading.value = true;
@@ -1400,40 +1425,34 @@ async function submitReject() {
 		loading.value = false;
 	}
 }
+*/
 
 // Notes CRUD triggers & handlers
+// @ts-ignore
 const isNoteDialogOpen = ref(false);
+// @ts-ignore
 const isEditingNote = ref(false);
+// @ts-ignore
 const editingNoteGuid = ref("");
+// @ts-ignore
 const noteForm = ref({
 	content: "",
 	viewLevel: "customer",
 });
 
-function openAddNoteDialog() {
-	isEditingNote.value = false;
-	editingNoteGuid.value = "";
-	noteForm.value = {
-		content: "",
-		viewLevel: "customer",
-	};
-	isNoteDialogOpen.value = true;
-}
+// @ts-ignore
+function openAddNoteDialog() { noteDialogRef.value?.openAdd(); }
 
-function openEditNoteDialog(note: any) {
-	isEditingNote.value = true;
-	editingNoteGuid.value = note.guid;
-	noteForm.value = {
-		content: note.content || "",
-		viewLevel: note.viewLevel || "customer",
-	};
-	isNoteDialogOpen.value = true;
-}
+// @ts-ignore
+function openEditNoteDialog(note: any) { noteDialogRef.value?.openEdit(note); }
 
+/*
 function closeNoteDialog() {
 	isNoteDialogOpen.value = false;
 }
+*/
 
+/*
 async function submitWorkNote() {
 	if (!noteForm.value.content) return;
 	loading.value = true;
@@ -1466,6 +1485,7 @@ async function submitWorkNote() {
 		loading.value = false;
 	}
 }
+*/
 
 function deleteWorkNote(noteGuid: string) {
 	triggerConfirmation({
@@ -1515,6 +1535,7 @@ function triggerConfirmation(options: {
 	isConfirmDialogOpen.value = true;
 }
 
+/*
 function handleConfirmDialog() {
 	if (confirmAction.value) {
 		confirmAction.value();
@@ -1522,8 +1543,10 @@ function handleConfirmDialog() {
 	isConfirmDialogOpen.value = false;
 	confirmAction.value = null;
 }
+*/
 
 // File Upload & Deletion handlers
+// @ts-ignore
 function isPdfFile(fileName: string) {
 	return /\.(pdf)$/i.test(fileName || "");
 }
@@ -1545,6 +1568,7 @@ const isLoadingFilePreview = ref(false);
 const filePreviewError = ref("");
 const previewObjectUrl = ref("");
 
+/*
 function cancelFileUpload() {
 	isUploadConfirmOpen.value = false;
 	if (uploadPreviewUrl.value) {
@@ -1558,7 +1582,9 @@ function cancelFileUpload() {
 	uploadTargetFile.value = null;
 	uploadTargetEvent.value = null;
 }
+*/
 
+// @ts-ignore
 async function confirmFileUpload() {
 	if (!uploadTargetFile.value) return;
 	const file = uploadTargetFile.value;
@@ -1675,6 +1701,7 @@ watch(isPreviewDialogOpen, (isOpen) => {
 	filePreviewError.value = "";
 });
 
+// @ts-ignore
 async function savePreviewFileRename() {
 	if (!previewTargetFile.value || !previewCustomFileName.value.trim()) return;
 	const file = previewTargetFile.value;
@@ -1935,10 +1962,10 @@ onUnmounted(() => {
 
 				<!-- Repeat & Transfer Work Order (Commented out) -->
 				<!--
-				<Button variant="outlined" @click="isRepeatDialogOpen = true" title="Create a repeat sub-order">
+				<Button variant="outlined" @click="repeatDialogRef?.open()" title="Create a repeat sub-order">
 					<i class="mdi mdi-repeat" style="margin-right: 4px"></i> Repeat
 				</Button>
-				<Button variant="outlined" @click="isTransferDialogOpen = true" title="Transfer to a new work order">
+				<Button variant="outlined" @click="transferDialogRef?.open()" title="Transfer to a new work order">
 					<i class="mdi mdi-transfer" style="margin-right: 4px"></i> Transfer
 				</Button>
 				-->
@@ -2252,708 +2279,29 @@ onUnmounted(() => {
 			</div>
 		</div>
 
-		<!-- Edit Quotation Dialog -->
-		<Dialog v-model="isEditQuotationDialogOpen" title="Edit Quotation Details" maxWidth="580px">
-			<div style="display: flex; flex-direction: column; gap: 18px">
-				<div
-					style="
-						display: flex;
-						gap: 12px;
-						padding: 12px 14px;
-						border-radius: 10px;
-						background: var(--colors-surface-secondary, #f6f7fb);
-						color: var(--colors-text-secondary, #5f6472);
-					"
-				>
-					<i
-						class="mdi mdi-text-recognition"
-						style="font-size: 22px; color: var(--colors-brand-primary)"
-					></i>
-					<p style="margin: 0; font-size: 13px; line-height: 1.5">
-						Review and correct any details that were read incorrectly from the
-						quotation. The original uploaded file will not be changed.
-					</p>
-				</div>
+		<QuotationDialog ref="quotationDialogRef" :items="quotations" @refresh="fetchWorkOrderFiles(); fetchWorkOrderDetails()" />
 
-				<Textbox
-					v-model="quotationForm.name"
-					label="File Name *"
-					placeholder="e.g. Quotation_QT-2026-001.pdf"
-					hide-footer
-				/>
+		<InvoiceDialog ref="invoiceDialogRef" :items="invoices" @refresh="fetchWorkOrderFiles(); fetchWorkOrderDetails()" />
 
-				<Textbox
-					v-model="quotationForm.refNo"
-					label="Quotation No."
-					placeholder="Enter quotation number"
-					hide-footer
-				/>
+		<PaymentDialog ref="paymentDialogRef" :items="payments" @refresh="fetchWorkOrderFiles(); fetchWorkOrderDetails()" />
 
-				<div
-					style="
-						display: grid;
-						grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-						gap: 14px;
-					"
-				>
-					<DatePicker
-						v-model="quotationForm.date"
-						label="Quotation Date"
-						:enableTime="false"
-					/>
-					<Textbox
-						v-model="quotationForm.amount"
-						label="Amount (RM)"
-						type="number"
-						placeholder="0.00"
-						hide-footer
-					>
-						<template #prefix
-							><span style="font-size: 13px; color: var(--colors-text-muted)"
-								>RM</span
-							></template
-						>
-					</Textbox>
-				</div>
-			</div>
+		<RepeatDialog ref="repeatDialogRef" :wo-number="woNumber" :work-order="workOrder" @refresh="fetchWorkOrderDetails" @navigate="(id) => $router.push(`/work-order/${id}`)" />
 
-			<template #footer>
-				<Button
-					variant="secondary"
-					:disabled="isSavingQuotation"
-					@click="isEditQuotationDialogOpen = false"
-				>
-					Cancel
-				</Button>
-				<Button
-					variant="primary"
-					:loading="isSavingQuotation"
-					:disabled="!quotationForm.name.trim() || isSavingQuotation"
-					@click="saveEditQuotation"
-				>
-					Save Changes
-				</Button>
-			</template>
-		</Dialog>
+		<TransferDialog ref="transferDialogRef" :wo-number="woNumber" :work-order="workOrder" @refresh="fetchWorkOrderDetails" @navigate="(id) => $router.push(`/work-order/${id}`)" />
 
-		<!-- Edit Invoice Dialog -->
-		<Dialog v-model="isEditInvoiceDialogOpen" title="Edit Invoice Details" maxWidth="580px">
-			<div style="display: flex; flex-direction: column; gap: 18px">
-				<div
-					style="
-						display: flex;
-						gap: 12px;
-						padding: 12px 14px;
-						border-radius: 10px;
-						background: var(--colors-surface-secondary, #f6f7fb);
-						color: var(--colors-text-secondary, #5f6472);
-					"
-				>
-					<i
-						class="mdi mdi-text-recognition"
-						style="font-size: 22px; color: var(--colors-brand-primary)"
-					></i>
-					<p style="margin: 0; font-size: 13px; line-height: 1.5">
-						Review and correct any details that were read incorrectly from the invoice.
-						The original uploaded file will not be changed.
-					</p>
-				</div>
+		<RejectDialog ref="rejectDialogRef" :wo-number="woNumber" @refresh="fetchWorkOrderDetails" />
 
-				<Textbox
-					v-model="invoiceForm.name"
-					label="File Name *"
-					placeholder="e.g. Invoice_I-000008.pdf"
-					hide-footer
-				/>
-				<Textbox
-					v-model="invoiceForm.refNo"
-					label="Invoice No."
-					placeholder="Enter invoice number"
-					hide-footer
-				/>
-				<div
-					style="
-						display: grid;
-						grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-						gap: 14px;
-					"
-				>
-					<DatePicker
-						v-model="invoiceForm.date"
-						label="Invoice Date"
-						:enableTime="false"
-					/>
-					<Textbox
-						v-model="invoiceForm.amount"
-						label="Amount (RM)"
-						type="number"
-						placeholder="0.00"
-						hide-footer
-					>
-						<template #prefix
-							><span style="font-size: 13px; color: var(--colors-text-muted)"
-								>RM</span
-							></template
-						>
-					</Textbox>
-				</div>
-			</div>
+		<ExtendDialog ref="extendDialogRef" :wo-number="woNumber" :work-order="workOrder" @refresh="fetchWorkOrderDetails" />
 
-			<template #footer>
-				<Button
-					variant="secondary"
-					:disabled="isSavingInvoice"
-					@click="isEditInvoiceDialogOpen = false"
-				>
-					Cancel
-				</Button>
-				<Button
-					variant="primary"
-					:loading="isSavingInvoice"
-					:disabled="!invoiceForm.name.trim() || isSavingInvoice"
-					@click="saveEditInvoice"
-				>
-					Save Changes
-				</Button>
-			</template>
-		</Dialog>
+		<LocationMapDialog ref="locationMapDialogRef" :wo-number="woNumber" :work-order="workOrder" />
 
-		<!-- Edit Payment Dialog -->
-		<Dialog v-model="isEditPaymentDialogOpen" title="Edit Payment Details" maxWidth="580px">
-			<div style="display: flex; flex-direction: column; gap: 18px">
-				<div
-					style="
-						display: flex;
-						gap: 12px;
-						padding: 12px 14px;
-						border-radius: 10px;
-						background: var(--colors-surface-secondary, #f6f7fb);
-						color: var(--colors-text-secondary, #5f6472);
-					"
-				>
-					<i
-						class="mdi mdi-text-recognition"
-						style="font-size: 22px; color: var(--colors-brand-primary)"
-					></i>
-					<p style="margin: 0; font-size: 13px; line-height: 1.5">
-						Review and correct any details that were read incorrectly from the payment
-						file. The original uploaded file will not be changed.
-					</p>
-				</div>
+		<NoteDialog ref="noteDialogRef" :wo-number="woNumber" @refresh="fetchWorkOrderDetails" />
 
-				<Textbox
-					v-model="paymentForm.fileName"
-					label="File Name *"
-					placeholder="e.g. Payment_Receipt.pdf"
-					hide-footer
-				/>
-				<Textbox
-					v-model="paymentForm.reference"
-					label="Payment Reference"
-					placeholder="Enter payment reference"
-					hide-footer
-				/>
-				<div
-					style="
-						display: grid;
-						grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-						gap: 14px;
-					"
-				>
-					<DatePicker
-						v-model="paymentForm.date"
-						label="Payment Date"
-						:enableTime="false"
-					/>
-					<Textbox
-						v-model="paymentForm.amount"
-						label="Amount (RM)"
-						type="number"
-						placeholder="0.00"
-						hide-footer
-					>
-						<template #prefix
-							><span style="font-size: 13px; color: var(--colors-text-muted)"
-								>RM</span
-							></template
-						>
-					</Textbox>
-				</div>
-			</div>
+		<UploadConfirmDialog ref="uploadConfirmDialogRef"  />
 
-			<template #footer>
-				<Button
-					variant="secondary"
-					:disabled="isSavingPayment"
-					@click="isEditPaymentDialogOpen = false"
-				>
-					Cancel
-				</Button>
-				<Button
-					variant="primary"
-					:loading="isSavingPayment"
-					:disabled="!paymentForm.fileName.trim() || isSavingPayment"
-					@click="saveEditPayment"
-				>
-					Save Changes
-				</Button>
-			</template>
-		</Dialog>
+		<FilePreviewDialog ref="filePreviewDialogRef"  />
 
-		<!-- Repeat Work Order Dialog -->
-		<Dialog v-model="isRepeatDialogOpen" title="Repeat Work Order" maxWidth="520px">
-			<div style="display: flex; flex-direction: column; gap: 16px">
-				<p class="text-muted" style="margin: 0; font-size: 13px">
-					Create an extended sub-order from
-					<strong>{{ workOrder.woNumber }}</strong> (e.g. {{ workOrder.woNumber }}-01).
-					Status will be <strong>NEW</strong>.
-				</p>
-
-				<Textbox
-					v-model="repeatForm.title"
-					label="Title (Optional)"
-					:placeholder="workOrder.title"
-					hide-footer
-				/>
-
-				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
-					<DatePicker
-						v-model="repeatForm.startDate"
-						label="New Start Date"
-						:enableTime="false"
-					/>
-					<DatePicker
-						v-model="repeatForm.estimatedEndDate"
-						label="New Est. End Date"
-						:enableTime="false"
-					/>
-				</div>
-
-				<div class="textbox-field">
-					<label class="custom-label">Description (Optional)</label>
-					<textarea
-						v-model="repeatForm.description"
-						class="custom-textarea"
-						rows="3"
-						:placeholder="workOrder.description"
-					></textarea>
-				</div>
-			</div>
-			<template #footer>
-				<Button variant="secondary" @click="isRepeatDialogOpen = false">Cancel</Button>
-				<Button variant="primary" @click="submitRepeat" :disabled="isRepeating">
-					<i
-						v-if="isRepeating"
-						class="mdi mdi-loading mdi-spin"
-						style="margin-right: 4px"
-					></i>
-					Create Sub-Order
-				</Button>
-			</template>
-		</Dialog>
-
-		<!-- Transfer Work Order Dialog -->
-		<Dialog v-model="isTransferDialogOpen" title="Transfer to New Work Order" maxWidth="520px">
-			<div style="display: flex; flex-direction: column; gap: 16px">
-				<p class="text-muted" style="margin: 0; font-size: 13px">
-					Transfer content from <strong>{{ workOrder.woNumber }}</strong> into a brand new
-					sequential work order (e.g. WO-0002). Status will be <strong>NEW</strong>.
-					Original work order remains unchanged.
-				</p>
-
-				<Textbox
-					v-model="transferForm.title"
-					label="Title (Optional)"
-					:placeholder="workOrder.title"
-					hide-footer
-				/>
-
-				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
-					<DatePicker
-						v-model="transferForm.startDate"
-						label="New Start Date"
-						:enableTime="false"
-					/>
-					<DatePicker
-						v-model="transferForm.estimatedEndDate"
-						label="New Est. End Date"
-						:enableTime="false"
-					/>
-				</div>
-
-				<div class="textbox-field">
-					<label class="custom-label">Description (Optional)</label>
-					<textarea
-						v-model="transferForm.description"
-						class="custom-textarea"
-						rows="3"
-						:placeholder="workOrder.description"
-					></textarea>
-				</div>
-			</div>
-			<template #footer>
-				<Button variant="secondary" @click="isTransferDialogOpen = false">Cancel</Button>
-				<Button variant="primary" @click="submitTransfer" :disabled="isTransferring">
-					<i
-						v-if="isTransferring"
-						class="mdi mdi-loading mdi-spin"
-						style="margin-right: 4px"
-					></i>
-					Confirm Transfer
-				</Button>
-			</template>
-		</Dialog>
-
-		<!-- Reject Work Order Dialog -->
-		<Dialog v-model="isRejectDialogOpen" title="Reject Work Order" maxWidth="500px">
-			<div style="display: flex; flex-direction: column; gap: 16px">
-				<p class="text-muted" style="margin: 0; font-size: 13px">
-					State the reason for rejecting this work order. It will be sent back to the In
-					Progress state.
-				</p>
-
-				<div class="textbox-field">
-					<label class="custom-label">Reason for Rejection *</label>
-					<textarea
-						v-model="rejectForm.rejectedReason"
-						class="custom-textarea"
-						rows="3"
-						placeholder="Explain why the work is rejected..."
-						required
-					></textarea>
-				</div>
-			</div>
-			<template #footer>
-				<Button variant="secondary" @click="closeRejectDialog">Cancel</Button>
-				<Button
-					v-slot:default
-					variant="primary"
-					style="background-color: var(--colors-error); border-color: var(--colors-error)"
-					@click="submitReject"
-					:disabled="!rejectForm.rejectedReason"
-				>
-					Reject Work Order
-				</Button>
-			</template>
-		</Dialog>
-
-		<!-- Extend Work Order Dialog-->
-		<Dialog v-model="isExtendDialogOpen" title="Extend Estimated End Date" maxWidth="520px">
-			<div class="extend-dialog-form">
-				<DatePicker
-					v-model="extendForm.newEstimatedEndDate"
-					label="New Estimated End Date *"
-					:enableTime="false"
-				/>
-				<div class="textbox-field">
-					<label class="custom-label">Extension Reason</label>
-					<textarea
-						v-model="extendForm.extensionReason"
-						class="custom-textarea"
-						rows="4"
-						placeholder="Enter the reason for extending the work order"
-					></textarea>
-				</div>
-			</div>
-			<template #footer>
-				<Button
-					variant="secondary"
-					:disabled="isExtending"
-					@click="isExtendDialogOpen = false"
-				>
-					Cancel
-				</Button>
-				<Button
-					variant="primary"
-					:loading="isExtending"
-					:disabled="!extendForm.newEstimatedEndDate"
-					@click="submitExtend"
-				>
-					Confirm Extension
-				</Button>
-			</template>
-		</Dialog>
-
-		<!-- Loaction Map Dialog -->
-		<Dialog v-model="isMapDialogOpen" title="Work Order Location" maxWidth="760px">
-			<GoogleMapPicker
-				v-model:location="workOrder.location"
-				v-model:latitude="workOrder.latitude"
-				v-model:longitude="workOrder.longitude"
-				:readonly="!canEditGeneral"
-				height="420px"
-			/>
-			<template #footer>
-				<Button variant="secondary" @click="isMapDialogOpen = false">Close</Button>
-				<Button v-if="canEditGeneral" variant="primary" @click="isMapDialogOpen = false">
-					Done
-				</Button>
-			</template>
-		</Dialog>
-
-		<!-- Add/Edit Note Dialog -->
-		<Dialog
-			v-model="isNoteDialogOpen"
-			:title="`${isEditingNote ? 'Edit' : 'Add'} Work Note`"
-			maxWidth="500px"
-		>
-			<div style="display: flex; flex-direction: column; gap: 16px">
-				<div class="textbox-field">
-					<label class="custom-label">Note Content *</label>
-					<textarea
-						v-model="noteForm.content"
-						class="custom-textarea"
-						rows="4"
-						placeholder="Enter notes..."
-						required
-					></textarea>
-				</div>
-
-				<div class="select-field">
-					<label class="custom-label">View Level *</label>
-					<select v-model="noteForm.viewLevel" class="custom-select">
-						<option value="internal">Internal (Team Only)</option>
-						<option value="customer">External (Customer Viewable)</option>
-					</select>
-				</div>
-			</div>
-			<template #footer>
-				<Button variant="secondary" @click="closeNoteDialog">Cancel</Button>
-				<Button
-					v-slot:default
-					variant="primary"
-					@click="submitWorkNote"
-					:disabled="!noteForm.content"
-				>
-					Save Note
-				</Button>
-			</template>
-		</Dialog>
-
-		<!-- Upload Confirmation & Rename Dialog -->
-		<Dialog v-model="isUploadConfirmOpen" title="Upload File" maxWidth="500px">
-			<div style="display: flex; flex-direction: column; gap: 16px; align-items: center">
-				<!-- Small Preview -->
-				<div
-					v-if="uploadPreviewUrl"
-					style="
-						width: 120px;
-						height: 120px;
-						border-radius: 8px;
-						overflow: hidden;
-						border: 1px solid var(--colors-surface-border);
-					"
-				>
-					<img
-						:src="uploadPreviewUrl"
-						style="width: 100%; height: 100%; object-fit: cover"
-					/>
-				</div>
-				<div
-					v-else-if="uploadTargetFile"
-					style="
-						width: 120px;
-						height: 120px;
-						border-radius: 8px;
-						display: flex;
-						flex-direction: column;
-						align-items: center;
-						justify-content: center;
-						background: rgba(239, 68, 68, 0.05);
-						color: #ef4444;
-					"
-				>
-					<i class="mdi mdi-file-pdf-box" style="font-size: 48px"></i>
-					<span style="font-size: 11px; font-weight: 600">PDF Document</span>
-				</div>
-
-				<!-- Filename Input -->
-				<div class="textbox-field" style="width: 100%">
-					<label class="custom-label">File Name</label>
-					<input
-						type="text"
-						v-model="uploadCustomFileName"
-						class="custom-input"
-						placeholder="Enter filename..."
-						required
-					/>
-				</div>
-			</div>
-			<template #footer>
-				<Button variant="secondary" @click="cancelFileUpload">Cancel</Button>
-				<Button
-					variant="primary"
-					@click="confirmFileUpload"
-					:disabled="!uploadCustomFileName.trim()"
-				>
-					Upload
-				</Button>
-			</template>
-		</Dialog>
-
-		<!-- File Preview & Rename Dialog -->
-		<Dialog v-model="isPreviewDialogOpen" title="File Preview & Details" maxWidth="600px">
-			<div style="display: flex; flex-direction: column; gap: 16px; align-items: center">
-				<!-- Loading -->
-				<div
-					v-if="isLoadingFilePreview"
-					style="
-						height: 320px;
-						width: 100%;
-						display: flex;
-						flex-direction: column;
-						align-items: center;
-						justify-content: center;
-						gap: 10px;
-						color: var(--colors-text-muted);
-					"
-				>
-					<i
-						class="mdi mdi-loading mdi-spin"
-						style="font-size: 34px; color: var(--colors-brand-primary)"
-					></i>
-					<span style="font-size: 13px">Loading file preview...</span>
-				</div>
-				<!-- Error -->
-				<div
-					v-else-if="filePreviewError"
-					style="
-						height: 240px;
-						width: 100%;
-						display: flex;
-						flex-direction: column;
-						align-items: center;
-						justify-content: center;
-						gap: 10px;
-						border: 1px dashed var(--colors-surface-border);
-						border-radius: 8px;
-						color: var(--colors-text-muted);
-					"
-				>
-					<i
-						class="mdi mdi-file-alert-outline"
-						style="font-size: 38px; color: var(--colors-error, #ef4444)"
-					></i>
-					<span style="font-size: 13px">
-						{{ filePreviewError }}
-					</span>
-
-					<Button
-						variant="secondary"
-						@click="previewTargetFile && openFilePreview(previewTargetFile)"
-					>
-						Try Again
-					</Button>
-				</div>
-
-				<!-- Preview media -->
-				<div v-else-if="previewTargetFile?.url" style="width: 100%">
-					<div
-						v-if="isPdfFile(previewTargetFile.name)"
-						style="width: 100%; display: flex; flex-direction: column; gap: 12px"
-					>
-						<iframe
-							:src="previewTargetFile.url"
-							style="
-								width: 100%;
-								height: 480px;
-								border: 1px solid var(--colors-surface-border);
-								border-radius: 8px;
-								background: white;
-							"
-						></iframe>
-						<a
-							:href="previewTargetFile.url"
-							target="_blank"
-							style="
-								display: flex;
-								align-items: center;
-								justify-content: center;
-								gap: 6px;
-								padding: 10px;
-								background: rgba(239, 68, 68, 0.05);
-								border: 1px solid rgba(239, 68, 68, 0.15);
-								border-radius: 6px;
-								color: #ef4444;
-								text-decoration: none;
-								font-size: 13px;
-								font-weight: 600;
-								transition: all 0.2s;
-							"
-						>
-							<i class="mdi mdi-open-in-new" style="font-size: 16px"></i>
-							Open PDF in New Tab
-						</a>
-					</div>
-
-					<!-- Image File Preview -->
-					<div
-						v-else
-						style="
-							width: 100%;
-							max-height: 320px;
-							border-radius: 8px;
-							overflow: hidden;
-							background: var(--colors-surface-background);
-							display: flex;
-							align-items: center;
-							justify-content: center;
-							border: 1px solid var(--colors-surface-border);
-						"
-					>
-						<img
-							:src="previewTargetFile.url"
-							style="max-width: 100%; max-height: 320px; object-fit: contain"
-						/>
-					</div>
-				</div>
-
-				<!-- Rename Input -->
-				<div class="textbox-field" style="width: 100%">
-					<label class="custom-label">File Name</label>
-					<input
-						type="text"
-						v-model="previewCustomFileName"
-						class="custom-input"
-						:disabled="!isEditing"
-						placeholder="Enter file name..."
-					/>
-				</div>
-			</div>
-			<template #footer>
-				<Button variant="secondary" @click="isPreviewDialogOpen = false">Close</Button>
-				<Button
-					v-if="isEditing && previewTargetFile"
-					variant="primary"
-					@click="savePreviewFileRename"
-					:disabled="!previewCustomFileName.trim()"
-				>
-					Save Changes
-				</Button>
-			</template>
-		</Dialog>
-
-		<!-- Reusable Confirmation Dialog -->
-		<Dialog
-			v-model="isConfirmDialogOpen"
-			:title="confirmTitle"
-			maxWidth="440px"
-			:confirmText="confirmButtonText"
-			:confirmVariant="confirmVariant"
-			@confirm="handleConfirmDialog"
-			@cancel="isConfirmDialogOpen = false"
-		>
-			<p
-				style="
-					margin: 0;
-					font-size: 14px;
-					color: var(--colors-text-secondary);
-					line-height: 1.5;
-				"
-			>
-				{{ confirmMessage }}
-			</p>
-		</Dialog>
+		<ConfirmDialog ref="confirmDialogRef" />
 	</div>
 </template>
 

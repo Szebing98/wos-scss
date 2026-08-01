@@ -35,18 +35,5 @@ const parts = computed(() => {
 </template>
 
 <style lang="scss">
-.highlight-text-wrapper {
-	display: inline;
-}
-
-.highlight-mark {
-	background-color: #fef08a !important; // Warm bright yellow background
-	color: #854d0e !important;           // Contrast amber text color
-	padding: 1px 3px !important;
-	border-radius: 3px !important;
-	font-weight: 600 !important;
-	box-shadow: 0 1px 2px rgba(234, 179, 8, 0.25);
-	line-height: inherit;
-	font-family: inherit;
-}
+@use "@/styles/components/_highlight-text.scss";
 </style>

@@ -19,43 +19,5 @@ defineProps<{
 </script>
 
 <style lang="scss" scoped>
-.panel-card {
-	background: var(--colors-surface-card);
-	border: 1px solid var(--colors-surface-border);
-	border-radius: var(--radius-xxs, 12px);
-	padding: var(--spacing-lg);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-	display: flex;
-	flex-direction: column;
-
-
-	&--bordered {
-		border-left: 6px solid var(--colors-brand-primary);
-	}
-
-	&__header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: var(--spacing-lg);
-
-		:deep(h2), :deep(h3) {
-			font-size: 16px;
-			font-weight: 600;
-			margin: 0;
-			color: var(--colors-text-primary);
-		}
-	}
-
-	&__content {
-		flex: 1;
-	}
-
-	&__actions {
-		display: flex;
-		justify-content: flex-end;
-		margin-top: var(--spacing-md);
-		gap: var(--spacing-sm);
-	}
-}
+@use "@/styles/components/_card.scss";
 </style>

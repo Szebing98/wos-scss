@@ -196,47 +196,5 @@ function handleDateFormatChange(val: string) {
 </template>
 
 <style lang="scss" scoped>
-.settings-page {
-	padding: var(--spacing-xl);
-	
-	&__header {
-		margin-bottom: var(--spacing-xl);
-		
-		h1 {
-			font-size: 24px;
-			font-weight: 700;
-			margin: 0 0 4px 0;
-			color: var(--colors-text-primary);
-		}
-	}
-}
-
-.settings-grid {
-	display: flex;
-	flex-direction: column;
-	gap: var(--spacing-lg);
-}
-
-.setting-item {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: var(--spacing-md) 0;
-}
-
-.form-group {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-	
-	&__label {
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--colors-text-secondary);
-	}
-}
-
-.u-required {
-	color: #ef4444;
-}
+@use "@/styles/pages/_settings.scss";
 </style>

@@ -8,21 +8,5 @@ import Snackbar from "@/components/Snackbar.vue";
 </template>
 
 <style lang="scss" scoped>
-body {
-	margin: 0;
-	padding: 0;
-	box-sizing: border-box;
-}
-
-.status-card {
-	background-color: var(--card-color);
-	color: white;
-
-	:global([data-theme="dark"]) & {
-		background: linear-gradient(135deg, #1e1e2d 0%, #151521 100%);
-		color: #ffffff;
-		border-left: 5px solid var(--card-color);
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-	}
-}
+@use "@/styles/layout/_app.scss";
 </style>

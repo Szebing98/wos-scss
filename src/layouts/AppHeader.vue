@@ -4,7 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import type { MeResponse } from "@/api/auth/auth.types";
 import { notificationApi } from "@/api/notification/notification.api";
 import type { NotificationItem } from "@/api/notification/notification.types";
-import { getAvatarUrl } from "@/utils/avatar";
+import { getAvatarUrl } from "@/utils/User/avatar";
 
 const props = defineProps<{
 	currentUser: MeResponse | null;

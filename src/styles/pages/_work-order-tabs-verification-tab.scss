@@ -1,0 +1,51 @@
+.verification-actions-box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	padding: 32px 16px;
+	gap: 12px;
+
+	&__icon {
+		width: 64px;
+		height: 64px;
+		border-radius: 50%;
+		background: rgba(80, 88, 242, 0.1);
+		color: var(--colors-brand-primary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 32px;
+	}
+
+	h4 {
+		margin: 0;
+		font-size: 18px;
+		font-weight: 600;
+		color: var(--colors-text-primary);
+	}
+}
+
+.verification-buttons-row {
+	display: flex;
+	gap: 16px;
+	margin-top: 12px;
+}
+
+.verification-result-box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	padding: 36px 16px;
+
+	&--approved {
+		background: rgba(16, 185, 129, 0.04);
+		border-radius: 8px;
+	}
+
+	&--rejected {
+		background: rgba(239, 68, 68, 0.04);
+		border-radius: 8px;
+	}
+}
