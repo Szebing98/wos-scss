@@ -11,7 +11,7 @@
  * The /api/user/avatar endpoint does NOT require auth,
  * so it works with plain <img :src="..."> tags.
  */
-const API_BASE = "http://localhost:3707";
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3707/api").replace(/\/api$/, "");
 
 export function getAvatarUrl(path: string | null | undefined): string {
 	if (!path) return "";

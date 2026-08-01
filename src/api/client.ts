@@ -21,7 +21,7 @@ const authMiddleware: Middleware = {
 };
 
 const client = createClient<paths>({
-	baseUrl: "http://localhost:3707",
+	baseUrl: (import.meta.env.VITE_API_URL || "http://localhost:3707/api").replace(/\/api$/, ""),
 	credentials: "include",
 });
 
