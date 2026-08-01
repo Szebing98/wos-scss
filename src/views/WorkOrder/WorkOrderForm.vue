@@ -865,6 +865,7 @@ function validateDraftForm(): boolean {
 		isValid = false;
 	}
 
+	if (!isValid) snackbar.warning("Please fill in all compulsory fields (*).");
 	return isValid;
 }
 
@@ -965,6 +966,7 @@ function validateForm(): boolean {
 		}
 	}
 
+	if (!isValid) snackbar.warning("Please fill in all compulsory fields (*).");
 	return isValid;
 }
 
@@ -973,6 +975,7 @@ function validateApprovalAttachments(): boolean {
 	if (formData.value.siteInstructionsFiles.length < 2) {
 		siteInstructionsError.value =
 			"At least 2 site instruction files are required when requesting approval";
+		snackbar.warning(siteInstructionsError.value);
 		return false;
 	}
 	return true;

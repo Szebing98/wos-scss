@@ -1016,8 +1016,12 @@ async function handleExport(format: "CSV" | "PDF") {
 
 		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
 		const date = new Date().toISOString().slice(0, 10);
-		if (format === "CSV") downloadCsv(`work-orders-${date}.csv`, rows);
-		else printRowsAsPdf("Work Order Report", rows);
+		const exportColumns = headers.value
+			.filter((h) => h.key !== "select" && h.key !== "actions")
+			.map((h) => ({ key: h.key, label: h.label }));
+
+		if (format === "CSV") downloadCsv(`work-orders-${date}.csv`, rows, exportColumns);
+		else printRowsAsPdf("Work Order Report", rows, exportColumns);
 		snackbar.success(`${rows.length} work order(s) exported.`);
 	} catch (error) {
 		console.error("Failed to export work orders:", error);
@@ -1490,7 +1494,8 @@ defineExpose({
 						/>
 					</div>
 				</FilterPanel>
-				<!-- <Button
+				<Button
+					v-if="authStore.can('export', 'Report')"
 					variant="outlined"
 					@click="handleExport('CSV')"
 					:disabled="exporting"
@@ -1503,7 +1508,7 @@ defineExpose({
 						style="font-size: 18px"
 					></i>
 					<span class="filter-label-text">{{ exporting ? "Exporting..." : "CSV" }}</span>
-				</Button> -->
+				</Button>
 				<Button
 					v-if="authStore.can('export', 'report')"
 					variant="outlined"

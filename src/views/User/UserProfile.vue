@@ -295,7 +295,7 @@ watch(
 
 async function handleSaveProfile() {
 	if (!profileData.value.name || !profileData.value.email) {
-		snackbar.error("Please fill in all required fields.");
+		snackbar.warning("Please fill in all compulsory fields (*).");
 		return;
 	}
 

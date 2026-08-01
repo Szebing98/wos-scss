@@ -172,8 +172,12 @@ async function handleExport(format: "CSV" | "PDF") {
 		if (error) throw new Error(getApiErrorMessage(error, "Export request failed."));
 		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
 		const date = new Date().toISOString().slice(0, 10);
-		if (format === "CSV") downloadCsv(`customers-${date}.csv`, rows);
-		else printRowsAsPdf("Customer Report", rows);
+		const exportColumns = headers.value
+			.filter((h) => h.key !== "select" && h.key !== "actions")
+			.map((h) => ({ key: h.key, label: h.label }));
+
+		if (format === "CSV") downloadCsv(`customers-${date}.csv`, rows, exportColumns);
+		else printRowsAsPdf("Customer Report", rows, exportColumns);
 		snackbar.success(`${rows.length} customer(s) exported.`);
 	} catch (error) {
 		snackbar.error(error instanceof Error ? error.message : "Failed to export customers.");

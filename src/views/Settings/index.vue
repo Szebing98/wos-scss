@@ -97,37 +97,35 @@ function handleDateFormatChange(val: string) {
 			<!-- Theme Preference -->
 			<Card bordered>
 				<template #header>
-					<PageHeader>
-						<template #title>
-							<h2 style="font-size: 18px; display: flex; align-items: center;"><i class="mdi mdi-palette-outline" style="color: var(--colors-brand-primary); margin-right: 8px;"></i>Appearance & Theme</h2>
-						</template>
-					</PageHeader>
+					<h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
+						<i class="mdi mdi-palette-outline" style="color: var(--colors-brand-primary);"></i>
+						Appearance & Theme
+					</h2>
 				</template>
-				<div class="setting-item">
-					<div>
-						<h3 style="margin: 0 0 4px 0; font-size: 16px;">Theme Mode</h3>
-						<p class="u-text-muted" style="margin: 0; font-size: 14px;">Toggle between Light and Dark mode</p>
-					</div>
-					<Button variant="outlined" @click="themeStore.toggleTheme()" style="display: flex; align-items: center; gap: 8px;">
-						<i class="mdi" :class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'" style="font-size: 18px;"></i>
-						{{ themeStore.dark ? 'Dark Mode' : 'Light Mode' }}
-					</Button>
-				</div>
+				<PageHeader title="Theme Mode" style="border: none; margin-bottom: 0; padding-bottom: 0;">
+					<template #subtitle>
+						<p class="page-header__subtitle">Toggle between Light and Dark mode</p>
+					</template>
+					<template #actions>
+						<Button variant="outlined" @click="themeStore.toggleTheme()" style="display: flex; align-items: center; gap: 8px;">
+							<i class="mdi" :class="themeStore.dark ? 'mdi-brightness-4' : 'mdi-brightness-7'" style="font-size: 18px;"></i>
+							{{ themeStore.dark ? 'Dark Mode' : 'Light Mode' }}
+						</Button>
+					</template>
+				</PageHeader>
 			</Card>
 
 			<!-- System Date Format Preference -->
 			<Card bordered>
 				<template #header>
-					<PageHeader>
-						<template #title>
-							<h2 style="font-size: 18px; display: flex; align-items: center;"><i class="mdi mdi-calendar-clock-outline" style="color: var(--colors-brand-primary); margin-right: 8px;"></i>System Date Display Format</h2>
-						</template>
-					</PageHeader>
+					<h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
+						<i class="mdi mdi-calendar-clock-outline" style="color: var(--colors-brand-primary);"></i>
+						System Date Display Format
+					</h2>
 				</template>
-				<div class="setting-item" style="flex-wrap: wrap; gap: 16px;">
-					<div>
-						<h3 style="margin: 0 0 4px 0; font-size: 16px;">Global Date Separator & Style</h3>
-						<p class="u-text-muted" style="margin: 0; font-size: 14px;">
+				<PageHeader title="Global Date Separator & Style" style="border: none; margin-bottom: 0; padding-bottom: 0;">
+					<template #subtitle>
+						<p class="page-header__subtitle">
 							Choose your preferred system date style (dots, dashes, slashes, or word text)
 						</p>
 						<div class="live-date-preview" style="margin-top: 8px;">
@@ -136,41 +134,42 @@ function handleDateFormatChange(val: string) {
 								{{ dateFormatStore.formatDate(new Date()) }}
 							</strong>
 						</div>
-					</div>
-
-					<div style="min-width: 220px;">
-						<Select :model-value="dateFormatStore.currentFormat" @update:model-value="handleDateFormatChange">
-							<option value="YYYY-MM-DD">YYYY-MM-DD (Dashed: 2026-07-26)</option>
-							<option value="YYYY.MM.DD">YYYY.MM.DD (Dotted: 2026.07.26)</option>
-							<option value="DD.MM.YYYY">DD.MM.YYYY (Dotted: 26.07.2026)</option>
-							<option value="DD/MM/YYYY">DD/MM/YYYY (Slash: 26/07/2026)</option>
-							<option value="DD-MM-YYYY">DD-MM-YYYY (Dashed: 26-07-2026)</option>
-							<option value="YYYY/MM/DD">YYYY/MM/DD (Slash: 2026/07/26)</option>
-							<option value="DD MMM YYYY">DD MMM YYYY (Word Text: 26 Jul 2026)</option>
-						</Select>
-					</div>
-				</div>
+					</template>
+					<template #actions>
+						<div style="min-width: 220px;">
+							<Select :model-value="dateFormatStore.currentFormat" @update:model-value="handleDateFormatChange">
+								<option value="YYYY-MM-DD">YYYY-MM-DD (Dashed: 2026-07-26)</option>
+								<option value="YYYY.MM.DD">YYYY.MM.DD (Dotted: 2026.07.26)</option>
+								<option value="DD.MM.YYYY">DD.MM.YYYY (Dotted: 26.07.2026)</option>
+								<option value="DD/MM/YYYY">DD/MM/YYYY (Slash: 26/07/2026)</option>
+								<option value="DD-MM-YYYY">DD-MM-YYYY (Dashed: 26-07-2026)</option>
+								<option value="YYYY/MM/DD">YYYY/MM/DD (Slash: 2026/07/26)</option>
+								<option value="DD MMM YYYY">DD MMM YYYY (Word Text: 26 Jul 2026)</option>
+							</Select>
+						</div>
+					</template>
+				</PageHeader>
 			</Card>
 
 			<!-- Security Settings -->
 			<Card bordered>
 				<template #header>
-					<PageHeader>
-						<template #title>
-							<h2 style="font-size: 18px; display: flex; align-items: center;"><i class="mdi mdi-shield-lock-outline" style="color: var(--colors-brand-primary); margin-right: 8px;"></i>Account Security</h2>
-						</template>
-					</PageHeader>
+					<h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
+						<i class="mdi mdi-shield-lock-outline" style="color: var(--colors-brand-primary);"></i>
+						Account Security
+					</h2>
 				</template>
-				<div class="setting-item">
-					<div>
-						<h3 style="margin: 0 0 4px 0; font-size: 16px;">Change Password</h3>
-						<p class="u-text-muted" style="margin: 0; font-size: 14px;">Ensure your account is using a secure password</p>
-					</div>
-					<Button variant="outlined" @click="openPasswordModal" style="display: flex; align-items: center; gap: 8px;">
-						<i class="mdi mdi-lock-reset" style="font-size: 18px;"></i>
-						Change Password
-					</Button>
-				</div>
+				<PageHeader title="Change Password" style="border: none; margin-bottom: 0; padding-bottom: 0;">
+					<template #subtitle>
+						<p class="page-header__subtitle">Ensure your account is using a secure password</p>
+					</template>
+					<template #actions>
+						<Button variant="outlined" @click="openPasswordModal" style="display: flex; align-items: center; gap: 8px;">
+							<i class="mdi mdi-lock-reset" style="font-size: 18px;"></i>
+							Change Password
+						</Button>
+					</template>
+				</PageHeader>
 			</Card>
 		</div>
 
