@@ -19,6 +19,3 @@ defineProps<{
 	</div>
 </template>
 
-<style lang="scss" scoped>
-@use "@/styles/components/_page-header.scss";
-</style>

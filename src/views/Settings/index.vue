@@ -97,10 +97,11 @@ function handleDateFormatChange(val: string) {
 			<!-- Theme Preference -->
 			<Card bordered>
 				<template #header>
-					<h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
-						<i class="mdi mdi-palette-outline" style="color: var(--colors-brand-primary);"></i>
-						Appearance & Theme
-					</h2>
+					<PageHeader>
+						<template #title>
+							<h2 style="font-size: 18px; display: flex; align-items: center;"><i class="mdi mdi-palette-outline" style="color: var(--colors-brand-primary); margin-right: 8px;"></i>Appearance & Theme</h2>
+						</template>
+					</PageHeader>
 				</template>
 				<div class="setting-item">
 					<div>
@@ -117,10 +118,11 @@ function handleDateFormatChange(val: string) {
 			<!-- System Date Format Preference -->
 			<Card bordered>
 				<template #header>
-					<h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
-						<i class="mdi mdi-calendar-clock-outline" style="color: var(--colors-brand-primary);"></i>
-						System Date Display Format
-					</h2>
+					<PageHeader>
+						<template #title>
+							<h2 style="font-size: 18px; display: flex; align-items: center;"><i class="mdi mdi-calendar-clock-outline" style="color: var(--colors-brand-primary); margin-right: 8px;"></i>System Date Display Format</h2>
+						</template>
+					</PageHeader>
 				</template>
 				<div class="setting-item" style="flex-wrap: wrap; gap: 16px;">
 					<div>
@@ -153,10 +155,11 @@ function handleDateFormatChange(val: string) {
 			<!-- Security Settings -->
 			<Card bordered>
 				<template #header>
-					<h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
-						<i class="mdi mdi-shield-lock-outline" style="color: var(--colors-brand-primary);"></i>
-						Account Security
-					</h2>
+					<PageHeader>
+						<template #title>
+							<h2 style="font-size: 18px; display: flex; align-items: center;"><i class="mdi mdi-shield-lock-outline" style="color: var(--colors-brand-primary); margin-right: 8px;"></i>Account Security</h2>
+						</template>
+					</PageHeader>
 				</template>
 				<div class="setting-item">
 					<div>

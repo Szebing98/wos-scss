@@ -59,6 +59,12 @@ const routes = [
 				component: () => import("@/views/Notifications/index.vue"),
 				meta: { requiresAuth: true, breadcrumb: "Notifications" },
 			},
+			{
+				path: "about",
+				name: "About",
+				component: () => import("@/views/About/index.vue"),
+				meta: { requiresAuth: true },
+			},
 		],
 	},
 	{

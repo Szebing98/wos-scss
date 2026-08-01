@@ -372,17 +372,17 @@ onMounted(() => {
 			</div> -->
 
 			<div class="dashboard__panel" style="margin-top: 24px">
-				<div class="dashboard__panel-header">
-					<h2 class="dashboard__panel-title">All Work Orders</h2>
-					<button
-						class="btn btn--primary"
-						v-if="authStore.can('create', 'WorkOrder')"
-						@click="handleCreateClick"
-					>
-						<i class="mdi mdi-plus"></i>
-						Create New Work Order
-					</button>
-				</div>
+				<PageHeader title="All Work Orders">
+					<template #actions>
+						<button
+							class="btn btn--primary"
+							v-if="authStore.can('create', 'WorkOrder')"
+							@click="handleCreateClick"
+						>
+							<i class="mdi mdi-plus"></i> <span class="btn-text">Create New Work Order</span>
+						</button>
+					</template>
+				</PageHeader>
 				<WorkOrderList ref="workOrderListRef" status="All" hideHeader />
 			</div>
 		</div>
