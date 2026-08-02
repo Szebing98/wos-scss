@@ -170,11 +170,25 @@ async function handleExport(format: "CSV" | "PDF") {
 			type: "list",
 		});
 		if (error) throw new Error(getApiErrorMessage(error, "Export request failed."));
-		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
+		const rawRows = ((data as any)?.data || []) as Record<string, any>[];
+		const rows = rawRows.map((c) => ({
+			status: c.isActive ? "Active" : "Inactive",
+			customer: c.name || "",
+			classification: getCustomerClassification(c.individualType || "", c.identityNo || ""),
+			autocount: c.accountNo || "",
+			contractNo: c.contractNo || c.metadata?.contractNo || "",
+			einvoice: c.requestEinvoice ? "Requested" : "Not Requested",
+			email: c.email || "",
+			phone: c.phone || "",
+		}));
 		const date = new Date().toISOString().slice(0, 10);
-		const exportColumns = headers.value
-			.filter((h) => h.key !== "select" && h.key !== "actions")
-			.map((h) => ({ key: h.key, label: h.label }));
+		const exportColumns = [
+			...headers.value
+				.filter((h) => h.key !== "select" && h.key !== "actions")
+				.map((h) => ({ key: h.key, label: h.label })),
+			{ key: "email", label: "Email" },
+			{ key: "phone", label: "Phone" },
+		];
 
 		if (format === "CSV") downloadCsv(`customers-${date}.csv`, rows, exportColumns);
 		else printRowsAsPdf("Customer Report", rows, exportColumns);

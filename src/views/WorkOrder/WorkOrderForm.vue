@@ -419,20 +419,7 @@ async function loadOptions() {
 			customers.value = custRes.data.data.map((c: any) => ({
 				code: c.code,
 				name: c.name,
-				contracts: c.contracts || [
-					{
-						contractNo: `CTR-${c.code}-01`,
-						contractName: `Annual Maintenance (${c.code})`,
-						startDate: "2026-01-01",
-						endDate: "2026-12-31",
-					},
-					{
-						contractNo: `CTR-${c.code}-02`,
-						contractName: `Equipment Overhaul (${c.code})`,
-						startDate: "2026-06-01",
-						endDate: "2027-05-31",
-					},
-				],
+				contracts: c.contracts || [],
 			}));
 		}
 
@@ -1875,7 +1862,9 @@ const statusColors: Record<string, string> = {
 
 							<!-- Work Description -->
 							<div class="col-12 textbox-field" style="margin-top: 8px">
-								<label class="custom-label">Work Description *</label>
+								<label class="textbox-field__label">
+									Work Description <span class="required-asterisk">*</span>
+								</label>
 								<textarea
 									v-model="formData.description"
 									:disabled="isFieldDisabled('description')"

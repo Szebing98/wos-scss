@@ -414,7 +414,9 @@ function openImageModal(url: string) {
 
 		<!-- Work Description -->
 		<div class="col-12 textbox-field" style="margin-top: 8px">
-			<label class="custom-label">Work Description *</label>
+			<label class="textbox-field__label">
+				Work Description <span class="required-asterisk">*</span>
+			</label>
 			<textarea
 				v-model="workOrder.description"
 				class="custom-textarea"

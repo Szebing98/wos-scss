@@ -15,7 +15,6 @@ import { userApi } from "@/api/user/user.api";
 import { useAuthStore } from "@/stores/auth.store";
 import { getAvatarUrl } from "@/utils/User/avatar";
 import HighlightText from "@/components/HighlightText.vue";
-import { reportApi } from "@/api/report/report.api";
 import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
 
 interface UserModel {
@@ -193,12 +192,30 @@ async function handleExport(format: "CSV" | "PDF") {
 	if (exporting.value) return;
 	exporting.value = true;
 	try {
-		const { data, error } = await reportApi.exportUsers({
-			format,
-			type: "list",
-		});
+		const query: any = {
+			pageIndex: 0,
+			pageSize: 1000,
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+		};
+		if (searchQuery.value) query.q = searchQuery.value;
+		if (roleFilter.value !== "all") query.userGroupCode = roleFilter.value;
+
+		if (filterStatus.value === "active") query.isActive = "true";
+		else if (filterStatus.value === "inactive") query.isActive = "false";
+
+		const { data, error } = await userApi.getUsers(query);
 		if (error) throw new Error(getApiErrorMessage(error, "Export request failed."));
-		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
+		const rawRows = (data?.data || []) as any[];
+		const rows = rawRows.map((u) => ({
+			status: u.isActive ? "Active" : "Inactive",
+			employee: u.displayName || u.profile?.displayName || u.name || "Unknown",
+			code: u.displayCode || (u.guid ? u.guid.substring(0, 8).toUpperCase() : ""),
+			role:
+				u.groups && u.groups.length > 0
+					? u.groups[0].name || u.groups[0].code
+					: u.userGroupCode || u.role || "Unassigned",
+			email: u.email || "",
+		}));
 		const date = new Date().toISOString().slice(0, 10);
 		const exportColumns = headers.value
 			.filter((h) => h.key !== "select" && h.key !== "actions")
