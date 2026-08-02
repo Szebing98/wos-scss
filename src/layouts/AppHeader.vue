@@ -59,6 +59,11 @@ function toggleNotifications() {
 	}
 }
 
+function toggleAccount() {
+	isNotificationsOpen.value = false;
+	isAccountOpenMobile.value = !isAccountOpenMobile.value;
+}
+
 async function fetchUnreadNotifications() {
 	isLoadingNotifications.value = true;
 	notificationError.value = "";
@@ -325,7 +330,8 @@ onUnmounted(() => {
 			<div class="account-menu-wrapper">
 				<button
 					class="icon-btn account-btn"
-					@click.stop="isAccountOpenMobile = !isAccountOpenMobile"
+					:aria-expanded="isAccountOpenMobile"
+					@click.stop="toggleAccount"
 					aria-label="Account"
 				>
 					<i class="mdi mdi-account-circle-outline"></i>

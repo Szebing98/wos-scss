@@ -20,6 +20,7 @@ const emit = defineEmits<{
 
 const route = useRoute();
 const authStore = useAuthStore();
+const isLoadingNavigation = computed(() => !!authStore.token && !authStore.currentUser);
 const canAccessMaintenance = computed(() =>
 	[
 		["read", "Location"],
@@ -90,7 +91,13 @@ watch(
 			'is-rail': (isDesktop && isDocked) || isTablet,
 		}"
 	>
-		<nav class="nav">
+		<div v-if="isLoadingNavigation" class="sidebar-loader" role="status" aria-label="Loading navigation">
+			<div v-for="item in 7" :key="item" class="sidebar-loader__item">
+				<span class="sidebar-loader__icon"></span>
+				<span class="sidebar-loader__label"></span>
+			</div>
+		</div>
+		<nav v-else class="nav">
 			<!-- Dashboard -->
 			<router-link
 				class="nav__item"
