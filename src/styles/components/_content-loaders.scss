@@ -64,6 +64,14 @@
 		overflow-x: auto;
 	}
 
+	&--overlay {
+		position: absolute;
+		inset: 76px 0 0;
+		z-index: 40;
+		padding-top: var(--spacing-md);
+		background: var(--colors-surface-background);
+	}
+
 	&__form-section {
 		margin-bottom: var(--spacing-lg);
 	}
@@ -84,6 +92,10 @@
 		height: 40px;
 		width: 100%;
 	}
+}
+
+.maintenance-view {
+	position: relative;
 }
 
 @keyframes content-loader-shimmer {

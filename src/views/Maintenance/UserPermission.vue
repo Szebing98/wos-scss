@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageHeader from "@/components/PageHeader.vue";
+import FormLoader from "@/components/FormLoader.vue";
 import { ref, shallowRef, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import Textbox from "@/components/Textbox.vue";
@@ -38,6 +39,7 @@ const selectedUserCode = ref("");
 const selectedUser = ref<UserModel | null>(null);
 const searchQuery = ref("");
 const isLoadingPermissions = ref(false);
+const isInitialLoading = ref(true);
 const showPermissionMatrix = ref(false);
 const isSaving = ref(false);
 const isEditingOverrides = ref(false);
@@ -251,6 +253,7 @@ onMounted(async () => {
 			handleUserSelection(target);
 		}
 	}
+	isInitialLoading.value = false;
 });
 
 const filteredGroupedPermissions = computed(() => {
@@ -446,6 +449,7 @@ async function saveOverrides() {
 				</template>
         </template>
     </PageHeader>
+		<FormLoader v-if="isInitialLoading" overlay :sections="3" :fields-per-section="4" />
 
 		<div class="overrides-container">
 			<div class="panel-card panel-card--selector mb-md">

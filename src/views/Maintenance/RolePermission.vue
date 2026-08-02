@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageHeader from "@/components/PageHeader.vue";
+import FormLoader from "@/components/FormLoader.vue";
 import { ref, shallowRef, computed, onMounted } from "vue";
 import Textbox from "@/components/Textbox.vue";
 import Badge from "@/components/Badge.vue";
@@ -32,6 +33,7 @@ interface PermissionModel {
 const snackbar = useSnackbarStore();
 
 const isLoadingGroups = ref(false);
+const isInitialLoading = ref(true);
 const isLoadingPermissions = ref(false);
 const isSaving = ref(false);
 const showPermissionMatrix = ref(false);
@@ -353,7 +355,8 @@ onMounted(async () => {
 		initTasks.push(authStore.fetchMe());
 	}
 	await Promise.all(initTasks);
-	loadGroups();
+	await loadGroups();
+	isInitialLoading.value = false;
 });
 </script>
 
@@ -404,6 +407,7 @@ onMounted(async () => {
 				</template>
         </template>
     </PageHeader>
+		<FormLoader v-if="isInitialLoading" overlay :sections="3" :fields-per-section="4" />
 
 		<div class="maintenance-grid">
 			<div class="maintenance-grid__left-panel">

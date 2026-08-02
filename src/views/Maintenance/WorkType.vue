@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageHeader from "@/components/PageHeader.vue";
+import FormLoader from "@/components/FormLoader.vue";
 import { ref, computed, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Badge from "@/components/Badge.vue";
@@ -80,11 +81,13 @@ const editingItem = ref<WorkTypeItem>({
 const workTypes = ref<WorkType[]>([]);
 const items = ref<WorkTypeItem[]>([]);
 const isLoadingItems = ref(false);
+const isLoadingWorkTypes = ref(false);
 const isSavingType = ref(false);
 const isSavingItem = ref(false);
 const isUpdatingItemStatus = ref(false);
 
 async function fetchWorkTypes() {
+	isLoadingWorkTypes.value = true;
 	try {
 		const res = await http.get("/work-type", { params: { pageSize: 100 } });
 		const data = res.data?.data || res.data || [];
@@ -94,6 +97,8 @@ async function fetchWorkTypes() {
 		}
 	} catch (e) {
 		console.error("Failed to fetch work types", e);
+	} finally {
+		isLoadingWorkTypes.value = false;
 	}
 }
 
@@ -338,6 +343,7 @@ onMounted(() => {
 			</button>
         </template>
     </PageHeader>
+		<FormLoader v-if="isLoadingWorkTypes" overlay :sections="3" :fields-per-section="4" />
 
 		<div class="maintenance-grid">
 			<div class="maintenance-grid__left-panel">

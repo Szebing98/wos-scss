@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageHeader from "@/components/PageHeader.vue";
+import FormLoader from "@/components/FormLoader.vue";
 import { ref, computed, onMounted } from "vue";
 import Dialog from "@/components/Dialog.vue";
 import Card from "@/components/Card.vue";
@@ -235,6 +236,7 @@ async function executeDelete() {
 				<i class="mdi mdi-plus"></i><span class="btn-text">New Format Rule</span></button>
         </template>
     </PageHeader>
+		<FormLoader v-if="isLoading" overlay :sections="3" :fields-per-section="4" />
 
 		<div class="maintenance-grid">
 			<Card class="maintenance-grid__left-panel">

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageHeader from "@/components/PageHeader.vue";
+import FormLoader from "@/components/FormLoader.vue";
 import { ref, computed, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Table from "@/components/Table.vue";
@@ -208,6 +209,7 @@ async function confirmToggleStatus() {
 			</button>
         </template>
     </PageHeader>
+		<FormLoader v-if="isLoading" overlay :sections="3" :fields-per-section="4" />
 
 		<!-- Overview Centered Stat Cards -->
 		<div class="stats-grid">

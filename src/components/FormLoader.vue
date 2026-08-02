@@ -1,12 +1,13 @@
 <script setup lang="ts">
-withDefaults(defineProps<{ sections?: number; fieldsPerSection?: number }>(), {
+withDefaults(defineProps<{ sections?: number; fieldsPerSection?: number; overlay?: boolean }>(), {
 	sections: 3,
 	fieldsPerSection: 6,
+	overlay: false,
 });
 </script>
 
 <template>
-	<div class="content-loader content-loader--form" role="status" aria-label="Loading form">
+	<div class="content-loader content-loader--form" :class="{ 'content-loader--overlay': overlay }" role="status" aria-label="Loading page content">
 		<div v-for="section in sections" :key="section" class="content-loader__form-section panel-card">
 			<span class="content-loader__line content-loader__line--heading" />
 			<div class="content-loader__form-grid">

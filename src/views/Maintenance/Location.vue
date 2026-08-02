@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import Badge from "@/components/Badge.vue";
+import FormLoader from "@/components/FormLoader.vue";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import Dialog from "@/components/Dialog.vue";
@@ -269,6 +270,7 @@ async function syncWithLhdn() {
 				<span class="btn-text">{{ isSyncing ? 'Syncing SDK...' : 'Sync LHDN Codes' }}</span>
 			</button>
 		</div>
+		<FormLoader v-if="isSyncing" overlay :sections="3" :fields-per-section="4" />
 
 		<div class="filter-panel">
 			<div class="filter-panel__left">
