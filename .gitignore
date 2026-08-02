@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Testing and Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.auth/
+/test-status-temp.js

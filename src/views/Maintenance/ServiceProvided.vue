@@ -298,15 +298,12 @@ function formatPrice(value: number) {
 					/>
 				</div>
 
-				<div class="form-group">
-					<label class="form-group__label">Unit (UOM)</label>
-					<Select v-model="editingService.uom">
+				<Select label="Unit (UOM)" v-model="editingService.uom">
 						<option value="HOUR">Per Hour</option>
 						<option value="JOB">Per Job</option>
 						<option value="TRIP">Per Trip</option>
 						<option value="DAY">Per Day</option>
-					</Select>
-				</div>
+					</Select />
 
 				<div class="form-group form-group--full">
 					<label class="form-group__label">Efficiency Rate / Multiplier</label>

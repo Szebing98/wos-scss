@@ -194,10 +194,11 @@ const routes = [
 	{
 		path: "/work-order",
 		component: MainLayout,
+		meta: { breadcrumb: false },
 		children: [
 			{
 				path: "",
-				name: "Work Orders",
+				name: "Work Order List",
 				component: () => import("@/views/WorkOrder/WorkOrderList.vue"),
 				meta: { requiresAuth: true, permission: ["read", "WorkOrder"] },
 			},

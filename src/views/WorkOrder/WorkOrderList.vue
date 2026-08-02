@@ -1014,7 +1014,15 @@ async function handleExport(format: "CSV" | "PDF") {
 		});
 		if (error) throw new Error(getApiErrorMessage(error, "Export request failed."));
 
-		const rows = ((data as any)?.data || []) as Record<string, unknown>[];
+		const rawRows = ((data as any)?.data || []) as Record<string, unknown>[];
+		const rows = rawRows.map((w) => ({
+			...w,
+			status: formatStatusLabel(
+				w.isDraft
+					? "New"
+					: normalizeStatusForUi(w.orderStatus as string || w.status as string || "new"),
+			),
+		}));
 		const date = new Date().toISOString().slice(0, 10);
 		const exportColumns = headers.value
 			.filter((h) => h.key !== "select" && h.key !== "actions")
@@ -1417,6 +1425,22 @@ defineExpose({
 			</template>
 			<template #actions>
 				<button
+					v-if="authStore.can('export', 'Report')"
+					class="btn btn--primary"
+					:disabled="exporting"
+					@click="handleExport('CSV')"
+				>
+					<i class="mdi mdi-file-delimited-outline"></i> <span class="btn-text">Export CSV</span>
+				</button>
+				<button
+					v-if="authStore.can('export', 'Report')"
+					class="btn btn--primary"
+					:disabled="exporting"
+					@click="handleExport('PDF')"
+				>
+					<i class="mdi mdi-file-pdf-box"></i> <span class="btn-text">Export PDF</span>
+				</button>
+				<button
 					v-if="
 						authStore.can('create', 'WorkOrder') &&
 						(effectiveStatus === 'New' ||
@@ -1494,29 +1518,7 @@ defineExpose({
 						/>
 					</div>
 				</FilterPanel>
-				<Button
-					v-if="authStore.can('export', 'Report')"
-					variant="outlined"
-					@click="handleExport('CSV')"
-					:disabled="exporting"
-					title="Export List"
-					style="margin-left: 8px; display: inline-flex; align-items: center; gap: 6px"
-				>
-					<i
-						class="mdi"
-						:class="exporting ? 'mdi-loading mdi-spin' : 'mdi-tray-arrow-down'"
-						style="font-size: 18px"
-					></i>
-					<span class="filter-label-text">{{ exporting ? "Exporting..." : "CSV" }}</span>
-				</Button>
-				<Button
-					v-if="authStore.can('export', 'report')"
-					variant="outlined"
-					:disabled="exporting"
-					@click="handleExport('PDF')"
-					title="Export PDF"
-				>
-					<i class="mdi mdi-file-pdf-box" style="font-size: 18px"></i> <span class="btn-text">Export</span> </Button>
+
 			</div>
 		</Card>
 

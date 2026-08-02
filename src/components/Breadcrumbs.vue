@@ -44,7 +44,7 @@ const computedItems = computed<BreadcrumbItem[]>(() => {
 		if (label) {
 			items.push({
 				label,
-				to: m.redirect ? undefined : m.path,
+				to: (!m.name || m.redirect) ? undefined : m.path,
 			});
 		}
 	});

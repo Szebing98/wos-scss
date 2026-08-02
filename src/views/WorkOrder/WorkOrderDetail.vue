@@ -33,7 +33,8 @@ import FinanceTab from "./tabs/FinanceTab.vue";
 import VerificationTab from "./tabs/VerificationTab.vue";
 import PaymentTab from "./tabs/PaymentTab.vue";
 import ReportTab from "./tabs/ReportTab.vue";
-import { useSnackbarStore } from "@/stores/snackbar.store.ts";
+import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useBreadcrumbStore } from "@/stores/breadcrumb.store";
 import http from "@/utils/http";
 import { userDisplayCode } from "@/utils/User/user-display";
 
@@ -42,6 +43,7 @@ const router = useRouter();
 const dateFormatStore = useDateFormatStore();
 const snackbar = useSnackbarStore();
 const authStore = useAuthStore();
+const breadcrumbStore = useBreadcrumbStore();
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3707/api").replace(
 	/\/$/,
@@ -185,6 +187,13 @@ function updateStepFromStatus(statusStr: string) {
 		currentStepIndex.value = 6;
 		breadcrumbStatus.value = "Closed";
 	}
+}
+
+function updateBreadcrumbs() {
+	breadcrumbStore.setItems([
+		{ label: "Work Order List", to: "/work-order" },
+		{ label: workOrder.value.woNumber ? `${workOrder.value.woNumber}` : "Work Order Detail" }
+	]);
 }
 
 function getStatusChipType(status: string) {
@@ -536,6 +545,7 @@ async function fetchWorkOrderDetails() {
 		if (workOrder.value?.status) {
 			updateStepFromStatus(workOrder.value.status);
 		}
+		updateBreadcrumbs();
 		loading.value = false;
 	}
 }

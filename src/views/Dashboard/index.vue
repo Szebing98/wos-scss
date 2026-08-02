@@ -268,16 +268,17 @@ onMounted(() => {
 				<p class="dashboard__updated-time">Last updated: {{ lastUpdatedTime }}</p>
 			</template>
 			<template #actions>
-				<!-- <button
+				<button class="btn btn--icon" :disabled="loadingCounts" @click="refreshData">
+					<i class="mdi mdi-refresh"></i>
+				</button>
+
+				<button
+					v-if="authStore.can('export', 'Report')"
 					class="btn btn--outlined"
 					:disabled="loadingCounts"
 					@click="exportCountReport('CSV')"
 				>
-					<i class="mdi mdi-file-delimited-outline"></i> CSV
-				</button> -->
-
-				<button class="btn btn--icon" :disabled="loadingCounts" @click="refreshData">
-					<i class="mdi mdi-refresh"></i>
+					<i class="mdi mdi-file-delimited-outline"></i><span class="btn-text">Export CSV</span>
 				</button>
 
 				<button

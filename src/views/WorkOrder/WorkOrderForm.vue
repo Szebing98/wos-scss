@@ -19,12 +19,14 @@ import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
 import { workOrderApi } from "@/api/work-order/work-order.api";
 import http from "@/utils/http";
 import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useBreadcrumbStore } from "@/stores/breadcrumb.store";
 import { userDisplayCode } from "@/utils/User/user-display";
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 const snackbar = useSnackbarStore();
+const breadcrumbStore = useBreadcrumbStore();
 const SITE_INSTRUCTIONS_CATEGORY = "SiteInstructions";
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3707/api").replace(
 	/\/$/,
@@ -43,6 +45,30 @@ const pageTitle = computed(() => {
 	}
 	return isEditMode.value ? "Edit Work Order" : "Create New Work Order";
 });
+
+const effectiveStatus = computed(() => {
+	if (!isReadOnly.value && !isEditMode.value) return "New";
+	return formData.value.status || "New";
+});
+
+function updateBreadcrumbs() {
+	if (isReadOnly.value) {
+		breadcrumbStore.setItems([
+			{ label: "Work Order List", to: "/work-order" },
+			{ label: workOrderCode.value ? `View ${workOrderCode.value}` : "View Work Order" }
+		]);
+	} else if (isEditMode.value) {
+		breadcrumbStore.setItems([
+			{ label: "Work Order List", to: "/work-order" },
+			{ label: workOrderCode.value ? `Edit ${workOrderCode.value}` : "Edit Work Order" }
+		]);
+	} else {
+		breadcrumbStore.setItems([
+			{ label: "Work Order List", to: "/work-order" },
+			{ label: "Create Work Order" }
+		]);
+	}
+}
 
 function normalizeWorkOrderStatus(w: any) {
 	if (w?.isDraft) return "Draft";
@@ -109,12 +135,36 @@ const canEditForCurrentAssignment = computed(() => {
 	if (isSuperadmin.value) return true;
 	const userCode = authStore.currentUser?.code;
 	if (!userCode) return false;
-	if (["draft", "new"].includes(normalizedStatus.value)) {
+
+	if (isDraftStatus.value) {
+		// Draft: only creator (or SA)
 		return workOrderOwnerCode.value === userCode;
 	}
-	if (["pending", "pendingapproval"].includes(normalizedStatus.value)) {
-		return formData.value.personInChargeCode === userCode;
+
+	if (isNewStatus.value) {
+		// New: creator, users in form, admin
+		if (workOrderOwnerCode.value === userCode) return true;
+		
+		// Check if user is Admin (assuming Admin has 'manage' or 'update_new' globally)
+		if (authStore.can("update_new", "WorkOrder")) return true;
+
+		// Check if user is in form
+		const inForm =
+			formData.value.salesAgentCode === userCode ||
+			formData.value.personInChargeCode === userCode ||
+			formData.value.leaderCode === userCode ||
+			formData.value.leaderIICode === userCode ||
+			(formData.value.technicianCodes || []).includes(userCode);
+		
+		return inForm;
 	}
+
+	if (isPendingApproval.value) {
+		// Pending: only Manager, Admin, SA (which translates to those who have update_pending ability)
+		// We return true here because `canEditReadOnlyWorkOrder` will ALSO check `authStore.can('update_pending')`
+		return true;
+	}
+
 	if (["progress", "inprogress"].includes(normalizedStatus.value)) {
 		return (
 			formData.value.personInChargeCode === userCode || formData.value.leaderCode === userCode
@@ -140,6 +190,7 @@ const isPendingApproval = computed(() =>
 
 function isFieldDisabled(fieldName: string): boolean {
 	if (isReadOnly.value) return true;
+	if (isEditMode.value && !canEditReadOnlyWorkOrder.value) return true;
 	if (isPendingApproval.value) {
 		const allowedFields = [
 			"jobPriority",
@@ -634,7 +685,10 @@ onMounted(async () => {
 			console.error("Failed to load work order edit data:", e);
 		} finally {
 			loading.value = false;
+			updateBreadcrumbs();
 		}
+	} else {
+		updateBreadcrumbs();
 	}
 });
 
@@ -844,7 +898,7 @@ function validateDraftForm(): boolean {
 	formErrors.value = {};
 	let isValid = true;
 
-	if (!formData.value.orderTypeItemCode) {
+	if (workTypeItems.value.length > 0 && !formData.value.orderTypeItemCode) {
 		formErrors.value.orderTypeItemCode = "Work Type Item is required";
 		isValid = false;
 	}
@@ -865,6 +919,7 @@ function validateDraftForm(): boolean {
 		isValid = false;
 	}
 
+
 	if (!isValid) snackbar.warning("Please fill in all compulsory fields (*).");
 	return isValid;
 }
@@ -873,7 +928,7 @@ function validateForm(): boolean {
 	formErrors.value = {};
 	let isValid = true;
 
-	if (!formData.value.orderTypeItemCode) {
+	if (workTypeItems.value.length > 0 && !formData.value.orderTypeItemCode) {
 		formErrors.value.orderTypeItemCode = "Work Type Item is required";
 		isValid = false;
 	}
@@ -889,7 +944,7 @@ function validateForm(): boolean {
 		formErrors.value.customerCode = "Customer is required";
 		isValid = false;
 	}
-	if (!formData.value.contractNo?.trim()) {
+	if (contractSelectOptions.value.length > 0 && !formData.value.contractNo?.trim()) {
 		formErrors.value.contractNo = "Contract No is required";
 		isValid = false;
 	}
@@ -972,13 +1027,22 @@ function validateForm(): boolean {
 
 function validateApprovalAttachments(): boolean {
 	siteInstructionsError.value = "";
-	if (formData.value.siteInstructionsFiles.length < 2) {
+	const validFiles = formData.value.siteInstructionsFiles.filter(
+		(item) => !!item.name?.trim() && (!!item.file || !!item.guid),
+	);
+	if (validFiles.length < 2) {
 		siteInstructionsError.value =
-			"At least 2 site instruction files are required when requesting approval";
+			"At least 2 valid site instruction files are required when requesting approval";
 		snackbar.warning(siteInstructionsError.value);
 		return false;
 	}
 	return true;
+}
+
+function ensureCurrentWorkOrderCanBeEdited(): boolean {
+	if (!isEditMode.value || canEditReadOnlyWorkOrder.value) return true;
+	snackbar.error("You do not have permission to edit this work order.");
+	return false;
 }
 
 function extractWorkOrderGuid(response: any): string {
@@ -1092,7 +1156,16 @@ function goToWorkOrderReadOnly(workOrderGuid: string) {
 	});
 }
 
+function goToWorkOrderEdit(workOrderGuid: string) {
+	router.replace({
+		name: "Work Order Form",
+		params: { id: workOrderGuid },
+		query: { mode: "edit" },
+	});
+}
+
 async function submitDraft() {
+	if (!ensureCurrentWorkOrderCanBeEdited()) return;
 	if (!validateDraftForm()) {
 		console.error("Draft validation failed", formErrors.value);
 		return;
@@ -1128,7 +1201,8 @@ async function submitDraft() {
 			}
 			snackbar.success("Work order draft created successfully!");
 		}
-		if (savedWorkOrderGuid) goToWorkOrderReadOnly(savedWorkOrderGuid);
+        formData.value.status = "Draft";
+		if (savedWorkOrderGuid) goToWorkOrderEdit(savedWorkOrderGuid);
 	} catch (e) {
 		console.error(e);
 		snackbar.error(e instanceof Error ? e.message : "Failed to save work order draft");
@@ -1138,6 +1212,7 @@ async function submitDraft() {
 }
 
 async function submitNew() {
+	if (!ensureCurrentWorkOrderCanBeEdited()) return;
 	if (!validateForm()) {
 		console.error("Validation failed", formErrors.value);
 		return;
@@ -1148,7 +1223,7 @@ async function submitNew() {
 		const body = buildBody();
 		let savedWorkOrderGuid = typeof id === "string" ? id : "";
 		if (id && typeof id === "string") {
-			if (formData.value.status === "Draft") {
+			if (isDraftStatus.value) {
 				const updateRes = await workOrderApi.updateDraft(id, body);
 				if (updateRes.error) {
 					snackbar.error(
@@ -1197,7 +1272,7 @@ async function submitNew() {
 			snackbar.success("Work order submitted successfully!");
 		}
 		formData.value.status = "New";
-		if (savedWorkOrderGuid) goToWorkOrderReadOnly(savedWorkOrderGuid);
+		if (savedWorkOrderGuid) goToWorkOrderEdit(savedWorkOrderGuid);
 	} catch (e) {
 		console.error(e);
 		snackbar.error(e instanceof Error ? e.message : "Failed to submit work order");
@@ -1207,6 +1282,7 @@ async function submitNew() {
 }
 
 async function submitAndRequestApproval() {
+	if (!ensureCurrentWorkOrderCanBeEdited()) return;
 	const isFormValid = validateForm();
 	const areAttachmentsValid = validateApprovalAttachments();
 	if (!isFormValid || !areAttachmentsValid) {
@@ -1219,7 +1295,7 @@ async function submitAndRequestApproval() {
 		const body = buildBody();
 		let savedWorkOrderGuid = typeof id === "string" ? id : "";
 		if (id && typeof id === "string") {
-			if (formData.value.status === "Draft") {
+			if (isDraftStatus.value) {
 				const updateRes = await workOrderApi.updateDraft(id, body);
 				if (updateRes.error) {
 					snackbar.error(
@@ -1237,7 +1313,7 @@ async function submitAndRequestApproval() {
 					);
 					return;
 				}
-			} else if (formData.value.status === "New") {
+			} else if (isNewStatus.value) {
 				const updateRes = await workOrderApi.updateNew(id, body);
 				if (updateRes.error) {
 					snackbar.error(
@@ -1297,6 +1373,7 @@ async function submitAndRequestApproval() {
 }
 
 async function saveNew() {
+	if (!ensureCurrentWorkOrderCanBeEdited()) return;
 	if (!validateForm()) {
 		console.error("Validation failed", formErrors.value);
 		return;
@@ -1314,7 +1391,7 @@ async function saveNew() {
 			}
 			await uploadSelectedSiteInstructions(id);
 			snackbar.success("Work order saved successfully (Status: New)!");
-			goToWorkOrderReadOnly(id);
+			goToWorkOrderEdit(id);
 		}
 	} catch (e) {
 		console.error(e);
@@ -1325,6 +1402,7 @@ async function saveNew() {
 }
 
 async function updatePending(options: { stayInEdit?: boolean; silent?: boolean } = {}) {
+	if (!ensureCurrentWorkOrderCanBeEdited()) return false;
 	if (!validateForm()) {
 		console.error("Validation failed", formErrors.value);
 		return false;
@@ -1342,7 +1420,7 @@ async function updatePending(options: { stayInEdit?: boolean; silent?: boolean }
 			}
 			if (!options.silent)
 				snackbar.success("Pending Approval work order updated successfully!");
-			if (!options.stayInEdit) goToWorkOrderReadOnly(id);
+			if (!options.stayInEdit) goToWorkOrderEdit(id);
 			return true;
 		}
 		return false;
@@ -1374,6 +1452,7 @@ async function approvePendingFromEdit() {
 }
 
 async function submitChanges() {
+	if (!ensureCurrentWorkOrderCanBeEdited()) return;
 	if (!validateForm()) {
 		console.error("Validation failed", formErrors.value);
 		return;
@@ -1383,11 +1462,11 @@ async function submitChanges() {
 		const id = route.params.id;
 		if (id && typeof id === "string") {
 			let res;
-			if (formData.value.status === "Draft") {
+			if (isDraftStatus.value) {
 				res = await workOrderApi.updateDraft(id, buildBody());
-			} else if (formData.value.status === "New") {
+			} else if (isNewStatus.value) {
 				res = await workOrderApi.updateNew(id, buildBody());
-			} else if (formData.value.status === "PendingApproval") {
+			} else if (isPendingApproval.value) {
 				res = await workOrderApi.updatePending(id, buildBody());
 			} else {
 				res = await workOrderApi.updateProgress(id, buildBody());
@@ -1469,13 +1548,33 @@ const priorityColors: Record<string, string> = {
 	Medium: "warning",
 	Low: "info",
 };
+
+const statusColors: Record<string, string> = {
+	New: "primary",
+	Draft: "secondary",
+	PendingApproval: "warning",
+	InProgress: "info",
+	Completed: "success",
+	Closed: "success",
+	Cancelled: "error",
+};
 </script>
 
 <template>
 	<div class="workorder-form-view">
 		<div class="page-header">
 			<div class="title-area">
-				<h1>{{ pageTitle }}</h1>
+				<div style="display: flex; gap: 12px; align-items: center;">
+					<h1>{{ pageTitle }}</h1>
+					<Badge
+						v-if="isReadOnly || isEditMode"
+						class="status-badge"
+						:type="statusColors[effectiveStatus] as any || 'primary'"
+						size="lg"
+					>
+						{{ effectiveStatus === 'PendingApproval' ? 'Pending Approval' : effectiveStatus }}
+					</Badge>
+				</div>
 				<p>Set the work order details, assign the right schedule and resources.</p>
 			</div>
 			<div class="actions-area">
@@ -1520,7 +1619,9 @@ const priorityColors: Record<string, string> = {
 						</Button>
 					</template>
 				</template>
-				<template v-else-if="!isEditMode || isDraftStatus">
+				<template
+					v-else-if="(!isEditMode || canEditReadOnlyWorkOrder) && (!isEditMode || isDraftStatus)"
+				>
 					<Button variant="outlined" @click="submitDraft">
 						<i class="mdi mdi-content-save-outline"></i> Save as Draft
 					</Button>
@@ -1531,7 +1632,7 @@ const priorityColors: Record<string, string> = {
 						<i class="mdi mdi-check"></i> Save & Request Approval
 					</Button>
 				</template>
-				<template v-else-if="isNewStatus">
+				<template v-else-if="isNewStatus && canEditReadOnlyWorkOrder">
 					<Button variant="outlined" @click="saveNew">
 						<i class="mdi mdi-content-save"></i> Save New
 					</Button>
@@ -1539,7 +1640,7 @@ const priorityColors: Record<string, string> = {
 						<i class="mdi mdi-check"></i> Request For Approval
 					</Button>
 				</template>
-				<template v-else-if="isPendingApproval">
+				<template v-else-if="isPendingApproval && canEditReadOnlyWorkOrder">
 					<Button variant="outlined" @click="() => updatePending()">
 						<i class="mdi mdi-content-save"></i> Update
 					</Button>
@@ -1558,7 +1659,7 @@ const priorityColors: Record<string, string> = {
 						<i class="mdi mdi-close-circle-outline"></i> Reject
 					</Button>
 				</template>
-				<template v-else>
+				<template v-else-if="canEditReadOnlyWorkOrder">
 					<Button variant="primary" @click="submitChanges">
 						<i class="mdi mdi-content-save"></i> Save Changes
 					</Button>
@@ -1575,7 +1676,7 @@ const priorityColors: Record<string, string> = {
 				<div class="helper-line">
 					<span class="helper-bullet">-</span>
 					<span
-						><strong>Save as Draft</strong> creates a New editable work order.
+						><strong>Save as Draft</strong> creates an editable Draft work order.
 						<em
 							>(Required: Work Type Item, Title, Sales Agent, Customer,
 							Description)</em
@@ -1599,7 +1700,10 @@ const priorityColors: Record<string, string> = {
 			</div>
 		</div>
 
-		<fieldset class="read-only-fieldset" :disabled="isReadOnly">
+		<fieldset
+			class="read-only-fieldset"
+			:disabled="isReadOnly || (isEditMode && !canEditReadOnlyWorkOrder)"
+		>
 			<div class="form-grid">
 				<div class="form-grid__main">
 					<!-- Work Order Details -->

@@ -176,18 +176,9 @@ function handleDateFormatChange(val: string) {
 		<!-- Password Change Dialog -->
 		<Dialog v-model="showPasswordModal" title="Change Password" maxWidth="440px">
 			<div class="form-grid" style="display: flex; flex-direction: column; gap: 16px; padding: 8px 0;">
-				<div class="form-group">
-					<label class="form-group__label">Current Password <span class="u-required">*</span></label>
-					<Textbox v-model="passwordForm.currentPassword" type="password" placeholder="Enter current password" />
-				</div>
-				<div class="form-group">
-					<label class="form-group__label">New Password <span class="u-required">*</span></label>
-					<Textbox v-model="passwordForm.newPassword" type="password" placeholder="Enter new password" />
-				</div>
-				<div class="form-group">
-					<label class="form-group__label">Confirm New Password <span class="u-required">*</span></label>
-					<Textbox v-model="passwordForm.newPasswordConfirm" type="password" placeholder="Confirm new password" />
-				</div>
+				<Textbox label="Current Password *" v-model="passwordForm.currentPassword" type="password" placeholder="Enter current password" />
+				<Textbox label="New Password *" v-model="passwordForm.newPassword" type="password" placeholder="Enter new password" />
+				<Textbox label="Confirm New Password *" v-model="passwordForm.newPasswordConfirm" type="password" placeholder="Confirm new password" />
 			</div>
 			<template #footer>
 				<Button variant="outlined" @click="showPasswordModal = false" :disabled="passwordLoading">Cancel</Button>

@@ -736,37 +736,21 @@ async function handleSubmitForm() {
 						/>
 					</div>
 
-					<div class="form-group">
-						<label class="form-group__label">
-							Classification / Customer Type <span class="u-required">*</span>
-						</label>
-						<Select v-model="customerCategory">
+					<Select label="Classification / Customer Type *" v-model="customerCategory">
 							<option value="INDIVIDUAL">INDIVIDUAL (0 - Personal Account)</option>
 							<option value="COMPANY">BUSINESS (1 - Corporate Entity)</option>
 							<option value="GOVERNMENT">GOVERNMENT (2 - Gov Agency)</option>
-						</Select>
-					</div>
+						</Select />
 
-					<div class="form-group">
-						<label class="form-group__label">AutoCount Debtor Code (AccountNo)</label>
-						<Textbox v-model="form.accountNo" placeholder="e.g. 300-A0001" />
-					</div>
+					<Textbox label="AutoCount Debtor Code (AccountNo)" v-model="form.accountNo" placeholder="e.g. 300-A0001" />
 
-					<div class="form-group">
-						<label class="form-group__label">Linked Accounting Control Account</label>
-						<Textbox
-							v-model="form.metadata.controlAccount"
+					<Textbox label="Linked Accounting Control Account" v-model="form.metadata.controlAccount"
 							placeholder="e.g. 300-0000"
 						/>
-					</div>
 
-					<div class="form-group">
-						<label class="form-group__label">License / Operating Permit No</label>
-						<Textbox
-							v-model="form.licenseNo"
+					<Textbox label="License / Operating Permit No" v-model="form.licenseNo"
 							placeholder="Business license reference (optional)"
 						/>
-					</div>
 
 					<div class="form-group mt-sm">
 						<label class="switch-toggle">
@@ -1002,17 +986,11 @@ async function handleSubmitForm() {
 				</div>
 
 				<div class="form-grid">
-					<div class="form-group">
-						<label class="form-group__label">
-							Email <span class="u-required">*</span>
-						</label>
-						<Textbox
-							v-model="form.profile.email"
+					<Textbox label="Email *" v-model="form.profile.email"
 							type="email"
 							placeholder="e.g. customer@example.com"
 							:error="formErrors.email"
 						/>
-					</div>
 					<div class="form-group">
 						<label class="form-group__label"
 							>Contact Phone <span class="u-required">*</span></label
@@ -1039,70 +1017,34 @@ async function handleSubmitForm() {
 							</Select>
 						</div>
 
-						<div class="form-group">
-							<label class="form-group__label">
-								{{ selectedIdentityType || "Identity" }} Number
-							</label>
-							<Textbox
-								v-model="form.profile.identityNo"
+						<Textbox :label="`${selectedIdentityType || 'Identity'} Number *`" v-model="form.profile.identityNo"
 								:placeholder="`Enter ${selectedIdentityType || 'Identity'} Number`"
 								:error="formErrors.identityNo"
 							/>
-						</div>
 
-						<div class="form-group">
-							<label class="form-group__label">
-								Tax Identity No (TIN)
-								<span style="font-size: 11px; color: var(--colors-text-muted)"
-									>(Default: EI00000000010)</span
-								>
-							</label>
-							<Textbox
-								v-model="form.profile.tin"
+						<Textbox label="Tax Identity No (TIN) (Default: EI00000000010)" v-model="form.profile.tin"
 								placeholder="EI00000000010 (Leave blank for default)"
 								:error="formErrors.tin"
 							/>
-						</div>
 					</template>
 
 					<!-- Business Category Details -->
 					<template v-else-if="customerCategory === 'COMPANY'">
-						<div class="form-group">
-							<label class="form-group__label">
-								Business Registration No (BRN)
-								<span v-if="isLocalCompany" class="u-required">*</span>
-							</label>
-							<Textbox
-								v-model="form.profile.brn"
+						<Textbox :label="isLocalCompany ? 'Business Registration No (BRN) *' : 'Business Registration No (BRN)'" v-model="form.profile.brn"
 								placeholder="202601000123 (123456-X)"
 								:error="formErrors.brn"
 							/>
-						</div>
 
-						<div class="form-group">
-							<label class="form-group__label">
-								Tax Identity No (TIN)
-								<span v-if="isLocalCompany" class="u-required">*</span>
-							</label>
-							<Textbox
-								v-model="form.profile.tin"
+						<Textbox :label="isLocalCompany ? 'Tax Identity No (TIN) *' : 'Tax Identity No (TIN)'" v-model="form.profile.tin"
 								placeholder="C2580000000"
 								:error="formErrors.tin"
 							/>
-						</div>
 
-						<div class="form-group">
-							<label class="form-group__label">SST Registration Number</label>
-							<Textbox
-								v-model="form.metadata.sstRegNo"
+						<Textbox label="SST Registration Number" v-model="form.metadata.sstRegNo"
 								placeholder="W10-1808-32000001"
 							/>
-						</div>
 
-						<div class="form-group">
-							<label class="form-group__label">MSIC Code</label>
-							<Textbox v-model="form.profile.msicCode" placeholder="00000" />
-						</div>
+						<Textbox label="MSIC Code" v-model="form.profile.msicCode" placeholder="00000" />
 
 						<div class="form-group form-group--full">
 							<label class="form-group__label">Business Activity Description</label>
@@ -1112,26 +1054,15 @@ async function handleSubmitForm() {
 
 					<!-- Government Category Details -->
 					<template v-else-if="customerCategory === 'GOVERNMENT'">
-						<div class="form-group">
-							<label class="form-group__label">Tax Identity No (TIN)</label>
-							<Textbox
-								v-model="form.profile.tin"
+						<Textbox label="Tax Identity No (TIN)" v-model="form.profile.tin"
 								placeholder="Government Tax Ref (optional)"
 							/>
-						</div>
 
-						<div class="form-group">
-							<label class="form-group__label">SST Registration Number</label>
-							<Textbox
-								v-model="form.metadata.sstRegNo"
+						<Textbox label="SST Registration Number" v-model="form.metadata.sstRegNo"
 								placeholder="SST Registration No (optional)"
 							/>
-						</div>
 
-						<div class="form-group">
-							<label class="form-group__label">MSIC Code</label>
-							<Textbox v-model="form.profile.msicCode" placeholder="00000" />
-						</div>
+						<Textbox label="MSIC Code" v-model="form.profile.msicCode" placeholder="00000" />
 
 						<div class="form-group form-group--full">
 							<label class="form-group__label">Business Activity Description</label>
@@ -1182,13 +1113,9 @@ async function handleSubmitForm() {
 						<DatePicker v-model="contractForm.endDate" />
 					</div>
 				</div>
-				<div class="form-group">
-					<label class="form-group__label">Description / Remarks</label>
-					<Textbox
-						v-model="contractForm.description"
+				<Textbox label="Description / Remarks" v-model="contractForm.description"
 						placeholder="Optional contract terms or notes..."
 					/>
-				</div>
 			</div>
 		</Dialog>
 
@@ -1216,13 +1143,9 @@ async function handleSubmitForm() {
 					>
 					<DatePicker v-model="renewForm.newEndDate" />
 				</div>
-				<div class="form-group">
-					<label class="form-group__label">Renewal Remarks / Notes</label>
-					<Textbox
-						v-model="renewForm.remarks"
+				<Textbox label="Renewal Remarks / Notes" v-model="renewForm.remarks"
 						placeholder="Reason for extension / renewal terms..."
 					/>
-				</div>
 			</div>
 		</Dialog>
 

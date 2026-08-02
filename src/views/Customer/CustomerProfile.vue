@@ -9,11 +9,13 @@ import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { customerApi } from "@/api/customer/customer.api";
 import { useSnackbarStore } from "@/stores/snackbar.store";
+import { useBreadcrumbStore } from "@/stores/breadcrumb.store";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
 
 const route = useRoute();
 const router = useRouter();
 const snackbar = useSnackbarStore();
+const breadcrumbStore = useBreadcrumbStore();
 const dateFormatStore = useDateFormatStore();
 
 const customer = ref<any>(null);
@@ -53,6 +55,14 @@ function computeStatus(endDateStr: string): "Active" | "ExpiringSoon" | "Expired
 	return "Active";
 }
 
+function updateBreadcrumbs() {
+	const name = customer.value?.name || customer.value?.metadata?.name || "Customer Profile";
+	breadcrumbStore.setItems([
+		{ label: "Customer List", to: "/customer/list" },
+		{ label: customer.value?.code ? `${name} (${customer.value.code})` : name }
+	]);
+}
+
 async function loadCustomerDetail() {
 	const targetId = (route.query.guid || route.query.code) as string;
 	if (!targetId || typeof targetId !== "string") {
@@ -79,6 +89,7 @@ async function loadCustomerDetail() {
 		console.error("Error loading customer profile:", e);
 	} finally {
 		loading.value = false;
+		updateBreadcrumbs();
 	}
 }
 
@@ -608,10 +619,7 @@ function formatDate(iso: string) {
 						<DatePicker v-model="contractForm.endDate" />
 					</div>
 				</div>
-				<div class="form-group">
-					<label class="form-group__label">Description / Remarks</label>
-					<Textbox v-model="contractForm.description" placeholder="Optional notes..." />
-				</div>
+				<Textbox label="Description / Remarks" v-model="contractForm.description" placeholder="Optional notes..." />
 			</div>
 		</Dialog>
 
@@ -639,13 +647,9 @@ function formatDate(iso: string) {
 					>
 					<DatePicker v-model="renewForm.newEndDate" />
 				</div>
-				<div class="form-group">
-					<label class="form-group__label">Renewal Remarks / Notes</label>
-					<Textbox
-						v-model="renewForm.remarks"
+				<Textbox label="Renewal Remarks / Notes" v-model="renewForm.remarks"
 						placeholder="Reason for extension / renewal terms..."
 					/>
-				</div>
 			</div>
 		</Dialog>
 	</div>

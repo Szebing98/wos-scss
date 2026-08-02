@@ -203,24 +203,16 @@ function formatPrice(value: number) {
             </template>
 
             <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-group__label">Part Code <span class="u-required">*</span></label>
-                    <Textbox
-                        v-model="editingPart.code"
+                <Textbox label="Part Code *" v-model="editingPart.code"
                         :disabled="!isNewRecord"
                         placeholder="e.g. FIL-001, BELT-X"
                         class="u-font-mono"
                     />
-                </div>
 
-                <div class="form-group">
-                    <label class="form-group__label">Part No <span class="u-required">*</span></label>
-                    <Textbox
-                        v-model="editingPart.partNo"
+                <Textbox label="Part No *" v-model="editingPart.partNo"
                         placeholder="e.g. P-99201, BT-1122"
                         class="u-font-mono"
                     />
-                </div>
 
                 <div class="form-group form-group--full">
                     <label class="form-group__label">Part Name <span class="u-required">*</span></label>
@@ -230,26 +222,19 @@ function formatPrice(value: number) {
                     />
                 </div>
 
-                <div class="form-group">
-                    <label class="form-group__label">Unit Price (RM) <span class="u-required">*</span></label>
-                    <Textbox
-                        v-model.number="editingPart.unitPrice"
+                <Textbox label="Unit Price (RM) *" v-model.number="editingPart.unitPrice"
                         type="number"
                         placeholder="0.00"
                     />
-                </div>
 
-                <div class="form-group">
-                    <label class="form-group__label">Unit of Measure (UOM)</label>
-                    <Select v-model="editingPart.uom">
+                <Select label="Unit of Measure (UOM)" v-model="editingPart.uom">
                         <option value="PCS">PCS (Pieces)</option>
                         <option value="UNIT">UNIT</option>
                         <option value="SET">SET</option>
                         <option value="BOX">BOX</option>
                         <option value="KG">KG</option>
                         <option value="MTR">MTR (Meter)</option>
-                    </Select>
-                </div>
+                    </Select />
 
                 <div class="form-group form-group--full">
                     <label class="form-group__label">Description</label>

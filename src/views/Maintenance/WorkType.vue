@@ -453,10 +453,7 @@ onMounted(() => {
 						</div>
 
 						<div v-else class="form-grid">
-							<div class="form-group">
-								<label class="form-group__label">Work Type Name</label>
-								<Textbox v-model="selectedType.name" />
-							</div>
+							<Textbox label="Work Type Name" v-model="selectedType.name" />
 							<div class="form-group form-group--checkbox">
 								<label class="checkbox-container">
 									<input
@@ -599,24 +596,9 @@ onMounted(() => {
 				<p>Manage task item specifications for {{ selectedType?.name }}</p>
 			</template>
 
-			<div class="form-group">
-				<label class="form-group__label">
-					Item Code
-					<span
-						style="
-							font-size: 11px;
-							color: var(--colors-text-muted);
-							font-weight: normal;
-						"
-						>(System Auto-Generated)</span
-					>
-				</label>
-				<Textbox v-model="editingItem.code" disabled class="u-font-mono" />
-			</div>
-			<div class="form-group">
-				<label class="form-group__label">Item Name</label>
-				<Textbox v-model="editingItem.name" />
-			</div>
+			<Textbox label="Item Code
+					(System Auto-Generated)" v-model="editingItem.code" disabled class="u-font-mono" />
+			<Textbox label="Item Name" v-model="editingItem.name" />
 			<div class="form-group">
 				<label class="form-group__label">Description</label>
 				<textarea

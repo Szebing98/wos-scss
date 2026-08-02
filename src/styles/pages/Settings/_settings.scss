@@ -39,5 +39,8 @@
 }
 
 .u-required {
-	color: #ef4444;
+	color: var(--colors-feedback-error, #ef4444);
+	opacity: 0.7;
+	margin-left: 4px;
+	font-weight: var(--typography-fontWeight-medium);
 }

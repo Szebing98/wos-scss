@@ -273,9 +273,17 @@ function getRandomAvatarBg(name: string) {
 					v-if="authStore.can('export', 'Report')"
 					class="btn btn--primary"
 					:disabled="exporting"
+					@click="handleExport('CSV')"
+				>
+					<i class="mdi mdi-file-delimited-outline"></i> <span class="btn-text">Export CSV</span>
+				</button>
+				<button
+					v-if="authStore.can('export', 'Report')"
+					class="btn btn--primary"
+					:disabled="exporting"
 					@click="handleExport('PDF')"
 				>
-					<i class="mdi mdi-file-pdf-box"></i> <span class="btn-text">Export</span>
+					<i class="mdi mdi-file-pdf-box"></i> <span class="btn-text">Export PDF</span>
 				</button>
 				<button
 					v-if="authStore.can('create', 'User')"

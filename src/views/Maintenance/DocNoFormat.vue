@@ -392,43 +392,28 @@ async function executeDelete() {
 						placeholder="e.g. WO, INV, TECH"
 					/>
 				</div>
-				<div class="form-group">
-					<label class="form-group__label">Date Format Pattern (dateFormat)</label>
-					<Select v-model="formData.dateFormat">
+				<Select label="Date Format Pattern (dateFormat)" v-model="formData.dateFormat">
 						<option value="YYYYMMDD">YYYYMMDD (e.g. 20260726)</option>
 						<option value="YYYYMM">YYYYMM (e.g. 202607)</option>
 						<option value="YYMM">YYMM (e.g. 2607)</option>
 						<option value="YYYY">YYYY (e.g. 2026)</option>
 						<option value="">None (No date component)</option>
-					</Select>
-				</div>
-				<div class="form-group">
-					<label class="form-group__label">Delimiter Separator</label>
-					<Textbox
-						v-model="formData.delimiter"
+					</Select />
+				<Textbox label="Delimiter Separator" v-model="formData.delimiter"
 						maxlength="5"
 						class="u-font-mono"
 						placeholder="e.g. -, /, _"
 					/>
-				</div>
-				<div class="form-group">
-					<label class="form-group__label">Serial Code Width (padding)</label>
-					<Textbox
-						v-model.number="formData.padding"
+				<Textbox label="Serial Code Width (padding)" v-model.number="formData.padding"
 						type="number"
 						min="1"
 						max="10"
 					/>
-				</div>
-				<div class="form-group">
-					<label class="form-group__label">Next Serial Counter</label>
-					<Textbox
-						v-model.number="formData.nextNumber"
+				<Textbox label="Next Serial Counter" v-model.number="formData.nextNumber"
 						type="number"
 						min="1"
 						class="u-text-primary u-font-weight-bold"
 					/>
-				</div>
 				<div class="form-group form-group--full" style="padding-top: var(--spacing-xs)">
 					<label class="switch-toggle">
 						<input type="checkbox" v-model="formData.isActive" />
