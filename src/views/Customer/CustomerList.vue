@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from "@/utils/error";
 import PageHeader from "@/components/PageHeader.vue";
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, shallowRef, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import Table from "@/components/Table.vue";
 import type { TableHeader } from "@/components/Table.vue";
@@ -15,6 +15,7 @@ import { reportApi } from "@/api/report/report.api";
 import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
 import { useSnackbarStore } from "@/stores/snackbar.store";
 import { useAuthStore } from "@/stores/auth.store";
+import { debounce } from "@/utils/debounce";
 
 const router = useRouter();
 const searchQuery = ref("");
@@ -29,7 +30,7 @@ function resetFilters() {
 	filterEinvoice.value = "all";
 }
 
-const customers = ref<any[]>([]);
+const customers = shallowRef<any[]>([]);
 const loading = ref(false);
 const exporting = ref(false);
 const snackbar = useSnackbarStore();
@@ -56,7 +57,10 @@ const headers = computed<TableHeader[]>(() => {
 	return cols;
 });
 
+let lastFetchId = 0;
+
 async function fetchCustomers() {
+	const fetchId = ++lastFetchId;
 	loading.value = true;
 	try {
 		const query: any = {
@@ -70,6 +74,7 @@ async function fetchCustomers() {
 		if (identityFilter.value !== "all") query.individualType = identityFilter.value;
 
 		const { data, error } = await customerApi.getCustomers(query);
+		if (fetchId !== lastFetchId) return;
 		if (data && data.data) {
 			customers.value = data.data.map((c: any) => ({
 				guid: c.guid || c.code,
@@ -109,8 +114,14 @@ onMounted(() => {
 	fetchCustomers();
 });
 
-watch([searchQuery, filterStatus, identityFilter], () => {
+const debouncedFetchCustomers = debounce(fetchCustomers, 300);
+
+watch([filterStatus, identityFilter], () => {
 	fetchCustomers();
+});
+
+watch(searchQuery, () => {
+	debouncedFetchCustomers();
 });
 
 const filteredCustomers = computed(() => {

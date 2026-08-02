@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from "@/utils/error";
 import PageHeader from "@/components/PageHeader.vue";
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, shallowRef, onMounted, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
 import Table from "@/components/Table.vue";
@@ -16,6 +16,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { getAvatarUrl } from "@/utils/User/avatar";
 import HighlightText from "@/components/HighlightText.vue";
 import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
+import { debounce } from "@/utils/debounce";
 
 interface UserModel {
 	guid: string;
@@ -53,7 +54,7 @@ const headers = computed<TableHeader[]>(() => {
 	return cols;
 });
 
-const users = ref<UserModel[]>([]);
+const users = shallowRef<UserModel[]>([]);
 const loading = ref(false);
 const exporting = ref(false);
 
@@ -62,7 +63,10 @@ const showStatusModal = ref(false);
 const selectedUserForStatus = ref<UserModel | null>(null);
 const statusLoading = ref(false);
 
+let lastFetchId = 0;
+
 async function fetchUsers() {
+	const fetchId = ++lastFetchId;
 	loading.value = true;
 	try {
 		const query: any = {
@@ -78,6 +82,8 @@ async function fetchUsers() {
 		else if (filterStatus.value === "inactive") query.isActive = "false";
 
 		const { data, error } = await userApi.getUsers(query);
+
+		if (fetchId !== lastFetchId) return;
 
 		if (data && data.data) {
 			users.value = data.data.map((u: any) => ({
@@ -143,9 +149,15 @@ function getRoleChipType(role: string) {
 	}
 }
 
+const debouncedFetchUsers = debounce(fetchUsers, 300);
+
 // Re-fetch users whenever filters change
-watch([searchQuery, roleFilter, filterStatus], () => {
+watch([roleFilter, filterStatus], () => {
 	fetchUsers();
+});
+
+watch(searchQuery, () => {
+	debouncedFetchUsers();
 });
 
 const totalEmployees = computed(() => users.value.length);
@@ -174,8 +186,10 @@ const managerCount = computed(
 );
 
 onMounted(async () => {
-	roleList.value = await fetchRoleList();
-	fetchUsers();
+	await Promise.all([
+		fetchRoleList().then(r => roleList.value = r),
+		fetchUsers()
+	]);
 });
 
 function resetFilters() {

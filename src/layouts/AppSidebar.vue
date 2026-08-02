@@ -252,14 +252,14 @@ watch(
 					class="nav__children"
 					v-show="!((isDesktop && isDocked) || isTablet) && groups.maintenance"
 				>
-					<li v-if="authStore.can('read', 'Location')">
+					<!-- <li v-if="authStore.can('read', 'Location')">
 						<router-link
 							to="/maintenance/location"
 							class="nav__child"
 							active-class="nav__child-active"
 							><span>Location</span></router-link
 						>
-					</li>
+					</li> -->
 					<li v-if="authStore.can('read', 'Site')">
 						<router-link
 							to="/maintenance/site"
@@ -292,14 +292,14 @@ watch(
 							><span>Service Provided</span></router-link
 						>
 					</li> -->
-					<li v-if="authStore.can('read', 'Permission')">
+					<!-- <li v-if="authStore.can('read', 'Permission')">
 						<router-link
 							to="/maintenance/doc-no-format"
 							class="nav__child"
 							active-class="nav__child-active"
 							><span>Doc No Format</span></router-link
 						>
-					</li>
+					</li> -->
 					<li v-if="authStore.can('read', 'Permission')">
 						<router-link
 							to="/maintenance/role-permission"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import PageHeader from "@/components/PageHeader.vue";
-import { ref, computed, onMounted } from "vue";
+import { ref, shallowRef, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import Textbox from "@/components/Textbox.vue";
 import http from "@/utils/http";
@@ -59,8 +59,8 @@ const filteredAutocompleteUsers = computed(() => {
 	);
 });
 
-const users = ref<UserModel[]>([]);
-const allPermissions = ref<PermissionModel[]>([]);
+const users = shallowRef<UserModel[]>([]);
+const allPermissions = shallowRef<PermissionModel[]>([]);
 
 const inheritedPermissions = ref<Set<string>>(new Set());
 const userOverrides = ref<Map<string, "allow" | "deny">>(new Map());
@@ -231,11 +231,11 @@ function selectAllPermissions(action: "allow" | "deny") {
 }
 
 onMounted(async () => {
+	const initTasks = [loadUsers(), loadAllPermissions()];
 	if (!authStore.currentUser) {
-		await authStore.fetchMe();
+		initTasks.push(authStore.fetchMe());
 	}
-	await loadUsers();
-	await loadAllPermissions();
+	await Promise.all(initTasks);
 	document.addEventListener("mousedown", handleClickOutside);
 
 	const targetUserQuery = route.query.user as string;
@@ -257,12 +257,12 @@ const filteredGroupedPermissions = computed(() => {
 	const result: Record<string, PermissionModel[]> = {};
 	if (!allPermissions.value) return result;
 
+	const query = searchQuery.value.trim().toLowerCase();
 	allPermissions.value
 		.filter((x) => !x.inverted)
 		.forEach((x) => {
-			const query = searchQuery.value.toLowerCase();
 			const matches =
-				!searchQuery.value ||
+				!query ||
 				x.subject.toLowerCase().includes(query) ||
 				x.action.toLowerCase().includes(query) ||
 				x.code.toLowerCase().includes(query) ||

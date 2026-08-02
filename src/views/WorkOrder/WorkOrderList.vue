@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from "@/utils/error";
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, shallowRef, computed, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Badge from "@/components/Badge.vue";
 import Table from "@/components/Table.vue";
@@ -25,6 +25,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { reportApi } from "@/api/report/report.api";
 import { downloadCsv, printRowsAsPdf } from "@/utils/csv";
 import { userDisplayCode } from "@/utils/User/user-display";
+import { debounce } from "@/utils/debounce";
 
 const props = defineProps({
 	status: {
@@ -276,9 +277,22 @@ function resetFilters() {
 	applyFilters();
 }
 
-const workOrders = ref<any[]>([]);
+const workOrders = shallowRef<any[]>([]);
 const loading = ref(false);
-const userDirectory = ref<any[]>([]);
+const userDirectory = shallowRef<any[]>([]);
+
+const userLookupMap = computed(() => {
+	const map = new Map<string, any>();
+	for (const item of userDirectory.value) {
+		const candidates = [item.guid, item.code, item.displayCode, item.userCode];
+		for (const cand of candidates) {
+			if (cand) {
+				map.set(String(cand).toLowerCase(), item);
+			}
+		}
+	}
+	return map;
+});
 
 async function fetchUserDirectory() {
 	try {
@@ -300,18 +314,17 @@ function resolveUserDisplay(
 	fallbackDisplayCode?: string | null,
 ) {
 	const lookup = String(value || fallbackDisplayCode || "").toLowerCase();
-	const user = userDirectory.value.find((item: any) =>
-		[item.guid, item.code, item.displayCode, item.userCode]
-			.filter(Boolean)
-			.some((candidate) => String(candidate).toLowerCase() === lookup),
-	);
+	const user = userLookupMap.value.get(lookup);
 	if (!user) return formatUserDisplay(fallbackName, fallbackDisplayCode || value);
 	const name = user.displayName || user.profile?.displayName || user.name;
 	const displayCode = user.displayCode || user.code || user.userCode;
 	return formatUserDisplay(name, displayCode);
 }
 
+let lastFetchId = 0;
+
 async function fetchWorkOrders() {
+	const fetchId = ++lastFetchId;
 	loading.value = true;
 	try {
 		const query: any = {
@@ -347,6 +360,7 @@ async function fetchWorkOrders() {
 		}
 
 		const { data } = await workOrderApi.getWorkOrders(query);
+		if (fetchId !== lastFetchId) return;
 		if (data && data.data && Array.isArray(data.data)) {
 			workOrders.value = data.data.map((w: any) => ({
 				guid: w.guid,
@@ -459,9 +473,10 @@ function goToDetail(item: any) {
 	});
 }
 
+const debouncedFetchWorkOrders = debounce(fetchWorkOrders, 300);
+
 watch(
 	[
-		searchQuery,
 		activeStatus,
 		activeIsDraft,
 		activeIncludesDraftAndNew,
@@ -474,6 +489,10 @@ watch(
 		fetchWorkOrders();
 	},
 );
+
+watch(searchQuery, () => {
+	debouncedFetchWorkOrders();
+});
 
 onMounted(async () => {
 	await fetchUserDirectory();
@@ -510,23 +529,20 @@ const filteredWorkOrders = computed(() => {
 
 		if (searchQuery.value) {
 			const q = searchQuery.value.trim().toLowerCase();
-			const searchableValues: unknown[] = [];
-			const collectValues = (value: unknown) => {
-				if (value === null || value === undefined) return;
-				if (Array.isArray(value)) {
-					value.forEach(collectValues);
-					return;
-				}
-				if (typeof value === "object") {
-					Object.values(value as Record<string, unknown>).forEach(collectValues);
-					return;
-				}
-				searchableValues.push(value);
-			};
-			collectValues(w);
-			if (!searchableValues.some((value) => String(value).toLowerCase().includes(q))) {
-				return false;
-			}
+			const match =
+				String(w.woNumber || "").toLowerCase().includes(q) ||
+				String(w.title || "").toLowerCase().includes(q) ||
+				String(w.customer?.name || "").toLowerCase().includes(q) ||
+				String(w.customer?.email || "").toLowerCase().includes(q) ||
+				String(w.customer?.phone || "").toLowerCase().includes(q) ||
+				String(w.leader || "").toLowerCase().includes(q) ||
+				String(w.leaderII || "").toLowerCase().includes(q) ||
+				String(w.salesAgent || "").toLowerCase().includes(q) ||
+				String(w.workType || "").toLowerCase().includes(q) ||
+				String(w.site || "").toLowerCase().includes(q) ||
+				String(w.status || "").toLowerCase().includes(q) ||
+				String(w.jobPriority || "").toLowerCase().includes(q);
+			if (!match) return false;
 		}
 
 		return true;
@@ -549,10 +565,12 @@ const isAllSelected = computed({
 	},
 });
 
+const selectedWorkOrdersSet = computed(() => new Set(selectedWorkOrders.value));
+
 function toggleSelection(woNumber: string, isSelected: boolean) {
 	if (isSelected) {
-		if (!selectedWorkOrders.value.includes(woNumber)) {
-			selectedWorkOrders.value.push(woNumber);
+		if (!selectedWorkOrdersSet.value.has(woNumber)) {
+			selectedWorkOrders.value = [...selectedWorkOrders.value, woNumber];
 		}
 	} else {
 		selectedWorkOrders.value = selectedWorkOrders.value.filter((id) => id !== woNumber);
@@ -1570,7 +1588,7 @@ defineExpose({
 				<template #item-select="{ item }">
 					<div @click.stop>
 						<Checkbox
-							:modelValue="selectedWorkOrders.includes(item.woNumber)"
+							:modelValue="selectedWorkOrdersSet.has(item.woNumber)"
 							@update:modelValue="(val) => toggleSelection(item.woNumber, val)"
 						/>
 					</div>

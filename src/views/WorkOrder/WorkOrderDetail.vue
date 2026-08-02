@@ -1822,41 +1822,48 @@ onMounted(async () => {
 	if (tabsWrapperRef.value) {
 		tabsWrapperRef.value.addEventListener("scroll", updateTabArrows);
 	}
-	await fetchWorkOrderDetails();
-	await fetchActivityLogs();
-	await fetchWorkOrderFiles();
-	await fetchWorkNotes();
-
-	// Fetch dynamic users and work types
-	try {
-		const userRes = await userApi.getUsers({
-			pageIndex: 0,
-			pageSize: 100,
-			timezone: "Asia/Kuala_Lumpur",
-		});
-		if (userRes.data && userRes.data.data) {
-			users.value = userRes.data.data.map((u: any) => ({
-				code: u.code || u.guid,
-				displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
-				name: u.displayName || u.profile?.displayName || u.name || "Unknown",
-				role: (u.role || u.userGroup || u.description || "").toLowerCase(),
-			}));
-		}
-
-		const wtRes = await workTypeApi.getWorkTypes({
-			pageIndex: 0,
-			pageSize: 100,
-			timezone: "Asia/Kuala_Lumpur",
-		});
-		if (wtRes.data && wtRes.data.data) {
-			workTypes.value = wtRes.data.data.map((wt: any) => ({
-				code: wt.code,
-				name: wt.name,
-			}));
-		}
-	} catch (e) {
-		console.error("Failed to load options:", e);
-	}
+	await Promise.all([
+		fetchWorkOrderDetails(),
+		fetchActivityLogs(),
+		fetchWorkOrderFiles(),
+		fetchWorkNotes(),
+		(async () => {
+			try {
+				const userRes = await userApi.getUsers({
+					pageIndex: 0,
+					pageSize: 100,
+					timezone: "Asia/Kuala_Lumpur",
+				});
+				if (userRes.data && userRes.data.data) {
+					users.value = userRes.data.data.map((u: any) => ({
+						code: u.code || u.guid,
+						displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
+						name: u.displayName || u.profile?.displayName || u.name || "Unknown",
+						role: (u.role || u.userGroup || u.description || "").toLowerCase(),
+					}));
+				}
+			} catch (e) {
+				console.error("Failed to load users list in details onMounted:", e);
+			}
+		})(),
+		(async () => {
+			try {
+				const wtRes = await workTypeApi.getWorkTypes({
+					pageIndex: 0,
+					pageSize: 100,
+					timezone: "Asia/Kuala_Lumpur",
+				});
+				if (wtRes.data && wtRes.data.data) {
+					workTypes.value = wtRes.data.data.map((wt: any) => ({
+						code: wt.code,
+						name: wt.name,
+					}));
+				}
+			} catch (e) {
+				console.error("Failed to load work types in details onMounted:", e);
+			}
+		})()
+	]);
 });
 
 function revokeAllFileUrls() {

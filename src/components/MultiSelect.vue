@@ -18,16 +18,19 @@ const containerRef = ref<HTMLElement | null>(null);
 
 const filteredOptions = computed(() => {
     const val = props.modelValue || [];
+    const valSet = new Set(val);
+    const query = searchQuery.value.toLowerCase();
     return props.options.filter(opt => 
-        !val.includes(opt.code) && 
-        (opt.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
-         opt.code.toLowerCase().includes(searchQuery.value.toLowerCase()))
+        !valSet.has(opt.code) && 
+        (opt.name.toLowerCase().includes(query) || 
+         opt.code.toLowerCase().includes(query))
     );
 });
 
 const selectedOptions = computed(() => {
     const val = props.modelValue || [];
-    return val.map(code => props.options.find(opt => opt.code === code) || { code, name: code });
+    const optionsMap = new Map(props.options.map(opt => [opt.code, opt]));
+    return val.map(code => optionsMap.get(code) || { code, name: code });
 });
 
 function selectOption(code: string) {

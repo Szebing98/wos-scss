@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import PageHeader from "@/components/PageHeader.vue";
-import { ref, computed, onMounted } from "vue";
+import { ref, shallowRef, computed, onMounted } from "vue";
 import Textbox from "@/components/Textbox.vue";
 import Badge from "@/components/Badge.vue";
 import http from "@/utils/http";
@@ -41,8 +41,8 @@ const selectedGroup = ref<UserGroupModel | null>(null);
 const searchQuery = ref("");
 const permissionGuardMessage = ref("");
 
-const groups = ref<UserGroupModel[]>([]);
-const allPermissions = ref<PermissionModel[]>([]);
+const groups = shallowRef<UserGroupModel[]>([]);
+const allPermissions = shallowRef<PermissionModel[]>([]);
 const selectedPermissionCodes = ref<Set<string>>(new Set());
 const originalPermissionCodes = ref<Set<string>>(new Set());
 const authStore = useAuthStore();
@@ -232,10 +232,10 @@ const filteredGroupedPermissions = computed(() => {
 	const result: Record<string, PermissionModel[]> = {};
 	if (!allPermissions.value) return result;
 
+	const query = searchQuery.value.trim().toLowerCase();
 	allPermissions.value.forEach((x) => {
-		const query = searchQuery.value.toLowerCase();
 		const matches =
-			!searchQuery.value ||
+			!query ||
 			x.subject.toLowerCase().includes(query) ||
 			x.action.toLowerCase().includes(query) ||
 			x.code.toLowerCase().includes(query) ||
@@ -348,10 +348,11 @@ async function saveGroupPermissions() {
 }
 
 onMounted(async () => {
+	const initTasks = [loadAllPermissions()];
 	if (!authStore.currentUser) {
-		await authStore.fetchMe();
+		initTasks.push(authStore.fetchMe());
 	}
-	await loadAllPermissions();
+	await Promise.all(initTasks);
 	loadGroups();
 });
 </script>

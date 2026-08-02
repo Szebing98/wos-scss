@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from "@/utils/error";
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, shallowRef, computed, watch, onMounted } from "vue";
 import Card from "@/components/Card.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
@@ -104,18 +104,34 @@ function upsertUserOption(
 	const nextDisplayCode = displayCode?.trim();
 
 	if (existing) {
-		if (nextName) existing.name = nextName;
-		if (nextDisplayCode) existing.displayCode = nextDisplayCode;
-		if (role && !existing.role) existing.role = role;
+		let changed = false;
+		if (nextName && existing.name !== nextName) {
+			existing.name = nextName;
+			changed = true;
+		}
+		if (nextDisplayCode && existing.displayCode !== nextDisplayCode) {
+			existing.displayCode = nextDisplayCode;
+			changed = true;
+		}
+		if (role && !existing.role) {
+			existing.role = role;
+			changed = true;
+		}
+		if (changed) {
+			users.value = [...users.value];
+		}
 		return;
 	}
 
-	users.value.push({
-		code: normalizedCode,
-		displayCode: nextDisplayCode || normalizedCode,
-		name: nextName || nextDisplayCode || normalizedCode,
-		role: role || "",
-	});
+	users.value = [
+		...users.value,
+		{
+			code: normalizedCode,
+			displayCode: nextDisplayCode || normalizedCode,
+			name: nextName || nextDisplayCode || normalizedCode,
+			role: role || "",
+		},
+	];
 }
 
 const normalizedStatus = computed(() =>
@@ -289,11 +305,44 @@ const formData = ref({
 	}>,
 });
 
-const workTypeList = ref<any[]>([]);
-const workTypeItems = ref<any[]>([]);
-const users = ref<any[]>([]);
-const customers = ref<any[]>([]);
-const sites = ref<any[]>([]);
+const workTypeList = shallowRef<any[]>([]);
+const workTypeItems = shallowRef<any[]>([]);
+const users = shallowRef<any[]>([]);
+const customers = shallowRef<any[]>([]);
+const sites = shallowRef<any[]>([]);
+
+const usersByCodeMap = computed(() => {
+	const map = new Map<string, any>();
+	for (const u of users.value) {
+		if (u.code) {
+			map.set(String(u.code), u);
+		}
+	}
+	return map;
+});
+
+const customersByCodeMap = computed(() => {
+	const map = new Map<string, any>();
+	for (const c of customers.value) {
+		if (c.code) {
+			map.set(String(c.code), c);
+		}
+	}
+	return map;
+});
+
+const workTypeByCodeMap = computed(() => {
+	const map = new Map<string, any>();
+	for (const wt of workTypeList.value) {
+		if (wt.code) {
+			map.set(String(wt.code), wt);
+		}
+		if (wt.guid) {
+			map.set(String(wt.guid), wt);
+		}
+	}
+	return map;
+});
 const loading = ref(false);
 
 // Site instructions file handling
@@ -408,14 +457,30 @@ watch(
 
 async function loadOptions() {
 	try {
-		// Fetch Customers
-		const custRes = await customerApi.getCustomers({
-			pageIndex: 0,
-			pageSize: 100,
-			timezone: "Asia/Kuala_Lumpur",
-			isActive: true,
-		});
-		if (custRes.data && custRes.data.data) {
+		const [custRes, userRes, wtRes, siteRes] = await Promise.all([
+			customerApi.getCustomers({
+				pageIndex: 0,
+				pageSize: 100,
+				timezone: "Asia/Kuala_Lumpur",
+				isActive: true,
+			}).catch((e: any) => { console.error(e); return null; }),
+			userApi.getUsers({
+				pageIndex: 0,
+				pageSize: 1000,
+				timezone: "Asia/Kuala_Lumpur",
+			}).catch((e: any) => { console.error(e); return null; }),
+			workTypeApi.getWorkTypes({
+				pageIndex: 0,
+				pageSize: 100,
+				timezone: "Asia/Kuala_Lumpur",
+			}).catch((e: any) => { console.error(e); return null; }),
+			http.get("/site", { params: { pageSize: 100 } }).catch((e: any) => {
+				console.error("Failed to load site list from Maintenance site API:", e);
+				return null;
+			})
+		]);
+
+		if (custRes && custRes.data && custRes.data.data) {
 			customers.value = custRes.data.data.map((c: any) => ({
 				code: c.code,
 				name: c.name,
@@ -423,13 +488,7 @@ async function loadOptions() {
 			}));
 		}
 
-		// Fetch Users
-		const userRes = await userApi.getUsers({
-			pageIndex: 0,
-			pageSize: 1000,
-			timezone: "Asia/Kuala_Lumpur",
-		});
-		if (userRes.data && userRes.data.data) {
+		if (userRes && userRes.data && userRes.data.data) {
 			users.value = userRes.data.data.map((u: any) => ({
 				code: u.code || u.guid,
 				displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
@@ -446,13 +505,7 @@ async function loadOptions() {
 			}));
 		}
 
-		// Fetch Work Types
-		const wtRes = await workTypeApi.getWorkTypes({
-			pageIndex: 0,
-			pageSize: 100,
-			timezone: "Asia/Kuala_Lumpur",
-		});
-		if (wtRes.data && wtRes.data.data) {
+		if (wtRes && wtRes.data && wtRes.data.data) {
 			workTypeList.value = wtRes.data.data.map((wt: any) => ({
 				guid: wt.guid,
 				code: wt.code,
@@ -476,10 +529,8 @@ async function loadOptions() {
 			}
 		}
 
-		// Fetch Sites from Maintenance Site API
-		try {
-			const res = await http.get("/site", { params: { pageSize: 100 } });
-			const rawSites = res?.data?.data || res?.data?.items || res?.data || [];
+		if (siteRes) {
+			const rawSites = siteRes?.data?.data || siteRes?.data?.items || siteRes?.data || [];
 			if (Array.isArray(rawSites) && rawSites.length > 0) {
 				sites.value = rawSites
 					.filter((s: any) => s.isActive !== false)
@@ -489,8 +540,6 @@ async function loadOptions() {
 						guid: s.guid,
 					}));
 			}
-		} catch (e) {
-			console.error("Failed to load site list from Maintenance site API:", e);
 		}
 	} catch (e) {
 		console.error("Failed to load select options:", e);
@@ -499,14 +548,16 @@ async function loadOptions() {
 
 onMounted(async () => {
 	if (!authStore.currentUser) void authStore.fetchMe();
-	await loadOptions();
 
 	const id = route.params.id;
 	if (id && typeof id === "string") {
 		try {
 			loading.value = true;
-			const { data } = await workOrderApi.getWorkOrderByGuid(id);
-			const w = (data?.data || data) as any;
+			const [_, detailRes] = await Promise.all([
+				loadOptions(),
+				workOrderApi.getWorkOrderByGuid(id)
+			]);
+			const w = (detailRes?.data?.data || detailRes?.data) as any;
 			if (w && (w.guid || w.code)) {
 				workOrderOwnerCode.value = w.createdBy || w.createdByCode || "";
 				workOrderCode.value =
@@ -675,6 +726,7 @@ onMounted(async () => {
 			updateBreadcrumbs();
 		}
 	} else {
+		await loadOptions();
 		updateBreadcrumbs();
 	}
 });
@@ -737,7 +789,7 @@ const engineerUsers = computed(() => {
 });
 
 const leaderOptions = computed(() => {
-	const selected = users.value.find((u: any) => u.code === formData.value.leaderCode);
+	const selected = usersByCodeMap.value.get(formData.value.leaderCode);
 	const candidates = selected ? [...engineerUsers.value, selected] : engineerUsers.value;
 	return Array.from(new Map(candidates.map((u: any) => [u.code, u])).values()).filter(
 		(u: any) =>
@@ -748,7 +800,7 @@ const leaderOptions = computed(() => {
 });
 
 const leaderIIOptions = computed(() => {
-	const selected = users.value.find((u: any) => u.code === formData.value.leaderIICode);
+	const selected = usersByCodeMap.value.get(formData.value.leaderIICode);
 	const candidates = selected ? [...engineerUsers.value, selected] : engineerUsers.value;
 	return Array.from(new Map(candidates.map((u: any) => [u.code, u])).values()).filter(
 		(u: any) =>
@@ -760,7 +812,7 @@ const leaderIIOptions = computed(() => {
 
 const technicianOptions = computed(() => {
 	const selected = formData.value.technicianCodes
-		.map((code) => users.value.find((u: any) => u.code === code))
+		.map((code) => usersByCodeMap.value.get(code))
 		.filter(Boolean);
 	const candidates = [...engineerUsers.value, ...selected];
 	return Array.from(new Map(candidates.map((u: any) => [u.code, u])).values())
@@ -788,7 +840,7 @@ function getContractStatus(c: any): "Active" | "ExpiringSoon" | "Expired" {
 
 const availableContracts = computed(() => {
 	if (!formData.value.customerCode) return [];
-	const cust = customers.value.find((c: any) => c.code === formData.value.customerCode);
+	const cust = customersByCodeMap.value.get(formData.value.customerCode);
 	return (cust?.contracts || []).map((c: any) => ({
 		...c,
 		status: getContractStatus(c),
@@ -842,7 +894,7 @@ function redirectToCustomerRenew(contract: any) {
 		snackbar.error("Please select a Customer first.");
 		return;
 	}
-	const cust = customers.value.find((c: any) => c.code === formData.value.customerCode);
+	const cust = customersByCodeMap.value.get(formData.value.customerCode);
 	const custGuid = cust?.guid || cust?.code || formData.value.customerCode;
 	const targetContractNo = contract?.contractNo || formData.value.contractNo;
 
@@ -861,11 +913,10 @@ const selectedWorkType = computed(() => {
 	const code = (formData.value.orderTypeCode || "").toLowerCase();
 	const name = (formData.value.workType || "").toLowerCase();
 
-	return workTypeList.value.find(
-		(wt: any) =>
-			(guid && wt.guid === guid) ||
-			(code && wt.code?.toLowerCase() === code) ||
-			(name && wt.name?.toLowerCase() === name),
+	return (
+		(guid ? workTypeByCodeMap.value.get(guid) : undefined) ||
+		(code ? workTypeByCodeMap.value.get(code) : undefined) ||
+		workTypeList.value.find((wt: any) => name && wt.name?.toLowerCase() === name)
 	);
 });
 

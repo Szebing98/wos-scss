@@ -137,7 +137,7 @@ function handleClickOutside(event: MouseEvent) {
 
 watch([() => props.options, () => props.modelValue], () => {
 	updateParsedOptions();
-}, { immediate: true, deep: true });
+}, { immediate: true });
 
 onMounted(() => {
 	document.addEventListener("click", handleClickOutside);
