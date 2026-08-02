@@ -3,6 +3,7 @@ import { ref, computed, watch, onUnmounted } from "vue";
 import Dialog from "@/components/Dialog.vue";
 import Button from "@/components/Button.vue";
 import HighlightText from "@/components/HighlightText.vue";
+import TableLoader from "@/components/TableLoader.vue";
 
 export interface TableHeader {
 	key: string;
@@ -37,6 +38,7 @@ const props = withDefaults(
 		rowsPerPageOptions?: number[];
 		storageKey?: string;
 		searchQuery?: string;
+		loading?: boolean;
 	}>(),
 	{
 		emptyMessage: "No data available.",
@@ -50,6 +52,7 @@ const props = withDefaults(
 		rowsPerPageOptions: () => [10, 25, 50, 100],
 		storageKey: undefined,
 		searchQuery: undefined,
+		loading: false,
 	},
 );
 
@@ -428,7 +431,9 @@ const paginationText = computed(() => {
 			'mud-table-outlined': outlined,
 		}"
 	>
+		<TableLoader v-if="loading" :columns="Math.max(visibleHeaders.length, 1)" />
 		<table
+			v-else
 			class="mud-table-root"
 			:class="{ 'mud-table-root--bordered': bordered }"
 			:style="tableStyle"
@@ -558,7 +563,7 @@ const paginationText = computed(() => {
 				</tr>
 			</tbody>
 		</table>
-		<div class="mud-table-pagination" v-if="paginate && items && items.length > 0">
+		<div class="mud-table-pagination" v-if="!loading && paginate && items && items.length > 0">
 			<div class="mud-table-column-settings" style="margin-right: auto">
 				<button
 					class="btn btn--outlined"

@@ -45,6 +45,8 @@ const snackbar = useSnackbarStore();
 const authStore = useAuthStore();
 const exporting = ref(false);
 const applyingBulkAction = ref(false);
+const actionLoading = ref(false);
+const rejectLoading = ref(false);
 const priorityColors: Record<string, string> = {
 	High: "error",
 	Medium: "warning",
@@ -1078,6 +1080,7 @@ function openRejectDialog(item: WorkOrderModel) {
 
 async function executeAction() {
 	if (selectedItem.value && statusAction.value) {
+		actionLoading.value = true;
 		try {
 			const guid = selectedItem.value.guid;
 			if (!guid) return;
@@ -1109,6 +1112,8 @@ async function executeAction() {
 			}
 		} catch (e) {
 			console.error(e);
+		} finally {
+			actionLoading.value = false;
 		}
 	}
 	isConfirm.value = false;
@@ -1116,6 +1121,7 @@ async function executeAction() {
 
 async function executeReject() {
 	if (selectedItem.value && rejectReason.value) {
+		rejectLoading.value = true;
 		try {
 			const guid = selectedItem.value.guid;
 			if (!guid) return;
@@ -1129,6 +1135,8 @@ async function executeReject() {
 			}
 		} catch (e) {
 			console.error(e);
+		} finally {
+			rejectLoading.value = false;
 		}
 	}
 	isReject.value = false;
@@ -1752,7 +1760,7 @@ defineExpose({
 			<p style="margin: 0">{{ confirmMsg }}</p>
 			<template #footer>
 				<Button variant="secondary" @click="isConfirm = false">Cancel</Button>
-				<Button variant="primary" @click="executeAction">Confirm</Button>
+				<Button variant="primary" :loading="actionLoading" @click="executeAction">Confirm</Button>
 			</template>
 		</Dialog>
 
@@ -1762,7 +1770,7 @@ defineExpose({
 			</p>
 			<template #footer>
 				<Button variant="secondary" @click="isConfirmBulkAction = false">Cancel</Button>
-				<Button variant="primary" :disabled="applyingBulkAction" @click="applyBulkAction">
+				<Button variant="primary" :loading="applyingBulkAction" @click="applyBulkAction">
 					{{ applyingBulkAction ? "Processing..." : "Confirm" }}
 				</Button>
 			</template>
@@ -1782,7 +1790,7 @@ defineExpose({
 			/>
 			<template #footer>
 				<Button variant="secondary" @click="isReject = false">Cancel</Button>
-				<Button variant="danger" :disabled="!rejectReason" @click="executeReject"
+				<Button variant="danger" :loading="rejectLoading" :disabled="!rejectReason" @click="executeReject"
 					>Reject</Button
 				>
 			</template>

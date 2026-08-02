@@ -357,6 +357,7 @@ async function syncWithLhdn() {
 					storageKey="location-maintenance"
 					:headers="countryHeaders"
 					:items="filteredCountries"
+					:loading="isSyncing"
 					emptyMessage="No countries found matching your search."
 				>
 					<template #item-name="{ item }">

@@ -47,6 +47,7 @@ const filterType = ref("all");
 
 const isDetailDrawerOpen = ref(false);
 const isLoadingDetails = ref(false);
+const isLoadingLogs = ref(false);
 const selectedLog = ref<AuditLog | null>(null);
 const logChanges = ref<AuditChange[]>([]);
 
@@ -110,6 +111,7 @@ async function loadModules() {
 }
 
 async function loadLogs() {
+	isLoadingLogs.value = true;
 	try {
 		const query: any = {
 			pageIndex: 0,
@@ -136,6 +138,8 @@ async function loadLogs() {
 	} catch (error) {
 		console.error("Failed to load audit logs:", error);
 		logs.value = [];
+	} finally {
+		isLoadingLogs.value = false;
 	}
 }
 
@@ -228,6 +232,7 @@ onMounted(() => {
 				storageKey="audit-log-list"
 				:headers="headers"
 				:items="filteredLogs"
+				:loading="isLoadingLogs"
 				emptyMessage="No audit logs found for the selected criteria."
 			>
 				<template #item-timestamp="{ item }">

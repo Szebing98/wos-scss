@@ -18,6 +18,8 @@ const isNewRecord = ref(false);
 const isDialogOpen = ref(false);
 const isLoading = ref(false);
 const isDeleting = ref(false);
+const isSaving = ref(false);
+const isExecutingDelete = ref(false);
 const selectedFormat = ref<DocNoFormatModel | null>(null);
 
 const formData = ref<{
@@ -176,6 +178,7 @@ async function saveFormat() {
 	};
 
 	try {
+		isSaving.value = true;
 		if (isNewRecord.value) {
 			await http.post("/doc-no-format", payload);
 		} else if (selectedFormat.value?.id) {
@@ -185,6 +188,8 @@ async function saveFormat() {
 		await loadFormats();
 	} catch (e) {
 		console.error("Failed to save format:", e);
+	} finally {
+		isSaving.value = false;
 	}
 }
 
@@ -200,12 +205,15 @@ function promptDelete(item: DocNoFormatModel) {
 async function executeDelete() {
 	if (!selectedFormat.value?.id) return;
 	try {
+		isExecutingDelete.value = true;
 		await http.delete(`/doc-no-format/${selectedFormat.value.id}`);
 		selectedFormat.value = null;
 		isDeleting.value = false;
 		await loadFormats();
 	} catch (e) {
 		console.error("Failed to delete format:", e);
+	} finally {
+		isExecutingDelete.value = false;
 	}
 }
 </script>
@@ -427,8 +435,9 @@ async function executeDelete() {
 				<button class="btn btn--secondary" @click="isDialogOpen = false">
 					Cancel
 				</button>
-				<button class="btn btn--primary" @click="saveFormat">
-					Save Configuration
+				<button class="btn btn--primary" :disabled="isSaving" @click="saveFormat">
+					<i v-if="isSaving" class="mdi mdi-loading mdi-spin"></i>
+					{{ isSaving ? "Saving..." : "Save Configuration" }}
 				</button>
 			</template>
 		</Dialog>
@@ -443,7 +452,10 @@ async function executeDelete() {
 			</p>
 			<template #footer>
 				<button class="btn btn--secondary" @click="isDeleting = false">Cancel</button>
-				<button class="btn btn--danger" @click="executeDelete">Delete</button>
+				<button class="btn btn--danger" :disabled="isExecutingDelete" @click="executeDelete">
+					<i v-if="isExecutingDelete" class="mdi mdi-loading mdi-spin"></i>
+					{{ isExecutingDelete ? "Deleting..." : "Delete" }}
+				</button>
 			</template>
 		</Dialog>
 	</div>

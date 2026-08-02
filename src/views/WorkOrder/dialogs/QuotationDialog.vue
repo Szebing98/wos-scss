@@ -69,7 +69,7 @@ defineExpose({ open });
 		</div>
 		<template #footer>
 			<Button variant="secondary" @click="isOpen = false">Cancel</Button>
-			<Button variant="primary" @click="submit" :disabled="isSaving || !form.name">Save Changes</Button>
+			<Button variant="primary" @click="submit" :loading="isSaving" :disabled="!form.name">Save Changes</Button>
 		</template>
 	</Dialog>
 </template>

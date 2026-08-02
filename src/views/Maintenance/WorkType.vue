@@ -79,6 +79,10 @@ const editingItem = ref<WorkTypeItem>({
 
 const workTypes = ref<WorkType[]>([]);
 const items = ref<WorkTypeItem[]>([]);
+const isLoadingItems = ref(false);
+const isSavingType = ref(false);
+const isSavingItem = ref(false);
+const isUpdatingItemStatus = ref(false);
 
 async function fetchWorkTypes() {
 	try {
@@ -101,6 +105,7 @@ async function selectType(type: WorkType) {
 
 async function fetchItemsForWorkType(type: WorkType) {
 	if (!type) return;
+	isLoadingItems.value = true;
 	try {
 		if (type.guid) {
 			const res = await http.get(`/work-type/${type.guid}`);
@@ -111,6 +116,8 @@ async function fetchItemsForWorkType(type: WorkType) {
 	} catch (e) {
 		console.error("Failed to fetch work type items", e);
 		items.value = [];
+	} finally {
+		isLoadingItems.value = false;
 	}
 }
 
@@ -192,6 +199,7 @@ async function saveTypeModal() {
 	}
 
 	try {
+		isSavingType.value = true;
 		if (isNewRecord.value) {
 			const res = await http.post("/work-type", {
 				code: workTypeFormData.value.code.trim(),
@@ -216,6 +224,8 @@ async function saveTypeModal() {
 		await fetchWorkTypes();
 	} catch (e) {
 		console.error("Failed to save work type", e);
+	} finally {
+		isSavingType.value = false;
 	}
 }
 
@@ -244,6 +254,7 @@ function editItem(item: WorkTypeItem) {
 async function saveItem() {
 	if (!selectedType.value?.code) return;
 	try {
+		isSavingItem.value = true;
 		if (editingItem.value.guid) {
 			await http.put(`/work-type-item/${editingItem.value.guid}`, {
 				name: editingItem.value.name,
@@ -263,6 +274,8 @@ async function saveItem() {
 		await fetchItemsForWorkType(selectedType.value);
 	} catch (e) {
 		console.error("Failed to save work type item", e);
+	} finally {
+		isSavingItem.value = false;
 	}
 }
 
@@ -277,6 +290,7 @@ function requestToggleItemStatus(item: WorkTypeItem) {
 async function confirmToggleItemStatus() {
 	if (!itemToToggle.value?.guid) return;
 	try {
+		isUpdatingItemStatus.value = true;
 		const newStatus = !itemToToggle.value.isActive;
 		await http.put(`/work-type-item/${itemToToggle.value.guid}`, {
 			name: itemToToggle.value.name,
@@ -290,6 +304,8 @@ async function confirmToggleItemStatus() {
 		}
 	} catch (e) {
 		console.error("Failed to toggle item status:", e);
+	} finally {
+		isUpdatingItemStatus.value = false;
 	}
 }
 
@@ -534,6 +550,7 @@ onMounted(() => {
 							storageKey="worktype-items"
 							:headers="itemHeaders"
 							:items="filteredItems"
+							:loading="isLoadingItems"
 							emptyMessage="No work items found under this category."
 						>
 							<template #item-code="{ item }">
@@ -619,7 +636,10 @@ onMounted(() => {
 				<button class="action-btn action-btn--text" @click="isItemDialogOpen = false">
 					Cancel
 				</button>
-				<button class="action-btn action-btn--primary" @click="saveItem">Save Item</button>
+				<button class="action-btn action-btn--primary" :disabled="isSavingItem" @click="saveItem">
+					<i v-if="isSavingItem" class="mdi mdi-loading mdi-spin"></i>
+					{{ isSavingItem ? "Saving..." : "Save Item" }}
+				</button>
 			</template>
 		</Dialog>
 
@@ -682,7 +702,10 @@ onMounted(() => {
 
 			<template #footer>
 				<button class="btn btn--secondary" @click="isTypeDialogOpen = false">Cancel</button>
-				<button class="btn btn--primary" @click="saveTypeModal">Save Work Type</button>
+				<button class="btn btn--primary" :disabled="isSavingType" @click="saveTypeModal">
+					<i v-if="isSavingType" class="mdi mdi-loading mdi-spin"></i>
+					{{ isSavingType ? "Saving..." : "Save Work Type" }}
+				</button>
 			</template>
 		</Dialog>
 
@@ -702,7 +725,10 @@ onMounted(() => {
 				<button class="btn btn--secondary" @click="isConfirmItemStatusOpen = false">
 					Cancel
 				</button>
-				<button class="btn btn--primary" @click="confirmToggleItemStatus">Confirm</button>
+				<button class="btn btn--primary" :disabled="isUpdatingItemStatus" @click="confirmToggleItemStatus">
+					<i v-if="isUpdatingItemStatus" class="mdi mdi-loading mdi-spin"></i>
+					{{ isUpdatingItemStatus ? "Updating..." : "Confirm" }}
+				</button>
 			</template>
 		</Dialog>
 	</div>

@@ -62,7 +62,8 @@ const handleReset = async () => {
 
 				<Button
 					block
-					:disabled="isSubmitting || !!emailError || !email"
+					:loading="isSubmitting"
+					:disabled="!!emailError || !email"
 					@click="handleReset"
 				>
 					{{ isSubmitting ? "Sending..." : "Send Reset Link" }}

@@ -1984,6 +1984,7 @@ onUnmounted(() => {
 						canEditForCurrentAssignment
 					"
 					variant="primary"
+					:loading="loading"
 					@click="markAsDone"
 				>
 					Mark as Done
@@ -1994,6 +1995,7 @@ onUnmounted(() => {
 						authStore.can('reopen', 'WorkOrder')
 					"
 					variant="primary"
+					:loading="loading"
 					@click="reopenWorkOrder"
 				>
 					<i class="mdi mdi-lock-open-variant-outline"></i> <span class="btn-text">Reopen</span> </Button>
@@ -2004,6 +2006,7 @@ onUnmounted(() => {
 						authStore.can('mark_as_claimed', 'WorkOrder')
 					"
 					variant="primary"
+					:loading="loading"
 					:disabled="totalInvoiceIssued <= 0"
 					:title="
 						totalInvoiceIssued > 0

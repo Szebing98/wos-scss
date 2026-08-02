@@ -93,8 +93,9 @@ const handleReset = async () => {
 
 				<Button
 					block
+					:loading="isSubmitting"
 					:disabled="
-						isSubmitting || !!passwordError || !!confirmPasswordError || !form.password
+						!!passwordError || !!confirmPasswordError || !form.password
 					"
 					@click="handleReset"
 				>

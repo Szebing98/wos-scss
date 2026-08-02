@@ -7,6 +7,7 @@ import Textbox from "@/components/Textbox.vue";
 import Select, { type SelectOption } from "@/components/Select.vue";
 import Dialog from "@/components/Dialog.vue";
 import Button from "@/components/Button.vue";
+import FormLoader from "@/components/FormLoader.vue";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSnackbarStore } from "@/stores/snackbar.store";
 import { useBreadcrumbStore } from "@/stores/breadcrumb.store";
@@ -23,7 +24,8 @@ const breadcrumbStore = useBreadcrumbStore();
 
 const isNewMode = ref(false);
 const isEditMode = ref(false);
-const loading = ref(false);
+const isLoadingProfile = ref(false);
+const isSavingProfile = ref(false);
 const avatarLoading = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -106,7 +108,7 @@ const showSaveConfirmModal = ref(false);
 const saveConfirmChanges = ref<string[]>([]);
 
 async function loadProfile() {
-	loading.value = true;
+	isLoadingProfile.value = true;
 	try {
 		const userCode = route.query.code;
 		const mode = route.query.mode;
@@ -170,7 +172,7 @@ async function loadProfile() {
 	} catch (e) {
 		console.error("Failed to load user profile:", e);
 	} finally {
-		loading.value = false;
+		isLoadingProfile.value = false;
 	}
 }
 
@@ -326,7 +328,7 @@ async function handleSaveProfile() {
 
 async function executeSaveProfile() {
 	showSaveConfirmModal.value = false;
-	loading.value = true;
+	isSavingProfile.value = true;
 	try {
 		if (isNewMode.value) {
 			const { error } = await userApi.createUser({
@@ -395,7 +397,7 @@ async function executeSaveProfile() {
 		console.error(e);
 		snackbar.error("An unexpected error occurred.");
 	} finally {
-		loading.value = false;
+		isSavingProfile.value = false;
 	}
 }
 
@@ -514,14 +516,16 @@ async function confirmAvatarUpload() {
             </template>
         
         <template #actions>
-            <button v-if="isEditMode" class="btn btn--primary" @click="handleSaveProfile">
-					<i class="mdi mdi-content-save-outline"></i> <span class="btn-text">Save Changes</span> </button>
+			<button v-if="isEditMode" class="btn btn--primary" :disabled="isSavingProfile || isLoadingProfile" @click="handleSaveProfile">
+					<i :class="isSavingProfile ? 'mdi mdi-loading mdi-spin' : 'mdi mdi-content-save-outline'"></i>
+					<span class="btn-text">{{ isSavingProfile ? "Saving..." : "Save Changes" }}</span> </button>
 				<button v-else class="btn btn--primary" @click="isEditMode = true">
 					<i class="mdi mdi-pencil-outline"></i> <span class="btn-text">Edit Profile</span> </button>
         </template>
     </PageHeader>
 
-		<div class="profile-grid">
+		<FormLoader v-if="isLoadingProfile" :sections="2" :fields-per-section="4" />
+		<div v-else class="profile-grid">
 			<div class="profile-grid__left">
 				<!-- Part 1: User Meta Card -->
 				<div class="panel-card user-meta-card">
@@ -692,9 +696,9 @@ async function confirmAvatarUpload() {
 			</ul>
 		</div>
 		<template #footer>
-			<Button variant="outlined" @click="showSaveConfirmModal = false" :disabled="loading">Cancel</Button>
-			<Button variant="primary" @click="executeSaveProfile" :loading="loading">
-				<i v-if="!loading" class="mdi mdi-check"></i> <span class="btn-text">Confirm & Save</span> </Button>
+			<Button variant="outlined" @click="showSaveConfirmModal = false" :disabled="isSavingProfile">Cancel</Button>
+			<Button variant="primary" @click="executeSaveProfile" :loading="isSavingProfile">
+				<i v-if="!isSavingProfile" class="mdi mdi-check"></i> <span class="btn-text">Confirm & Save</span> </Button>
 		</template>
 	</Dialog>
 </template>

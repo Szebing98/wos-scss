@@ -1635,7 +1635,7 @@ const statusColors: Record<string, string> = {
 					<Button
 						v-if="isNewStatus && canEditReadOnlyWorkOrder"
 						variant="primary"
-						:disabled="loading"
+						:loading="loading"
 						@click="submitAndRequestApproval"
 					>
 						<i class="mdi mdi-check"></i> Request For Approval
@@ -1660,26 +1660,26 @@ const statusColors: Record<string, string> = {
 				<template
 					v-else-if="(!isEditMode || canEditReadOnlyWorkOrder) && (!isEditMode || isDraftStatus)"
 				>
-					<Button variant="outlined" @click="submitDraft">
+					<Button variant="outlined" :loading="loading" @click="submitDraft">
 						<i class="mdi mdi-content-save-outline"></i> Save as Draft
 					</Button>
-					<Button variant="outlined" @click="submitNew">
+					<Button variant="outlined" :loading="loading" @click="submitNew">
 						<i class="mdi mdi-send-outline"></i> Submit
 					</Button>
-					<Button variant="primary" @click="submitAndRequestApproval">
+					<Button variant="primary" :loading="loading" @click="submitAndRequestApproval">
 						<i class="mdi mdi-check"></i> Save & Request Approval
 					</Button>
 				</template>
 				<template v-else-if="isNewStatus && canEditReadOnlyWorkOrder">
-					<Button variant="outlined" @click="saveNew">
+					<Button variant="outlined" :loading="loading" @click="saveNew">
 						<i class="mdi mdi-content-save"></i> Save New
 					</Button>
-					<Button variant="primary" @click="submitAndRequestApproval">
+					<Button variant="primary" :loading="loading" @click="submitAndRequestApproval">
 						<i class="mdi mdi-check"></i> Request For Approval
 					</Button>
 				</template>
 				<template v-else-if="isPendingApproval && canEditReadOnlyWorkOrder">
-					<Button variant="outlined" @click="() => updatePending()">
+					<Button variant="outlined" :loading="loading" @click="() => updatePending()">
 						<i class="mdi mdi-content-save"></i> Update
 					</Button>
 					<Button
@@ -1698,7 +1698,7 @@ const statusColors: Record<string, string> = {
 					</Button>
 				</template>
 				<template v-else-if="canEditReadOnlyWorkOrder">
-					<Button variant="primary" @click="submitChanges">
+					<Button variant="primary" :loading="loading" @click="submitChanges">
 						<i class="mdi mdi-content-save"></i> Save Changes
 					</Button>
 				</template>

@@ -32,6 +32,7 @@ const passwordError = computed(() => {
 });
 
 const error = ref<string | null>(null);
+const isSubmitting = ref(false);
 
 const auth = useAuthStore();
 const snackbar = useSnackbarStore();
@@ -41,6 +42,7 @@ const login = async () => {
 	if (emailError.value || passwordError.value) return;
 
 	try {
+		isSubmitting.value = true;
 		await auth.login(form.value.email, form.value.password, form.value.remember);
 		snackbar.success("Logged in successfully");
 		router.push("/");
@@ -48,6 +50,8 @@ const login = async () => {
 		const msg = (e as Error).message;
 		error.value = msg;
 		snackbar.error(msg);
+	} finally {
+		isSubmitting.value = false;
 	}
 };
 </script>
@@ -81,7 +85,7 @@ const login = async () => {
 					<Checkbox v-model="form.remember"> Remember me </Checkbox>
 				</div>
 
-				<Button block @click="login"> Sign In </Button>
+				<Button block :loading="isSubmitting" @click="login"> Sign In </Button>
 
 				<div class="login__forgot">
 					<router-link to="/account/forgot-password" class="login__forgot-link">

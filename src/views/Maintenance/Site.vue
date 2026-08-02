@@ -22,6 +22,8 @@ const isLoading = ref(false);
 const dateFormatStore = useDateFormatStore();
 
 const isDialogOpen = ref(false);
+const isSavingSite = ref(false);
+const isUpdatingStatus = ref(false);
 const isNewRecord = ref(false);
 const selectedSite = ref<SiteModel | null>(null);
 
@@ -131,6 +133,7 @@ async function saveSite() {
 	}
 
 	try {
+		isSavingSite.value = true;
 		if (isNewRecord.value) {
 			await http.post("/site", {
 				code: formData.value.code.trim(),
@@ -149,6 +152,8 @@ async function saveSite() {
 		await fetchSites();
 	} catch (e) {
 		console.error("Failed to save site:", e);
+	} finally {
+		isSavingSite.value = false;
 	}
 }
 
@@ -163,6 +168,7 @@ function requestToggleStatus(site: SiteModel) {
 async function confirmToggleStatus() {
 	if (!siteToToggle.value?.guid) return;
 	try {
+		isUpdatingStatus.value = true;
 		const newStatus = !siteToToggle.value.isActive;
 		await http.put(`/site/${siteToToggle.value.guid}`, {
 			name: siteToToggle.value.name,
@@ -174,6 +180,8 @@ async function confirmToggleStatus() {
 		await fetchSites();
 	} catch (e) {
 		console.error("Failed to toggle site status:", e);
+	} finally {
+		isUpdatingStatus.value = false;
 	}
 }
 </script>
@@ -332,6 +340,7 @@ async function confirmToggleStatus() {
 					storageKey="site-maintenance"
 					:headers="tableHeaders"
 					:items="filteredSites"
+					:loading="isLoading"
 					emptyMessage="No maintenance sites found."
 				>
 					<template #item-code="{ item }">
@@ -419,8 +428,9 @@ async function confirmToggleStatus() {
 				<button class="btn btn--secondary" @click="isDialogOpen = false">
 					Cancel
 				</button>
-				<button class="btn btn--primary" @click="saveSite">
-					Save Site
+				<button class="btn btn--primary" :disabled="isSavingSite" @click="saveSite">
+					<i v-if="isSavingSite" class="mdi mdi-loading mdi-spin"></i>
+					{{ isSavingSite ? "Saving..." : "Save Site" }}
 				</button>
 			</template>
 		</Dialog>
@@ -440,8 +450,9 @@ async function confirmToggleStatus() {
 				<button class="btn btn--secondary" @click="isConfirmStatusOpen = false">
 					Cancel
 				</button>
-				<button class="btn btn--primary" @click="confirmToggleStatus">
-					Confirm
+				<button class="btn btn--primary" :disabled="isUpdatingStatus" @click="confirmToggleStatus">
+					<i v-if="isUpdatingStatus" class="mdi mdi-loading mdi-spin"></i>
+					{{ isUpdatingStatus ? "Updating..." : "Confirm" }}
 				</button>
 			</template>
 		</Dialog>

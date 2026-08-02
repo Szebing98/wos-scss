@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from "@/utils/error";
 import Badge from "@/components/Badge.vue";
+import FormLoader from "@/components/FormLoader.vue";
 import Chip from "@/components/Chip.vue";
 import CustomerContractDialogs from "./dialogs/CustomerContractDialogs.vue";
 import { ref, onMounted } from "vue";
@@ -232,7 +233,8 @@ function formatDate(iso: string) {
 		</div>
 
 		<!-- Profile Main Grid -->
-		<div class="profile-grid" v-if="customer">
+		<FormLoader v-if="loading" :sections="2" :fields-per-section="4" />
+		<div class="profile-grid" v-else-if="customer">
 			<!-- Left Meta Card -->
 			<div class="profile-grid__left">
 				<div class="panel-card user-meta-card">

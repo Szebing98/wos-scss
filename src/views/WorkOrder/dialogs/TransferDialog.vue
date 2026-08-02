@@ -54,7 +54,7 @@ defineExpose({ open });
 		</p>
 		<template #footer>
 			<Button variant="secondary" @click="isOpen = false">Cancel</Button>
-			<Button variant="primary" @click="submit" :disabled="isSaving">Confirm Transfer</Button>
+			<Button variant="primary" @click="submit" :loading="isSaving">Confirm Transfer</Button>
 		</template>
 	</Dialog>
 </template>

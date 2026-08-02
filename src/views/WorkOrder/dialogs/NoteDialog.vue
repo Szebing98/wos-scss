@@ -80,7 +80,7 @@ defineExpose({ openAdd, openEdit });
 		</div>
 		<template #footer>
 			<Button variant="secondary" @click="isOpen = false">Cancel</Button>
-			<Button variant="primary" @click="submit" :disabled="!form.content">Save Note</Button>
+			<Button variant="primary" @click="submit" :loading="isSaving" :disabled="!form.content">Save Note</Button>
 		</template>
 	</Dialog>
 </template>
