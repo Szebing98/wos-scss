@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useThemeStore } from "@/stores/theme.store";
 import { useAuthStore } from "@/stores/auth.store";
@@ -22,6 +22,7 @@ const isMenuOpen = ref(false);
 
 const isAccountOpenMobile = ref(false);
 const isLogoutDialogOpen = ref(false);
+const mainRef = ref<HTMLElement | null>(null);
 
 const route = useRoute();
 const router = useRouter();
@@ -65,11 +66,16 @@ function toggleSidebar() {
 
 watch(
 	() => route.path,
-	() => {
+	async () => {
 		if (isMobile.value) {
 			isMenuOpen.value = false;
 			isAccountOpenMobile.value = false;
 		}
+
+		// The layout owns the scroll container, so reset it when navigating
+		// between pages that reuse this same MainLayout instance.
+		await nextTick();
+		mainRef.value?.scrollTo({ top: 0, left: 0, behavior: "auto" });
 	},
 );
 
@@ -121,6 +127,7 @@ onUnmounted(() => {
 			/>
 
 			<main
+				ref="mainRef"
 				class="app-main"
 				:class="{
 					'app-main--rail': (isDesktop && isDocked) || isTablet,

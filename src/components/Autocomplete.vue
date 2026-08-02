@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 
 export interface AutocompleteOption {
 	id: string | number;
@@ -29,6 +29,7 @@ const emit = defineEmits<{
 
 const searchInput = ref("");
 const isOpen = ref(false);
+const opensAbove = ref(false);
 const containerRef = ref<HTMLElement | null>(null);
 
 const selectedOption = computed(() => {
@@ -61,14 +62,30 @@ const filteredOptions = computed(() => {
 	});
 });
 
+async function updateDropdownDirection() {
+	await nextTick();
+	const rect = containerRef.value?.getBoundingClientRect();
+	if (!rect) return;
+
+	const spaceBelow = window.innerHeight - rect.bottom;
+	const spaceAbove = rect.top;
+	const preferredHeight = Math.min(260, Math.max(160, window.innerHeight * 0.35));
+	opensAbove.value = spaceBelow < preferredHeight && spaceAbove > spaceBelow;
+}
+
+function openDropdown() {
+	isOpen.value = true;
+	void updateDropdownDirection();
+}
+
 function onInputFocus() {
 	if (props.disabled) return;
-	isOpen.value = true;
+	openDropdown();
 }
 
 function onInputClick() {
 	if (props.disabled) return;
-	isOpen.value = true;
+	openDropdown();
 }
 
 function selectOption(option: AutocompleteOption) {
@@ -84,7 +101,7 @@ function clearSelection(event?: MouseEvent) {
 	if (props.disabled) return;
 	searchInput.value = "";
 	emit("update:modelValue", "");
-	isOpen.value = true;
+	openDropdown();
 }
 
 function handleClickOutside(event: MouseEvent) {
@@ -149,11 +166,15 @@ onUnmounted(() => {
 			<i
 				v-else
 				class="mdi mdi-chevron-down chevron-icon"
-				@click.stop="!disabled && (isOpen = !isOpen)"
+				@click.stop="!disabled && (isOpen ? (isOpen = false) : openDropdown())"
 			></i>
 		</div>
 
-		<div class="autocomplete-dropdown" v-if="isOpen">
+		<div
+			class="autocomplete-dropdown"
+			:class="{ 'autocomplete-dropdown--above': opensAbove }"
+			v-if="isOpen"
+		>
 			<ul v-if="filteredOptions.length > 0" class="options-list">
 				<li
 					v-for="opt in filteredOptions"

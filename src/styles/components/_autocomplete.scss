@@ -111,6 +111,11 @@
 	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 	max-height: clamp(160px, 35vh, 260px);
 	overflow-y: auto;
+
+	&--above {
+		top: auto;
+		bottom: calc(100% + 4px);
+	}
 }
 
 .options-list {
