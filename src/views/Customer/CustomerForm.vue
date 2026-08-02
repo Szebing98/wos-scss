@@ -8,7 +8,7 @@ import Badge from "@/components/Badge.vue";
 import Dialog from "@/components/Dialog.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
-import DatePicker from "@/components/DatePicker.vue";
+import CustomerContractDialogs from "./dialogs/CustomerContractDialogs.vue";
 import Autocomplete from "@/components/Autocomplete.vue";
 import type { AutocompleteOption } from "@/components/Autocomplete.vue";
 import { customerApi } from "@/api/customer/customer.api";
@@ -357,14 +357,11 @@ onMounted(async () => {
 function openAddContractModal() {
 	isEditingContract.value = false;
 	editingContractGuid.value = null;
-	const custName = createdCustomerName.value || form.value.name || "CUST";
 	contractForm.value = {
-		contractNo: `CTR-${custName.slice(0, 3).toUpperCase()}-${new Date().getFullYear()}`,
-		contractName: "Equipment & Maintenance Support Agreement",
-		startDate: new Date().toISOString().slice(0, 10),
-		endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-			.toISOString()
-			.slice(0, 10),
+		contractNo: "",
+		contractName: "",
+		startDate: "",
+		endDate: "",
 		description: "",
 	};
 	showContractDialog.value = true;
@@ -462,13 +459,9 @@ function handlePostRegisterSkip() {
 
 function openRenewModal(contractItem: any) {
 	selectedContractForRenew.value = contractItem;
-	const currentEnd = new Date(contractItem.endDate || new Date());
-	const nextYearEnd = new Date(currentEnd.setFullYear(currentEnd.getFullYear() + 1))
-		.toISOString()
-		.slice(0, 10);
 	renewForm.value = {
-		newEndDate: nextYearEnd,
-		remarks: "Standard 1-Year Contract Extension",
+		newEndDate: "",
+		remarks: "",
 	};
 	showRenewDialog.value = true;
 }
@@ -1073,81 +1066,17 @@ async function handleSubmitForm() {
 			</div>
 		</div>
 
-		<!-- Dialog: Add / Edit Contract -->
-		<Dialog
-			v-model="showContractDialog"
-			:title="isEditingContract ? 'Edit Customer Contract' : 'Add New Customer Contract'"
-			:confirmText="isEditingContract ? 'Save Edit' : 'Create Contract'"
-			cancelText="Cancel"
+		<CustomerContractDialogs
+			v-model:show-contract-dialog="showContractDialog"
+			v-model:show-renew-dialog="showRenewDialog"
+			v-model:contract-form="contractForm"
+			v-model:renew-form="renewForm"
+			:is-editing="isEditingContract"
 			:loading="submittingContract"
-			overflowVisible
-			@confirm="handleSaveContract"
-		>
-			<div class="dialog-form">
-				<div class="form-group mb-md">
-					<label class="form-group__label"
-						>Contract No <span class="u-required">*</span></label
-					>
-					<Textbox v-model="contractForm.contractNo" placeholder="e.g. CTR-2026-001" />
-				</div>
-				<div class="form-group mb-md">
-					<label class="form-group__label"
-						>Contract Title / Name <span class="u-required">*</span></label
-					>
-					<Textbox
-						v-model="contractForm.contractName"
-						placeholder="e.g. Annual Equipment Maintenance"
-					/>
-				</div>
-				<div class="form-grid-2 mb-md">
-					<div class="form-group">
-						<label class="form-group__label"
-							>Start Date <span class="u-required">*</span></label
-						>
-						<DatePicker v-model="contractForm.startDate" />
-					</div>
-					<div class="form-group">
-						<label class="form-group__label"
-							>End Date (Expiry) <span class="u-required">*</span></label
-						>
-						<DatePicker v-model="contractForm.endDate" />
-					</div>
-				</div>
-				<Textbox label="Description / Remarks" v-model="contractForm.description"
-						placeholder="Optional contract terms or notes..."
-					/>
-			</div>
-		</Dialog>
-
-		<!-- Dialog: Renew Contract -->
-		<Dialog
-			v-model="showRenewDialog"
-			title="Renew Contract"
-			confirmText="Confirm Renewal"
-			cancelText="Cancel"
-			:loading="submittingContract"
-			overflowVisible
-			@confirm="handleRenewContractSubmit"
-		>
-			<div class="dialog-form" v-if="selectedContractForRenew">
-				<p class="mb-md" style="font-size: 13px; color: var(--colors-text-muted)">
-					Renewing contract
-					<strong class="u-font-mono u-text-primary">{{
-						selectedContractForRenew.contractNo
-					}}</strong>
-					({{ selectedContractForRenew.contractName }})
-				</p>
-				<div class="form-group mb-md">
-					<label class="form-group__label"
-						>New Expiration Date <span class="u-required">*</span></label
-					>
-					<DatePicker v-model="renewForm.newEndDate" />
-				</div>
-				<Textbox label="Renewal Remarks / Notes" v-model="renewForm.remarks"
-						placeholder="Reason for extension / renewal terms..."
-					/>
-			</div>
-		</Dialog>
+			:selected-contract="selectedContractForRenew"
+			@save-contract="handleSaveContract"
+			@renew-contract="handleRenewContractSubmit"
+		/>
 
 		<!-- Dialog: Post-Registration Contract Prompt -->
 		<Dialog
