@@ -4,6 +4,7 @@ import PageHeader from "@/components/PageHeader.vue";
 import { ref, shallowRef, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import Table from "@/components/Table.vue";
+import TableLoader from "@/components/TableLoader.vue";
 import type { TableHeader } from "@/components/Table.vue";
 import Textbox from "@/components/Textbox.vue";
 import Select from "@/components/Select.vue";
@@ -380,13 +381,14 @@ function getClassificationBadge(individualType: string, identityNo: string = "")
 
 		<!-- Customers Data Table -->
 		<div class="panel-card table-card">
+			<TableLoader v-if="loading" :columns="headers.length" />
 			<Table
+				v-else
 				paginate
 				:hover="authStore.can('update', 'Customer')"
 				storageKey="customer-directory"
 				:headers="headers"
 				:items="filteredCustomers"
-				:loading="loading"
 				:search-query="searchQuery"
 				emptyMessage="No customer records found."
 				@row-click="

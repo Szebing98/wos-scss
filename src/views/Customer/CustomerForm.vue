@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from "@/utils/error";
 import PageHeader from "@/components/PageHeader.vue";
+import FormLoader from "@/components/FormLoader.vue";
 import { computed, ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Chip from "@/components/Chip.vue";
@@ -25,7 +26,8 @@ const dateFormatStore = useDateFormatStore();
 
 const isNewMode = ref(true);
 const customerGuid = ref<string | null>(null);
-const loading = ref(false);
+const isLoadingCustomer = ref(false);
+const isSaving = ref(false);
 const contracts = ref<any[]>([]);
 const formErrors = ref<Record<string, string>>({});
 
@@ -239,7 +241,7 @@ onMounted(async () => {
 	} else {
 		isNewMode.value = false;
 		customerGuid.value = identifier;
-		loading.value = true;
+		isLoadingCustomer.value = true;
 		try {
 			const { data, error } = await customerApi.getCustomerByGuid(identifier);
 			const c = (data?.data || data) as any;
@@ -338,7 +340,7 @@ onMounted(async () => {
 			snackbar.error("Error loading customer profile.");
 			console.error(e);
 		} finally {
-			loading.value = false;
+			isLoadingCustomer.value = false;
 		}
 	}
 
@@ -610,7 +612,7 @@ async function handleSubmitForm() {
 	if (!validateSchemaLogic()) return;
 
 	try {
-		loading.value = true;
+		isSaving.value = true;
 
 		const profileEmail = form.value.profile?.email?.trim();
 		const profilePhone = form.value.profile?.phone?.trim();
@@ -686,7 +688,7 @@ async function handleSubmitForm() {
 		snackbar.error("An unexpected error occurred while saving.");
 		console.error("Error submitting customer form:", e);
 	} finally {
-		loading.value = false;
+		isSaving.value = false;
 	}
 }
 </script>
@@ -704,13 +706,14 @@ async function handleSubmitForm() {
             </template>
         
         <template #actions>
-            <button class="btn btn--primary" :disabled="loading" @click="handleSubmitForm">
-				<i v-if="!loading" class="mdi mdi-content-save-check-outline"></i>
-				<i v-else class="mdi mdi-loading mdi-spin"></i><span class="btn-text">{{ loading ? "Saving..." : isNewMode ? "Register Customer" : "Commit Changes" }}</span></button>
+            <button class="btn btn--primary" :disabled="isLoadingCustomer || isSaving" @click="handleSubmitForm">
+				<i v-if="!isSaving" class="mdi mdi-content-save-check-outline"></i>
+				<i v-else class="mdi mdi-loading mdi-spin"></i><span class="btn-text">{{ isSaving ? "Saving..." : isNewMode ? "Register Customer" : "Commit Changes" }}</span></button>
         </template>
     </PageHeader>
 
-		<div class="form-scroll-layout">
+		<FormLoader v-if="isLoadingCustomer" />
+		<div v-else class="form-scroll-layout">
 			<!-- Core Primary Block -->
 			<div class="panel-card mb-lg">
 				<h2 class="panel-card__title mb-md">
