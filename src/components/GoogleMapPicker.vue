@@ -89,6 +89,15 @@ watch(
 	},
 );
 
+watch(
+	() => props.readonly,
+	(readonly) => {
+		if (markerInstance) markerInstance.gmpDraggable = !readonly;
+		if (!readonly) void initializeAutocomplete();
+		else closeSuggestions();
+	},
+);
+
 function emitChanges(newAddress: string, newLat: number, newLng: number) {
 	addressText.value = newAddress;
 	latVal.value = Number(newLat.toFixed(7));
@@ -152,30 +161,23 @@ async function initMap() {
 			title: "Selected Location",
 		});
 
-		if (!props.readonly) {
-			// Click on map to place marker
-			mapInstance.addListener("click", (e: any) => {
-				const clickLat = e.latLng.lat();
-				const clickLng = e.latLng.lng();
-				setMarkerPosition(clickLat, clickLng, true);
-			});
+		// Keep the listeners attached when the same component switches between View and Edit.
+		mapInstance.addListener("click", (e: any) => {
+			if (props.readonly) return;
+			const clickLat = e.latLng.lat();
+			const clickLng = e.latLng.lng();
+			setMarkerPosition(clickLat, clickLng, true);
+		});
 
-			// Drag marker to update
-			markerInstance.addListener("dragend", () => {
-				const pos = markerInstance.position;
-				const dragLat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
-				const dragLng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
-				setMarkerPosition(dragLat, dragLng, true);
-			});
+		markerInstance.addListener("dragend", () => {
+			if (props.readonly) return;
+			const pos = markerInstance.position;
+			const dragLat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
+			const dragLng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
+			setMarkerPosition(dragLat, dragLng, true);
+		});
 
-			// Autocomplete Data API (replaces deprecated google.maps.places.Autocomplete)
-			// This is the "headless" API -> no widget, no shadow DOM, full control over markup/CSS.
-			const { AutocompleteSuggestion, AutocompleteSessionToken } =
-				await google.maps.importLibrary("places");
-			AutocompleteSuggestionLib = AutocompleteSuggestion;
-			AutocompleteSessionTokenLib = AutocompleteSessionToken;
-			sessionToken = new AutocompleteSessionToken();
-		}
+		if (!props.readonly) await initializeAutocomplete();
 
 		isLoading.value = false;
 	} catch (err: any) {
@@ -183,6 +185,16 @@ async function initMap() {
 		isLoading.value = false;
 		mapError.value = err.message || "Failed to initialize Google Maps.";
 	}
+}
+
+async function initializeAutocomplete() {
+	if (AutocompleteSuggestionLib) return;
+	const google = await loadGoogleMapsScript();
+	const { AutocompleteSuggestion, AutocompleteSessionToken } =
+		await google.maps.importLibrary("places");
+	AutocompleteSuggestionLib = AutocompleteSuggestion;
+	AutocompleteSessionTokenLib = AutocompleteSessionToken;
+	sessionToken = new AutocompleteSessionToken();
 }
 
 function setMarkerPosition(lat: number, lng: number, reverseGeocode = false) {
