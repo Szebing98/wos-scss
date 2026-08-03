@@ -25,7 +25,9 @@ function multipartRequest(path: string, body: FormData) {
 }
 
 export const workOrderApi = {
-	getWorkOrders: (query: GetWorkOrdersQuery) => client.GET("/api/work-order/", { params: { query } }) as any,
+	// Avoid the trailing-slash URL because Vercel may serve a previously cached SPA
+	// fallback for `/backend/api/work-order/` instead of applying the API rewrite.
+	getWorkOrders: (query: GetWorkOrdersQuery) => client.GET("/api/work-order" as any, { params: { query } }) as any,
 
 	getWorkOrderByGuid: (guid: string) => client.GET("/api/work-order/{guid}", { params: { path: { guid } } }) as any,
 
