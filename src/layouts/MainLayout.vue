@@ -14,10 +14,11 @@ import Breadcrumbs from "@/components/Breadcrumbs.vue";
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
 
+const initialWidth = window.innerWidth;
 const isDocked = ref(false);
-const isMobile = ref(false);
-const isTablet = ref(false);
-const isDesktop = ref(true);
+const isMobile = ref(initialWidth < 768);
+const isTablet = ref(initialWidth >= 768 && initialWidth <= 1024);
+const isDesktop = ref(initialWidth > 1024);
 const isMenuOpen = ref(false);
 
 const isAccountOpenMobile = ref(false);
@@ -28,13 +29,17 @@ const route = useRoute();
 const router = useRouter();
 
 // Fetch once on mount and cache in store — Header will react to store changes automatically
-onMounted(async () => {
-	if (!authStore.currentUser) {
-		await authStore.fetchMe();
-	}
+onMounted(() => {
+	// Establish the viewport state before starting any network work. On a slower
+	// server, awaiting fetchMe first left mobile users on the desktop layout for
+	// several frames and then caused one large layout shift.
 	handleResize();
 	window.addEventListener("resize", handleResize);
 	document.addEventListener("click", handleClickOutside);
+
+	if (!authStore.currentUser) {
+		void authStore.fetchMe();
+	}
 });
 
 function handleLogout() {

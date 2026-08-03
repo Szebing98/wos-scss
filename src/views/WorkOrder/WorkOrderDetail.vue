@@ -1600,7 +1600,6 @@ function handleConfirmDialog() {
 
 // File Upload & Deletion handlers
 // File Upload Dialog State
-const isUploadConfirmOpen = ref(false);
 const uploadTargetFile = ref<File | null>(null);
 const uploadTargetCategory = ref("");
 const uploadTargetSubcategory = ref("");
@@ -1616,9 +1615,7 @@ const isLoadingFilePreview = ref(false);
 const filePreviewError = ref("");
 const previewObjectUrl = ref("");
 
-/*
 function cancelFileUpload() {
-	isUploadConfirmOpen.value = false;
 	if (uploadPreviewUrl.value) {
 		URL.revokeObjectURL(uploadPreviewUrl.value);
 		uploadPreviewUrl.value = "";
@@ -1630,7 +1627,6 @@ function cancelFileUpload() {
 	uploadTargetFile.value = null;
 	uploadTargetEvent.value = null;
 }
-*/
 
 // @ts-ignore
 async function confirmFileUpload() {
@@ -1649,7 +1645,6 @@ async function confirmFileUpload() {
 	const renamedFile = new File([file], finalName, { type: file.type });
 
 	loading.value = true;
-	isUploadConfirmOpen.value = false;
 	try {
 		const fd = new FormData();
 		fd.append("file", renamedFile);
@@ -1780,13 +1775,14 @@ async function handleFileUpload(event: Event, category: string, subcategory?: st
 	const file = target.files[0];
 
 	// Validate file type
-	const imageExtensions = /\.(jpg|jpeg|png|gif|webp|heic)$/i;
+	// Keep this list aligned with the server-side FileValidationUtil.
+	const imageExtensions = /\.(jpg|jpeg|png|gif|webp)$/i;
 	const pdfExtensions = /\.(pdf)$/i;
 	const fileName = file.name;
 
 	if (category === "PartInfo" || category === "Image") {
-		if (!imageExtensions.test(fileName) && !file.type.startsWith("image/")) {
-			snackbar.error("Invalid File Type. Only image files are allowed.");
+		if (!imageExtensions.test(fileName)) {
+			snackbar.error("Invalid File Type. Only JPG, JPEG, PNG, GIF, and WebP are allowed.");
 			target.value = "";
 			return;
 		}
@@ -1796,10 +1792,10 @@ async function handleFileUpload(event: Event, category: string, subcategory?: st
 		category === "Invoice" ||
 		category === "Payment"
 	) {
-		const isImg = imageExtensions.test(fileName) || file.type.startsWith("image/");
-		const isPdf = pdfExtensions.test(fileName) || file.type === "application/pdf";
+		const isImg = imageExtensions.test(fileName);
+		const isPdf = pdfExtensions.test(fileName);
 		if (!isImg && !isPdf) {
-			snackbar.error("Invalid File Type. Only PDF and image files are allowed.");
+			snackbar.error("Invalid File Type. Only PDF, JPG, JPEG, PNG, GIF, and WebP are allowed.");
 			target.value = "";
 			return;
 		}
@@ -1820,7 +1816,8 @@ async function handleFileUpload(event: Event, category: string, subcategory?: st
 		uploadPreviewUrl.value = "";
 	}
 
-	isUploadConfirmOpen.value = true;
+	await nextTick();
+	uploadConfirmDialogRef.value?.open();
 }
 
 function handleDeleteFile(fileGuid: string) {
@@ -2405,7 +2402,13 @@ onUnmounted(() => {
 
 		<NoteDialog ref="noteDialogRef" :wo-number="woNumber" @refresh="fetchWorkOrderDetails" />
 
-		<UploadConfirmDialog ref="uploadConfirmDialogRef" />
+		<UploadConfirmDialog
+			ref="uploadConfirmDialogRef"
+			v-model:fileName="uploadCustomFileName"
+			:preview-url="uploadPreviewUrl"
+			@confirm="confirmFileUpload"
+			@cancel="cancelFileUpload"
+		/>
 
 		<FilePreviewDialog ref="filePreviewDialogRef" />
 

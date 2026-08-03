@@ -2,6 +2,8 @@ import { defineStore } from "pinia";
 import { authApi } from "@/api/auth/auth.api";
 import { getApiErrorMessage } from "@/utils/error";
 
+let fetchMePromise: Promise<any> | null = null;
+
 export const useAuthStore = defineStore("auth", {
 	state: () => ({
 		token: localStorage.getItem("authToken") as string | null,
@@ -36,17 +38,34 @@ export const useAuthStore = defineStore("auth", {
 
 			this.token = data.token;
 			this.user = data.user;
+			// The login response already contains the same authorization context as /me.
+			// Populate it immediately so the post-login route does not fetch it again.
+			this.currentUser = {
+				...data.user,
+				userGroups: data.userGroups ?? [],
+				accessRights: data.accessRights ?? [],
+			};
 			localStorage.setItem("authToken", this.token!);
 			localStorage.setItem("authUser", JSON.stringify(this.user));
 		},
 
 		// Fetch full /me profile and cache in store
 		async fetchMe() {
-			const { data } = await authApi.me();
-			if (data) {
-				this.currentUser = data;
+			if (this.currentUser) return this.currentUser;
+
+			if (!fetchMePromise) {
+				fetchMePromise = authApi
+					.me()
+					.then(({ data }: any) => {
+						if (data) this.currentUser = data;
+						return data;
+					})
+					.finally(() => {
+						fetchMePromise = null;
+					});
 			}
-			return data;
+
+			return fetchMePromise;
 		},
 
 		// Patch profile image locally — no refetch needed
@@ -108,6 +127,7 @@ export const useAuthStore = defineStore("auth", {
 			this.token = null;
 			this.user = null;
 			this.currentUser = null;
+			fetchMePromise = null;
 			localStorage.removeItem("authToken");
 			localStorage.removeItem("authUser");
 		},
