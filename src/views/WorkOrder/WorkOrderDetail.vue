@@ -1687,9 +1687,12 @@ async function confirmFileUpload() {
 		} else {
 			snackbar.success(`${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} uploaded successfully!`);
 			await fetchWorkOrderFiles();
-			if (!["Image", "PartInfo", "SupplierInvoice"].includes(category)) {
-				await fetchWorkOrderDetails();
-			}
+			await Promise.all([
+				!["Image", "PartInfo", "SupplierInvoice"].includes(category)
+					? fetchWorkOrderDetails()
+					: Promise.resolve(),
+				fetchActivityLogs(),
+			]);
 		}
 	} catch (e) {
 		console.error("Upload error:", e);
@@ -2430,7 +2433,7 @@ onUnmounted(() => {
 			:work-order="workOrder"
 		/>
 
-		<NoteDialog ref="noteDialogRef" :wo-number="woNumber" @refresh="fetchWorkOrderDetails" />
+		<NoteDialog ref="noteDialogRef" :wo-number="woNumber" @refresh="fetchWorkNotes" />
 
 		<UploadConfirmDialog
 			ref="uploadConfirmDialogRef"
