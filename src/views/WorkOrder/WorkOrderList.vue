@@ -1008,13 +1008,40 @@ async function handleExport(format: "CSV" | "PDF") {
 		if (error) throw new Error(getApiErrorMessage(error, "Export request failed."));
 
 		const rawRows = ((data as any)?.data || []) as Record<string, unknown>[];
-		const rows = rawRows.map((w) => ({
-			...w,
+		const rows = rawRows.map((w: any) => ({
 			status: formatStatusLabel(
-				w.isDraft
-					? "New"
-					: normalizeStatusForUi(w.orderStatus as string || w.status as string || "new"),
+				w.isDraft ? "New" : normalizeStatusForUi(w.orderStatus || w.status || "new"),
 			),
+			woNumber: w.docNo || w.code || (w.guid ? String(w.guid).slice(0, 8).toUpperCase() : "—"),
+			title: w.title || "—",
+			customer: w.customerName || "—",
+			workType: w.workType || "—",
+			personInCharge: resolveUserDisplay(
+				w.projectPicCode || w.personInChargeCode,
+				w.projectPicName || w.personInChargeName,
+				w.projectPicDisplayCode || w.personInChargeDisplayCode,
+			),
+			leader: resolveUserDisplay(
+				w.leaderCode || w.leadEngineerCode,
+				w.leaderName || w.leadEngineerName,
+				w.leaderDisplayCode || w.leadEngineerDisplayCode,
+			),
+			leaderII: resolveUserDisplay(
+				w.leaderIICode || w.leaderIiCode,
+				w.leaderIIName || w.leaderIiName,
+				w.leaderIIDisplayCode || w.leaderIiDisplayCode,
+			),
+			salesAgent: resolveUserDisplay(
+				w.salesAgentCode,
+				w.salesAgentName || w.salesAgentDisplayName,
+				w.salesAgentDisplayCode,
+			),
+			site: w.siteName
+				? `${w.siteName}${w.siteCode ? ` (${w.siteCode})` : ""}`
+				: w.siteCode || "—",
+			jobPriority: w.jobPriority || "Low",
+			createdAt: w.createdAt || "",
+			rejectedReason: w.rejectedReason || "",
 		}));
 		const date = new Date().toISOString().slice(0, 10);
 		const exportColumns = headers.value

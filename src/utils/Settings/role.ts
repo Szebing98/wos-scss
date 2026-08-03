@@ -29,6 +29,9 @@ export const ROLE_LEVELS: Record<string, number> = {
 	SAL: 1,
 };
 
+let cachedRoleList: RoleModel[] | null = null;
+let roleListRequest: Promise<RoleModel[]> | null = null;
+
 function normalizeRoleKey(value?: string | null): string {
 	return String(value || "")
 		.trim()
@@ -66,18 +69,30 @@ export function hasRole(roles: Array<Partial<RoleModel>> = [], target?: Partial<
 }
 
 export async function fetchRoleList(): Promise<RoleModel[]> {
-	try {
-		const res = await http.get("/user-groups");
-		const data = res.data?.data || res.data;
-		if (Array.isArray(data) && data.length > 0) {
-			return data.map((r: any) => ({
-				code: r.code || r.id,
-				name: r.name || r.code,
-				description: r.description || "",
-			}));
-		}
-	} catch (e) {
-		console.warn("Failed to fetch role list, using default roleList:", e);
+	if (cachedRoleList) return cachedRoleList;
+	if (!roleListRequest) {
+		roleListRequest = http
+			.get("/user-groups")
+			.then((res) => {
+				const data = res.data?.data || res.data;
+				cachedRoleList =
+					Array.isArray(data) && data.length > 0
+						? data.map((role: any) => ({
+								code: role.code || role.id,
+								name: role.name || role.code,
+								description: role.description || "",
+							}))
+						: [...DEFAULT_ROLES];
+				return cachedRoleList;
+			})
+			.catch((error) => {
+				console.warn("Failed to fetch role list, using default roleList:", error);
+				cachedRoleList = [...DEFAULT_ROLES];
+				return cachedRoleList;
+			})
+			.finally(() => {
+				roleListRequest = null;
+			});
 	}
-	return DEFAULT_ROLES;
+	return roleListRequest;
 }

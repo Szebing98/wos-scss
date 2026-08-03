@@ -24,7 +24,7 @@ import PaymentDialog from "./dialogs/PaymentDialog.vue";
 import LocationMapDialog from "./dialogs/LocationMapDialog.vue";
 import UploadConfirmDialog from "./dialogs/UploadConfirmDialog.vue";
 import FilePreviewDialog from "./dialogs/FilePreviewDialog.vue";
-import { isImageFile, isPdfFile, normalizeFileMimeType } from "@/utils/file";
+import { compressImageForUpload, isImageFile, isPdfFile, normalizeFileMimeType } from "@/utils/file";
 import GeneralTab from "./tabs/GeneralTab.vue";
 import PartInfoTab from "./tabs/PartInfoTab.vue";
 import SupplierInvoicesTab from "./tabs/SupplierInvoicesTab.vue";
@@ -1183,27 +1183,21 @@ async function fetchWorkOrderFiles() {
 					: Array.isArray(data.items)
 						? data.items
 						: [];
-			// Revoke previous blob URLs to avoid memory leaks
-			siteInstructionsFiles.value.forEach((f: any) => {
-				if (f.url && f.url.startsWith("blob:")) {
-					URL.revokeObjectURL(f.url);
-				}
-			});
-			partInfoPhotos.value.forEach((f: any) => {
-				if (f.url && f.url.startsWith("blob:")) {
-					URL.revokeObjectURL(f.url);
-				}
-			});
-			supplierInvoicePhotos.value.forEach((f: any) => {
-				if (f.url && f.url.startsWith("blob:")) {
-					URL.revokeObjectURL(f.url);
-				}
-			});
-			images.value.forEach((f: any) => {
-				if (f.url && f.url.startsWith("blob:")) {
-					URL.revokeObjectURL(f.url);
-				}
-			});
+			// Reuse blobs already in memory. Re-downloading the whole gallery after
+			// every upload made Image uploads progressively slower.
+			const previousFiles = [
+				...siteInstructionsFiles.value,
+				...partInfoPhotos.value,
+				...supplierInvoicePhotos.value,
+				...images.value,
+			];
+			const cachedBlobUrls = new Map<string, string>(
+				previousFiles
+					.filter((file: any) => file.guid && file.url?.startsWith("blob:"))
+					.map((file: any) => [file.guid, file.url]),
+			);
+			const resolveFileUrl = (file: any, rawUrl: string, previewable: boolean) =>
+				cachedBlobUrls.get(file.guid) || loadFileBlobUrl(rawUrl, previewable);
 
 			const siteInstructionsList = items.filter(
 				(f: any) => f.category === "SiteInstructions" || f.category === "site_instructions",
@@ -1213,7 +1207,7 @@ async function fetchWorkOrderFiles() {
 					const isImage = isImageFile(f.fileName, f.mimeType);
 					const isPdf = isPdfFile(f.fileName, f.mimeType);
 					const rawUrl = getFileUrl(f.storageUrl, isImage || isPdf);
-					const url = await loadFileBlobUrl(rawUrl, isImage || isPdf);
+					const url = await resolveFileUrl(f, rawUrl, isImage || isPdf);
 					return {
 						id: f.id,
 						guid: f.guid,
@@ -1231,7 +1225,7 @@ async function fetchWorkOrderFiles() {
 			partInfoPhotos.value = await Promise.all(
 				partInfoList.map(async (f: any) => {
 					const rawUrl = getFileUrl(f.storageUrl, true);
-					const url = await loadFileBlobUrl(rawUrl, true);
+					const url = await resolveFileUrl(f, rawUrl, true);
 					return {
 						id: f.id,
 						guid: f.guid,
@@ -1248,7 +1242,7 @@ async function fetchWorkOrderFiles() {
 			supplierInvoicePhotos.value = await Promise.all(
 				supplierInvoiceList.map(async (f: any) => {
 					const rawUrl = getFileUrl(f.storageUrl, true);
-					const url = await loadFileBlobUrl(rawUrl, true);
+					const url = await resolveFileUrl(f, rawUrl, true);
 					return {
 						id: f.id,
 						guid: f.guid,
@@ -1263,7 +1257,7 @@ async function fetchWorkOrderFiles() {
 			images.value = await Promise.all(
 				imagesList.map(async (f: any) => {
 					const rawUrl = getFileUrl(f.storageUrl, true);
-					const url = await loadFileBlobUrl(rawUrl, true);
+					const url = await resolveFileUrl(f, rawUrl, true);
 					return {
 						id: f.id,
 						guid: f.guid,
@@ -1273,6 +1267,19 @@ async function fetchWorkOrderFiles() {
 					};
 				}),
 			);
+			const activeBlobUrls = new Set(
+				[
+					...siteInstructionsFiles.value,
+					...partInfoPhotos.value,
+					...supplierInvoicePhotos.value,
+					...images.value,
+				]
+					.map((file: any) => file.url)
+					.filter((url: string) => url?.startsWith("blob:")),
+			);
+			cachedBlobUrls.forEach((url) => {
+				if (!activeBlobUrls.has(url)) URL.revokeObjectURL(url);
+			});
 
 			quotations.value = items
 				.filter((f: any) => f.category === "Quotation")
@@ -1680,7 +1687,9 @@ async function confirmFileUpload() {
 		} else {
 			snackbar.success(`${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} uploaded successfully!`);
 			await fetchWorkOrderFiles();
-			await fetchWorkOrderDetails();
+			if (!["Image", "PartInfo", "SupplierInvoice"].includes(category)) {
+				await fetchWorkOrderDetails();
+			}
 		}
 	} catch (e) {
 		console.error("Upload error:", e);
@@ -1774,7 +1783,7 @@ async function savePreviewFileRename() {
 async function handleFileUpload(event: Event, category: string, subcategory?: string) {
 	const target = event.target as HTMLInputElement;
 	if (!target.files || target.files.length === 0) return;
-	const files = Array.from(target.files);
+	let files = Array.from(target.files);
 
 	// Validate file type
 	// Keep this list aligned with the server-side FileValidationUtil.
@@ -1797,6 +1806,10 @@ async function handleFileUpload(event: Event, category: string, subcategory?: st
 		target.value = "";
 		return;
 	}
+
+	// Compress photos before enforcing the upload-size limit. This keeps the
+	// stored/displayed image lightweight while preserving the original filename.
+	files = await Promise.all(files.map((file) => compressImageForUpload(file)));
 	const oversizedFile = files.find((file) => file.size > 10 * 1024 * 1024);
 	if (oversizedFile) {
 		snackbar.error(`${oversizedFile.name} exceeds the 10 MB file size limit.`);

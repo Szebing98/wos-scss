@@ -284,8 +284,11 @@ const profileRoleOptions = computed<SelectOption[]>(() => {
 });
 
 onMounted(async () => {
-	roleList.value = await fetchRoleList();
-	await loadProfile();
+	const roleRequest = fetchRoleList().then((roles) => {
+		roleList.value = roles;
+		profileData.value.roleDisplayName = getRoleDisplayName(profileData.value.role);
+	});
+	await Promise.all([loadProfile(), roleRequest]);
 });
 
 watch(

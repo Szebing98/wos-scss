@@ -31,6 +31,44 @@ export function isImageFile(fileName?: string | null, mimeType?: string | null):
 	return getFileKind(fileName, mimeType) === "image";
 }
 
+/**
+ * Downscale photographic uploads before sending them to storage.
+ * PNG/GIF are intentionally preserved to avoid breaking transparency/animation.
+ */
+export async function compressImageForUpload(
+	file: File,
+	options: { maxDimension?: number; quality?: number } = {},
+): Promise<File> {
+	if (!['image/jpeg', 'image/webp'].includes(file.type.toLowerCase())) return file;
+
+	const maxDimension = options.maxDimension ?? 1920;
+	const quality = options.quality ?? 0.82;
+	let bitmap: ImageBitmap | null = null;
+	try {
+		bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+		const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+		if (scale === 1 && file.size <= 1.5 * 1024 * 1024) return file;
+
+		const canvas = document.createElement("canvas");
+		canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+		canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+		const context = canvas.getContext("2d");
+		if (!context) return file;
+		context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+		const blob = await new Promise<Blob | null>((resolve) =>
+			canvas.toBlob(resolve, file.type, quality),
+		);
+		if (!blob || blob.size >= file.size) return file;
+		return new File([blob], file.name, { type: file.type, lastModified: file.lastModified });
+	} catch (error) {
+		console.warn("Image compression skipped:", error);
+		return file;
+	} finally {
+		bitmap?.close();
+	}
+}
+
 export function isPdfFile(fileName?: string | null, mimeType?: string | null): boolean {
 	return getFileKind(fileName, mimeType) === "pdf";
 }
