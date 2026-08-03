@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { isPdfFile } from "@/utils/file";
 import Button from "@/components/Button.vue";
 
 const props = defineProps<{
@@ -12,9 +13,6 @@ const props = defineProps<{
 const emit = defineEmits(["upload", "delete", "preview"]);
 const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 
-function isPdfFile(fileName: string) {
-	return /\.(pdf)$/i.test(fileName || "");
-}
 </script>
 
 <template>

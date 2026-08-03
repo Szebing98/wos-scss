@@ -506,7 +506,7 @@ async function confirmAvatarUpload() {
 
 <template>
 	<div class="maintenance-view">
-		<PageHeader>
+		<PageHeader mobile-icon-only>
         <template #title>
             
                 <h1>

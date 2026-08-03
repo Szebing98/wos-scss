@@ -50,7 +50,7 @@ const formats = ref<DocNoFormatModel[]>([]);
 async function loadFormats() {
 	isLoading.value = true;
 	try {
-		const res = await http.get("/doc-no-format", { params: { pageSize: 100 } });
+		const res = await http.get("/doc-no-format", { params: { pageSize: 10 } });
 		const rawData = res?.data?.data || res?.data?.items || res?.data || [];
 		formats.value = Array.isArray(rawData) ? rawData : [];
 		if (!selectedFormat.value && formats.value.length > 0) {

@@ -18,9 +18,11 @@ import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
 import { workOrderApi } from "@/api/work-order/work-order.api";
 import http from "@/utils/http";
+import { debounce } from "@/utils/debounce";
 import { useSnackbarStore } from "@/stores/snackbar.store";
 import { useBreadcrumbStore } from "@/stores/breadcrumb.store";
 import { userDisplayCode } from "@/utils/User/user-display";
+import { isImageFile, normalizeFileMimeType, getFileIcon } from "@/utils/file";
 
 const router = useRouter();
 const route = useRoute();
@@ -359,7 +361,12 @@ function onSiteInstructionsChange(e: Event) {
 
 	for (const file of toAdd) {
 		const url = URL.createObjectURL(file);
-		current.push({ name: file.name, url, type: file.type, file });
+		current.push({
+			name: file.name,
+			url,
+			type: normalizeFileMimeType(file.name, file.type),
+			file,
+		});
 	}
 	siteInstructionsError.value = "";
 	input.value = "";
@@ -406,7 +413,7 @@ async function fetchWorkTypeItems(workTypeGuid: string) {
 	try {
 		const res = await workTypeApi.getWorkTypeItems(workTypeGuid, {
 			pageIndex: 0,
-			pageSize: 100,
+			pageSize: 5,
 			timezone: "Asia/Kuala_Lumpur",
 		} as any);
 		if (res.data && res.data.data) {
@@ -461,7 +468,7 @@ async function loadOptions() {
 			customerApi
 				.getCustomers({
 					pageIndex: 0,
-					pageSize: 100,
+					pageSize: 5,
 					timezone: "Asia/Kuala_Lumpur",
 					isActive: true,
 				})
@@ -472,7 +479,7 @@ async function loadOptions() {
 			userApi
 				.getUsers({
 					pageIndex: 0,
-					pageSize: 1000,
+					pageSize: 5,
 					timezone: "Asia/Kuala_Lumpur",
 				})
 				.catch((e: any) => {
@@ -489,7 +496,7 @@ async function loadOptions() {
 					console.error(e);
 					return null;
 				}),
-			http.get("/site", { params: { pageSize: 100 } }).catch((e: any) => {
+			http.get("/site", { params: { pageSize: 5 } }).catch((e: any) => {
 				console.error("Failed to load site list from Maintenance site API:", e);
 				return null;
 			}),
@@ -561,6 +568,64 @@ async function loadOptions() {
 	}
 }
 
+const autocompleteLoading = ref({ users: false, customers: false, sites: false, workTypeItems: false });
+
+const searchUsers = debounce(async (q: string) => {
+	autocompleteLoading.value.users = true;
+	try {
+		const { data } = await userApi.getUsers({ pageIndex: 0, pageSize: 5, q, timezone: "Asia/Kuala_Lumpur" });
+		const results = (data?.data || []).map((u: any) => ({
+			code: u.code || u.guid,
+			displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
+			name: u.displayName || u.profile?.displayName || u.name || "Unknown",
+			role: (u.groups?.[0]?.name || u.groups?.[0]?.code || u.userGroupCode || u.role || u.userGroup || u.description || "").toLowerCase(),
+		}));
+		const selectedCodes = new Set([formData.value.salesAgentCode, formData.value.personInChargeCode, formData.value.leaderCode, formData.value.leaderIICode, ...formData.value.technicianCodes]);
+		users.value = [...users.value.filter((u: any) => selectedCodes.has(u.code)), ...results]
+			.filter((u: any, index: number, all: any[]) => all.findIndex((item) => item.code === u.code) === index);
+	} finally {
+		autocompleteLoading.value.users = false;
+	}
+}, 300);
+
+const searchCustomers = debounce(async (q: string) => {
+	autocompleteLoading.value.customers = true;
+	try {
+		const { data } = await customerApi.getCustomers({ pageIndex: 0, pageSize: 5, q, timezone: "Asia/Kuala_Lumpur", isActive: true });
+		const results = (data?.data || []).map((c: any) => ({ code: c.code, name: c.name, contracts: c.contracts || [] }));
+		customers.value = [...customers.value.filter((c: any) => c.code === formData.value.customerCode), ...results]
+			.filter((c: any, index: number, all: any[]) => all.findIndex((item) => item.code === c.code) === index);
+	} finally {
+		autocompleteLoading.value.customers = false;
+	}
+}, 300);
+
+const searchSites = debounce(async (q: string) => {
+	autocompleteLoading.value.sites = true;
+	try {
+		const res = await http.get("/site", { params: { pageIndex: 0, pageSize: 5, q } });
+		const raw = res?.data?.data || res?.data?.items || res?.data || [];
+		const results = Array.isArray(raw) ? raw.filter((s: any) => s.isActive !== false).map((s: any) => ({ code: s.code, name: s.name, guid: s.guid })) : [];
+		sites.value = [...sites.value.filter((s: any) => s.code === formData.value.siteCode), ...results]
+			.filter((s: any, index: number, all: any[]) => all.findIndex((item) => item.code === s.code) === index);
+	} finally {
+		autocompleteLoading.value.sites = false;
+	}
+}, 300);
+
+const searchWorkTypeItems = debounce(async (q: string) => {
+	if (!formData.value.workTypeGuid) return;
+	autocompleteLoading.value.workTypeItems = true;
+	try {
+		const { data } = await workTypeApi.getWorkTypeItems(formData.value.workTypeGuid, { pageIndex: 0, pageSize: 5, q, timezone: "Asia/Kuala_Lumpur" } as any);
+		const results = (data?.data || []).map((item: any) => ({ code: item.code, name: item.name }));
+		workTypeItems.value = [...workTypeItems.value.filter((item) => item.code === formData.value.orderTypeItemCode), ...results]
+			.filter((item, index, all) => all.findIndex((candidate) => candidate.code === item.code) === index);
+	} finally {
+		autocompleteLoading.value.workTypeItems = false;
+	}
+}, 300);
+
 onMounted(async () => {
 	if (!authStore.currentUser) void authStore.fetchMe();
 
@@ -568,9 +633,10 @@ onMounted(async () => {
 	if (id && typeof id === "string") {
 		try {
 			loading.value = true;
-			const [_, detailRes] = await Promise.all([
+			const [_, detailRes, filesResult] = await Promise.all([
 				loadOptions(),
 				workOrderApi.getWorkOrderByGuid(id),
+				workOrderApi.getFiles(id),
 			]);
 			const w = (detailRes?.data?.data || detailRes?.data) as any;
 			if (w && (w.guid || w.code)) {
@@ -677,7 +743,6 @@ onMounted(async () => {
 					siteInstructionsFiles: [],
 				};
 
-				const filesResult = await workOrderApi.getFiles(id);
 				const filesData = filesResult.data;
 				const files = Array.isArray(filesData)
 					? filesData
@@ -696,9 +761,7 @@ onMounted(async () => {
 				);
 				formData.value.siteInstructionsFiles = await Promise.all(
 					siteInstructionFiles.map(async (file: any) => {
-						const isImage =
-							(file.mimeType || "").startsWith("image/") ||
-							/\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(file.fileName || "");
+						const isImage = isImageFile(file.fileName, file.mimeType);
 						let url = file.storageUrl || "";
 						if (url.startsWith("/work-order/")) url = `${API_BASE_URL}${url}`;
 
@@ -716,7 +779,7 @@ onMounted(async () => {
 						return {
 							name: file.fileName || "Site instruction",
 							url,
-							type: file.mimeType || (isImage ? "image/unknown" : ""),
+							type: normalizeFileMimeType(file.fileName, file.mimeType),
 							guid: file.guid,
 						};
 					}),
@@ -1113,9 +1176,10 @@ function extractWorkOrderGuid(response: any): string {
 }
 
 async function uploadSelectedSiteInstructions(workOrderGuid: string): Promise<void> {
-	const selectedFiles = formData.value.siteInstructionsFiles
-		.map((item) => item.file)
-		.filter((file): file is File => !!file);
+	const selectedItems = formData.value.siteInstructionsFiles.filter(
+		(item): item is typeof item & { file: File } => !!item.file,
+	);
+	const selectedFiles = selectedItems.map((item) => item.file);
 
 	if (selectedFiles.length === 0) return;
 
@@ -1137,8 +1201,50 @@ async function uploadSelectedSiteInstructions(workOrderGuid: string): Promise<vo
 		throw new Error(message);
 	}
 
+	// Replace the local File marker with the persisted GUID immediately. Without
+	// this sync, approval validation sees neither `file` nor `guid` until refresh.
+	const filesResult = await workOrderApi.getFiles(workOrderGuid);
+	if (filesResult.error) {
+		throw new Error(
+			getApiErrorMessage(filesResult.error, "Files uploaded, but failed to refresh them"),
+		);
+	}
+	const filesData = filesResult.data;
+	const persistedFiles = (
+		Array.isArray(filesData)
+			? filesData
+			: Array.isArray(filesData?.data)
+				? filesData.data
+				: Array.isArray(filesData?.data?.items)
+					? filesData.data.items
+					: Array.isArray(filesData?.items)
+						? filesData.items
+						: []
+	).filter(
+		(file: any) =>
+			file.category === "SiteInstructions" ||
+			file.category === "SiteInstruction" ||
+			file.category === "site_instructions",
+	);
+
+	const persistedGuidsByName = new Map<string, string[]>();
+	for (const file of persistedFiles) {
+		if (!file.guid || !file.fileName) continue;
+		const guids = persistedGuidsByName.get(file.fileName) || [];
+		guids.push(file.guid);
+		persistedGuidsByName.set(file.fileName, guids);
+	}
 	for (const item of formData.value.siteInstructionsFiles) {
-		if (item.file) item.file = undefined;
+		if (!item.file) continue;
+		const guid = persistedGuidsByName.get(item.name)?.shift();
+		if (guid) {
+			item.guid = guid;
+			item.file = undefined;
+		}
+	}
+
+	if (selectedItems.some((item) => !item.guid)) {
+		throw new Error("Files uploaded, but their saved records could not be verified");
 	}
 }
 
@@ -1797,6 +1903,9 @@ const statusColors: Record<string, string> = {
 									label="Work Type Item *"
 									placeholder="Search or select work type item..."
 									:error="formErrors.orderTypeItemCode"
+									server-search
+									:loading="autocompleteLoading.workTypeItems"
+									@search="searchWorkTypeItems"
 								/>
 							</div>
 							<div class="col-12">
@@ -1824,6 +1933,9 @@ const statusColors: Record<string, string> = {
 									label="Sales Agent *"
 									placeholder="Search or select Sales Agent..."
 									:error="formErrors.salesAgentCode"
+									server-search
+									:loading="autocompleteLoading.users"
+									@search="searchUsers"
 									:showCode="false"
 								/>
 							</div>
@@ -1841,6 +1953,9 @@ const statusColors: Record<string, string> = {
 									label="Project PIC *"
 									placeholder="Search or select Project PIC..."
 									:error="formErrors.personInChargeCode"
+									server-search
+									:loading="autocompleteLoading.users"
+									@search="searchUsers"
 									:showCode="false"
 								/>
 							</div>
@@ -1881,6 +1996,9 @@ const statusColors: Record<string, string> = {
 									label="Leader"
 									placeholder="Search or select Leader..."
 									:error="formErrors.leaderCode"
+									server-search
+									:loading="autocompleteLoading.users"
+									@search="searchUsers"
 									:showCode="false"
 								/>
 							</div>
@@ -1898,6 +2016,9 @@ const statusColors: Record<string, string> = {
 									label="Leader II"
 									placeholder="Search or select Leader II..."
 									:showCode="false"
+									server-search
+									:loading="autocompleteLoading.users"
+									@search="searchUsers"
 								/>
 							</div>
 
@@ -1910,6 +2031,9 @@ const statusColors: Record<string, string> = {
 									label="Technicians"
 									placeholder="Search to add technicians..."
 									:showCode="false"
+									server-search
+									:loading="autocompleteLoading.users"
+									@search="searchUsers"
 								/>
 							</div>
 
@@ -1984,7 +2108,7 @@ const statusColors: Record<string, string> = {
 											class="file-item__thumb"
 										/>
 										<div v-else class="file-item__doc-icon">
-											<i class="mdi mdi-file-pdf-box"></i>
+											<i class="mdi" :class="getFileIcon(file.name, file.type)"></i>
 										</div>
 									</div>
 									<div class="file-item__info">
@@ -2232,22 +2356,18 @@ const statusColors: Record<string, string> = {
 						</template>
 						<div class="grid-row">
 							<div class="col-12">
-								<Select
+								<Autocomplete
 									v-model="formData.customerCode"
 									:disabled="isFieldDisabled('customerCode')"
+									:options="customers.map((cust) => ({ id: cust.code, name: cust.name, code: cust.code }))"
 									label="Customer *"
 									:error="formErrors.customerCode"
-									@change="onCustomerChange"
-								>
-									<option value="" disabled>Select Customer</option>
-									<option
-										v-for="cust in customers"
-										:key="cust.code"
-										:value="cust.code"
-									>
-										{{ cust.name }} ({{ cust.code }})
-									</option>
-								</Select>
+									placeholder="Search or select Customer..."
+									server-search
+									:loading="autocompleteLoading.customers"
+									@search="searchCustomers"
+									@select="onCustomerChange"
+								/>
 							</div>
 							<div class="col-12">
 								<Select
@@ -2404,6 +2524,9 @@ const statusColors: Record<string, string> = {
 							label="Site *"
 							placeholder="Search or select Site..."
 							:error="formErrors.siteCode"
+							server-search
+							:loading="autocompleteLoading.sites"
+							@search="searchSites"
 						/>
 					</div>
 

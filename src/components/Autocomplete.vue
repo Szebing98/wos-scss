@@ -17,14 +17,19 @@ const props = withDefaults(defineProps<{
 	error?: string;
 	emptyMessage?: string;
 	showCode?: boolean;
+	serverSearch?: boolean;
+	loading?: boolean;
 }>(), {
 	emptyMessage: "Not found",
 	showCode: true,
+	serverSearch: false,
+	loading: false,
 });
 
 const emit = defineEmits<{
 	(e: "update:modelValue", value: string | number): void;
 	(e: "select", option: AutocompleteOption): void;
+	(e: "search", query: string): void;
 }>();
 
 const searchInput = ref("");
@@ -52,6 +57,7 @@ watch(
 );
 
 const filteredOptions = computed(() => {
+	if (props.serverSearch) return props.options;
 	const query = searchInput.value.trim().toLowerCase();
 	if (!query) return props.options;
 
@@ -61,6 +67,10 @@ const filteredOptions = computed(() => {
 		return nameMatch || codeMatch;
 	});
 });
+
+function handleSearchInput() {
+	if (props.serverSearch) emit("search", searchInput.value.trim());
+}
 
 async function updateDropdownDirection() {
 	await nextTick();
@@ -101,6 +111,7 @@ function clearSelection(event?: MouseEvent) {
 	if (props.disabled) return;
 	searchInput.value = "";
 	emit("update:modelValue", "");
+	if (props.serverSearch) emit("search", "");
 	openDropdown();
 }
 
@@ -148,6 +159,7 @@ onUnmounted(() => {
 			<input
 				type="text"
 				v-model="searchInput"
+				@input="handleSearchInput"
 				:placeholder="placeholder || 'Type to search...'"
 				:disabled="disabled"
 				@focus="onInputFocus"
@@ -175,7 +187,8 @@ onUnmounted(() => {
 			:class="{ 'autocomplete-dropdown--above': opensAbove }"
 			v-if="isOpen"
 		>
-			<ul v-if="filteredOptions.length > 0" class="options-list">
+			<div v-if="loading" class="empty-list">Searching...</div>
+			<ul v-else-if="filteredOptions.length > 0" class="options-list">
 				<li
 					v-for="opt in filteredOptions"
 					:key="opt.id"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from "@/utils/error";
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { auditApi } from "@/api/audit/audit.api";
 import Card from "@/components/Card.vue";
 import Table from "@/components/Table.vue";
@@ -11,6 +11,7 @@ import FilterPanel from "@/components/FilterPanel.vue";
 import Select from "@/components/Select.vue";
 import Badge from "@/components/Badge.vue";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
+import { debounce } from "@/utils/debounce";
 
 type AuditAction = "create" | "update" | "delete";
 
@@ -48,6 +49,9 @@ const filterType = ref("all");
 const isDetailDrawerOpen = ref(false);
 const isLoadingDetails = ref(false);
 const isLoadingLogs = ref(false);
+const pageIndex = ref(0);
+const pageSize = ref(10);
+const totalLogs = ref(0);
 const selectedLog = ref<AuditLog | null>(null);
 const logChanges = ref<AuditChange[]>([]);
 
@@ -114,8 +118,8 @@ async function loadLogs() {
 	isLoadingLogs.value = true;
 	try {
 		const query: any = {
-			pageIndex: 0,
-			pageSize: 100,
+			pageIndex: pageIndex.value,
+			pageSize: pageSize.value,
 			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
 		};
 		if (searchQuery.value) query.q = searchQuery.value;
@@ -124,6 +128,7 @@ async function loadLogs() {
 
 		const { data, error } = await auditApi.getAudits(query);
 		if (data && data.data) {
+			totalLogs.value = data.total ?? data.data.length;
 			logs.value = data.data.map((item: any) => ({
 				guid: item.guid,
 				module: item.module,
@@ -142,6 +147,17 @@ async function loadLogs() {
 		isLoadingLogs.value = false;
 	}
 }
+
+const debouncedLoadLogs = debounce(loadLogs, 300);
+watch([filterModule, filterType], () => {
+	if (pageIndex.value !== 0) pageIndex.value = 0;
+	else void loadLogs();
+});
+watch(searchQuery, () => {
+	if (pageIndex.value !== 0) pageIndex.value = 0;
+	else debouncedLoadLogs();
+});
+watch([pageIndex, pageSize], loadLogs);
 
 async function viewDetails(log: AuditLog) {
 	selectedLog.value = log;
@@ -229,6 +245,12 @@ onMounted(() => {
 		<Card class="table-scroll-container" style="padding: 0;">
 			<Table
 				paginate
+				server-pagination
+				:page-index="pageIndex"
+				:rows-per-page="pageSize"
+				:total-items="totalLogs"
+				@update:page-index="pageIndex = $event"
+				@update:rows-per-page="pageSize = $event"
 				storageKey="audit-log-list"
 				:headers="headers"
 				:items="filteredLogs"

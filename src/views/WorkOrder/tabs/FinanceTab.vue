@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getFileIcon } from "@/utils/file";
 import { ref, computed } from "vue";
 import Button from "@/components/Button.vue";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
@@ -79,7 +80,7 @@ const canUpload = computed(() => {
 		<div class="invoice-list" v-else>
 			<div v-for="qt in quotations" :key="qt.id" class="document-card" @click="emit('preview', qt)">
 				<div class="doc-icon">
-					<i class="mdi mdi-file-pdf-box text-danger" style="font-size: 32px"></i>
+					<i class="mdi text-danger" :class="getFileIcon(qt.name)" style="font-size: 32px"></i>
 				</div>
 				<div class="doc-info">
 					<h4>{{ qt.name }}</h4>

@@ -24,6 +24,7 @@ import PaymentDialog from "./dialogs/PaymentDialog.vue";
 import LocationMapDialog from "./dialogs/LocationMapDialog.vue";
 import UploadConfirmDialog from "./dialogs/UploadConfirmDialog.vue";
 import FilePreviewDialog from "./dialogs/FilePreviewDialog.vue";
+import { isImageFile, isPdfFile, normalizeFileMimeType } from "@/utils/file";
 import GeneralTab from "./tabs/GeneralTab.vue";
 import PartInfoTab from "./tabs/PartInfoTab.vue";
 import SupplierInvoicesTab from "./tabs/SupplierInvoicesTab.vue";
@@ -37,6 +38,7 @@ import { useSnackbarStore } from "@/stores/snackbar.store";
 import { useBreadcrumbStore } from "@/stores/breadcrumb.store";
 import http from "@/utils/http";
 import { userDisplayCode } from "@/utils/User/user-display";
+import { debounce } from "@/utils/debounce";
 
 const route = useRoute();
 const router = useRouter();
@@ -562,6 +564,25 @@ const contractStatus = computed(() => {
 
 const users = ref<any[]>([]);
 const workTypes = ref<any[]>([]);
+const userSearchLoading = ref(false);
+
+const searchUsers = debounce(async (q: string) => {
+	userSearchLoading.value = true;
+	try {
+		const { data } = await userApi.getUsers({ pageIndex: 0, pageSize: 5, q, timezone: "Asia/Kuala_Lumpur" });
+		const results = (data?.data || []).map((u: any) => ({
+			code: u.code || u.guid,
+			displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
+			name: u.displayName || u.profile?.displayName || u.name || "Unknown",
+			role: (u.role || u.userGroup || u.description || "").toLowerCase(),
+		}));
+		const selectedCodes = new Set([workOrder.value?.salesAgent, workOrder.value?.projectPersonInCharge, workOrder.value?.leaderCode, workOrder.value?.leaderIICode, ...(workOrder.value?.technicianCodes || [])]);
+		users.value = [...users.value.filter((u: any) => selectedCodes.has(u.code)), ...results]
+			.filter((u: any, index: number, all: any[]) => all.findIndex((item) => item.code === u.code) === index);
+	} finally {
+		userSearchLoading.value = false;
+	}
+}, 300);
 
 const allTabs = [
 	{ id: "general", label: "General" },
@@ -1169,11 +1190,8 @@ async function fetchWorkOrderFiles() {
 			);
 			siteInstructionsFiles.value = await Promise.all(
 				siteInstructionsList.map(async (f: any) => {
-					const isImage =
-						(f.mimeType || "").startsWith("image/") ||
-						/\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.fileName || "");
-					const isPdf =
-						f.mimeType === "application/pdf" || /\.(pdf)$/i.test(f.fileName || "");
+					const isImage = isImageFile(f.fileName, f.mimeType);
+					const isPdf = isPdfFile(f.fileName, f.mimeType);
 					const rawUrl = getFileUrl(f.storageUrl, isImage || isPdf);
 					const url = await loadFileBlobUrl(rawUrl, isImage || isPdf);
 					return {
@@ -1182,7 +1200,7 @@ async function fetchWorkOrderFiles() {
 						category: f.category,
 						url,
 						name: f.fileName,
-						type: f.mimeType || "",
+						type: normalizeFileMimeType(f.fileName, f.mimeType),
 					};
 				}),
 			);
@@ -1557,11 +1575,6 @@ function handleConfirmDialog() {
 */
 
 // File Upload & Deletion handlers
-// @ts-ignore
-function isPdfFile(fileName: string) {
-	return /\.(pdf)$/i.test(fileName || "");
-}
-
 // File Upload Dialog State
 const isUploadConfirmOpen = ref(false);
 const uploadTargetFile = ref<File | null>(null);
@@ -1777,7 +1790,7 @@ async function handleFileUpload(event: Event, category: string, subcategory?: st
 	const baseName = lastDot !== -1 ? file.name.substring(0, lastDot) : file.name;
 	uploadCustomFileName.value = baseName;
 
-	if (file.type.startsWith("image/")) {
+	if (isImageFile(file.name, file.type)) {
 		uploadPreviewUrl.value = URL.createObjectURL(file);
 	} else {
 		uploadPreviewUrl.value = "";
@@ -1822,8 +1835,9 @@ onMounted(async () => {
 	if (tabsWrapperRef.value) {
 		tabsWrapperRef.value.addEventListener("scroll", updateTabArrows);
 	}
-	await Promise.all([
-		fetchWorkOrderDetails(),
+	// Prioritize the core record so the detail view can render before secondary tab data.
+	await fetchWorkOrderDetails();
+	void Promise.all([
 		fetchActivityLogs(),
 		fetchWorkOrderFiles(),
 		fetchWorkNotes(),
@@ -1831,7 +1845,7 @@ onMounted(async () => {
 			try {
 				const userRes = await userApi.getUsers({
 					pageIndex: 0,
-					pageSize: 100,
+					pageSize: 5,
 					timezone: "Asia/Kuala_Lumpur",
 				});
 				if (userRes.data && userRes.data.data) {
@@ -2145,6 +2159,8 @@ onUnmounted(() => {
 						:phases="phases"
 						:showEquipmentForm="showEquipmentForm"
 						:isMechanical="isMechanical"
+						:userSearchLoading="userSearchLoading"
+						@searchUsers="searchUsers"
 						@save="saveGeneralFormChanges"
 						@edit="isGeneralEditMode = true"
 						@cancelEdit="isGeneralEditMode = false"

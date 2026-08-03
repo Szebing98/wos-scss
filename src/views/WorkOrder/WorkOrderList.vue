@@ -15,7 +15,6 @@ import Button from "@/components/Button.vue";
 import Dialog from "@/components/Dialog.vue";
 import DatePicker from "@/components/DatePicker.vue";
 import { workOrderApi } from "@/api/work-order/work-order.api";
-import { userApi } from "@/api/user/user.api";
 import { workTypeApi } from "@/api/maintenance/work-type/work-type.api";
 import HighlightText from "@/components/HighlightText.vue";
 import Autocomplete from "@/components/Autocomplete.vue";
@@ -281,46 +280,16 @@ function resetFilters() {
 
 const workOrders = shallowRef<any[]>([]);
 const loading = ref(false);
-const userDirectory = shallowRef<any[]>([]);
-
-const userLookupMap = computed(() => {
-	const map = new Map<string, any>();
-	for (const item of userDirectory.value) {
-		const candidates = [item.guid, item.code, item.displayCode, item.userCode];
-		for (const cand of candidates) {
-			if (cand) {
-				map.set(String(cand).toLowerCase(), item);
-			}
-		}
-	}
-	return map;
-});
-
-async function fetchUserDirectory() {
-	try {
-		const { data } = await userApi.getUsers({
-			pageIndex: 0,
-			pageSize: 1000,
-			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-		});
-		userDirectory.value = data?.data || [];
-	} catch (error) {
-		console.error("Failed to fetch users for Work Order list:", error);
-		userDirectory.value = [];
-	}
-}
+const pageIndex = ref(0);
+const pageSize = ref(10);
+const totalWorkOrders = ref(0);
 
 function resolveUserDisplay(
 	value?: string | null,
 	fallbackName?: string | null,
 	fallbackDisplayCode?: string | null,
 ) {
-	const lookup = String(value || fallbackDisplayCode || "").toLowerCase();
-	const user = userLookupMap.value.get(lookup);
-	if (!user) return formatUserDisplay(fallbackName, fallbackDisplayCode || value);
-	const name = user.displayName || user.profile?.displayName || user.name;
-	const displayCode = user.displayCode || user.code || user.userCode;
-	return formatUserDisplay(name, displayCode);
+	return formatUserDisplay(fallbackName, fallbackDisplayCode || value);
 }
 
 let lastFetchId = 0;
@@ -330,8 +299,8 @@ async function fetchWorkOrders() {
 	loading.value = true;
 	try {
 		const query: any = {
-			pageIndex: 0,
-			pageSize: 100,
+			pageIndex: pageIndex.value,
+			pageSize: pageSize.value,
 			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
 		};
 		if (searchQuery.value) query.q = searchQuery.value;
@@ -364,6 +333,7 @@ async function fetchWorkOrders() {
 		const { data } = await workOrderApi.getWorkOrders(query);
 		if (fetchId !== lastFetchId) return;
 		if (data && data.data && Array.isArray(data.data)) {
+			totalWorkOrders.value = data.total ?? data.data.length;
 			workOrders.value = data.data.map((w: any) => ({
 				guid: w.guid,
 				isDraft: !!w.isDraft,
@@ -488,18 +458,21 @@ watch(
 		appliedDateTo,
 	],
 	() => {
-		fetchWorkOrders();
+		if (pageIndex.value !== 0) pageIndex.value = 0;
+		else fetchWorkOrders();
 	},
 );
 
 watch(searchQuery, () => {
-	debouncedFetchWorkOrders();
+	if (pageIndex.value !== 0) pageIndex.value = 0;
+	else debouncedFetchWorkOrders();
 });
 
-onMounted(async () => {
-	await fetchUserDirectory();
-	await fetchWorkOrders();
-	fetchWorkTypes();
+watch([pageIndex, pageSize], fetchWorkOrders);
+
+onMounted(() => {
+	void fetchWorkOrders();
+	void fetchWorkTypes();
 });
 
 const filteredWorkOrders = computed(() => {
@@ -1210,13 +1183,14 @@ const isCreateDialog = ref(false);
 const availableWorkTypes = ref<WorkTypeOption[]>([]);
 const selectedWorkTypeGuid = ref<string>("");
 const loadingWorkTypes = ref(false);
+const searchingWorkTypes = ref(false);
 
 async function fetchWorkTypes() {
 	loadingWorkTypes.value = true;
 	try {
 		const wtRes = await workTypeApi.getWorkTypes({
 			pageIndex: 0,
-			pageSize: 100,
+			pageSize: 5,
 			timezone: "UTC",
 		});
 		if (wtRes.data && wtRes.data.data && wtRes.data.data.length > 0) {
@@ -1299,6 +1273,25 @@ async function fetchWorkTypes() {
 		loadingWorkTypes.value = false;
 	}
 }
+
+const searchWorkTypes = debounce(async (q: string) => {
+	searchingWorkTypes.value = true;
+	try {
+		const wtRes = await workTypeApi.getWorkTypes({ pageIndex: 0, pageSize: 5, q, timezone: "UTC" });
+		const results = (wtRes.data?.data || []).filter((wt: any) => wt.isActive !== false).map((wt: any) => ({
+			guid: wt.guid,
+			code: wt.code,
+			name: wt.name,
+			description: wt.description || "",
+			withEquipmentForm: !!wt.withEquipmentForm,
+			isActive: wt.isActive,
+		}));
+		availableWorkTypes.value = [...availableWorkTypes.value.filter((wt) => (wt.guid || wt.code) === selectedWorkTypeGuid.value), ...results]
+			.filter((wt, index, all) => all.findIndex((item) => (item.guid || item.code) === (wt.guid || wt.code)) === index);
+	} finally {
+		searchingWorkTypes.value = false;
+	}
+}, 300);
 
 function proceedCreateWorkOrder() {
 	const selectedWt =
@@ -1580,6 +1573,12 @@ defineExpose({
 		<Card class="table-scroll-container" style="padding: 0">
 			<Table
 				paginate
+				server-pagination
+				:page-index="pageIndex"
+				:rows-per-page="pageSize"
+				:total-items="totalWorkOrders"
+				@update:page-index="pageIndex = $event"
+				@update:rows-per-page="pageSize = $event"
 				hover
 				bordered
 				storageKey="work-order-list"
@@ -1743,6 +1742,9 @@ defineExpose({
 					label="Work Type"
 					placeholder="Type or select a work type..."
 					emptyMessage="Not found"
+					server-search
+					:loading="searchingWorkTypes"
+					@search="searchWorkTypes"
 				/>
 			</div>
 			<template #footer>

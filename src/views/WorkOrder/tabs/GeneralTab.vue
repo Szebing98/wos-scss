@@ -20,9 +20,10 @@ const props = defineProps<{
 	phases: any[];
 	showEquipmentForm: boolean;
 	isMechanical: boolean;
+	userSearchLoading?: boolean;
 }>();
 
-const emit = defineEmits(["save", "edit", "cancelEdit", "extend", "openMap"]);
+const emit = defineEmits(["save", "edit", "cancelEdit", "extend", "openMap", "searchUsers"]);
 
 const priorityColors: Record<string, string> = {
 	High: "error",
@@ -265,6 +266,9 @@ function openImageModal(url: string) {
 				:showCode="false"
 				label="Sales Agent"
 				placeholder="Search or select Sales Agent..."
+				server-search
+				:loading="userSearchLoading"
+				@search="emit('searchUsers', $event)"
 				disabled
 			/>
 		</div>
@@ -281,6 +285,9 @@ function openImageModal(url: string) {
 				:showCode="false"
 				label="Project PIC"
 				placeholder="Search or select Project Person In Charge..."
+				server-search
+				:loading="userSearchLoading"
+				@search="emit('searchUsers', $event)"
 				disabled
 			/>
 		</div>
@@ -359,6 +366,9 @@ function openImageModal(url: string) {
 				:showCode="false"
 				label="Leader"
 				placeholder="Search or select Leader..."
+				server-search
+				:loading="userSearchLoading"
+				@search="emit('searchUsers', $event)"
 				:disabled="!isEditing"
 			/>
 		</div>
@@ -375,6 +385,9 @@ function openImageModal(url: string) {
 				:showCode="false"
 				label="Leader II"
 				placeholder="Search or select Leader II..."
+				server-search
+				:loading="userSearchLoading"
+				@search="emit('searchUsers', $event)"
 				:disabled="!isEditing"
 			/>
 		</div>
@@ -409,6 +422,9 @@ function openImageModal(url: string) {
 				label="Technicians"
 				placeholder="Search to add technicians..."
 				:disabled="!isEditing"
+				server-search
+				:loading="userSearchLoading"
+				@search="emit('searchUsers', $event)"
 			/>
 		</div>
 

@@ -8,9 +8,11 @@ const props = defineProps<{
     placeholder?: string;
     disabled?: boolean;
     showCode?: boolean;
+	serverSearch?: boolean;
+	loading?: boolean;
 }>();
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'search']);
 
 const searchQuery = ref('');
 const isDropdownOpen = ref(false);
@@ -19,6 +21,7 @@ const containerRef = ref<HTMLElement | null>(null);
 const filteredOptions = computed(() => {
     const val = props.modelValue || [];
     const valSet = new Set(val);
+	if (props.serverSearch) return props.options.filter(opt => !valSet.has(opt.code));
     const query = searchQuery.value.toLowerCase();
     return props.options.filter(opt => 
         !valSet.has(opt.code) && 
@@ -26,6 +29,10 @@ const filteredOptions = computed(() => {
          opt.code.toLowerCase().includes(query))
     );
 });
+
+function handleSearchInput() {
+	if (props.serverSearch) emit('search', searchQuery.value.trim());
+}
 
 const selectedOptions = computed(() => {
     const val = props.modelValue || [];
@@ -38,6 +45,7 @@ function selectOption(code: string) {
     const val = props.modelValue || [];
     emit('update:modelValue', [...val, code]);
     searchQuery.value = '';
+	if (props.serverSearch) emit('search', '');
     isDropdownOpen.value = false;
 }
 
@@ -68,7 +76,8 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
                 </div>
                 <input 
                     type="text" 
-                    v-model="searchQuery" 
+                    v-model="searchQuery"
+					@input="handleSearchInput"
                     :placeholder="selectedOptions.length === 0 ? (placeholder || 'Search...') : ''"
                     @focus="isDropdownOpen = true"
                     :disabled="disabled"
@@ -77,7 +86,10 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
             <i class="mdi mdi-chevron-down toggle-icon" @click.stop="!disabled && (isDropdownOpen = !isDropdownOpen)"></i>
         </div>
         
-        <div class="dropdown-menu" v-if="isDropdownOpen && filteredOptions.length > 0">
+		<div class="dropdown-menu empty-msg" v-if="isDropdownOpen && loading">
+			Searching...
+		</div>
+        <div class="dropdown-menu" v-else-if="isDropdownOpen && filteredOptions.length > 0">
             <div 
                 v-for="opt in filteredOptions" 
                 :key="opt.code" 

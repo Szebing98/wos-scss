@@ -57,6 +57,9 @@ const headers = computed<TableHeader[]>(() => {
 const users = shallowRef<UserModel[]>([]);
 const loading = ref(false);
 const exporting = ref(false);
+const pageIndex = ref(0);
+const pageSize = ref(10);
+const totalUsers = ref(0);
 
 // Status Modal Confirmation State
 const showStatusModal = ref(false);
@@ -70,8 +73,8 @@ async function fetchUsers() {
 	loading.value = true;
 	try {
 		const query: any = {
-			pageIndex: 0,
-			pageSize: 50,
+			pageIndex: pageIndex.value,
+			pageSize: pageSize.value,
 			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
 		};
 
@@ -86,6 +89,7 @@ async function fetchUsers() {
 		if (fetchId !== lastFetchId) return;
 
 		if (data && data.data) {
+			totalUsers.value = (data as any).total ?? (data as any).pagination?.total ?? data.data.length;
 			users.value = data.data.map((u: any) => ({
 				guid: u.guid,
 				code: u.displayCode || (u.guid ? u.guid.substring(0, 8).toUpperCase() : ""),
@@ -153,12 +157,16 @@ const debouncedFetchUsers = debounce(fetchUsers, 300);
 
 // Re-fetch users whenever filters change
 watch([roleFilter, filterStatus], () => {
-	fetchUsers();
+	if (pageIndex.value !== 0) pageIndex.value = 0;
+	else fetchUsers();
 });
 
 watch(searchQuery, () => {
-	debouncedFetchUsers();
+	if (pageIndex.value !== 0) pageIndex.value = 0;
+	else debouncedFetchUsers();
 });
+
+watch([pageIndex, pageSize], fetchUsers);
 
 const totalEmployees = computed(() => users.value.length);
 const activeEmployees = computed(() => users.value.filter((u) => u.isActive).length);
@@ -422,6 +430,12 @@ function getRandomAvatarBg(name: string) {
 		<Card style="padding: 0">
 			<Table
 				paginate
+				server-pagination
+				:page-index="pageIndex"
+				:rows-per-page="pageSize"
+				:total-items="totalUsers"
+				@update:page-index="pageIndex = $event"
+				@update:rows-per-page="pageSize = $event"
 				:hover="authStore.can('edit', 'User')"
 				storageKey="employee-directory"
 				:headers="headers"

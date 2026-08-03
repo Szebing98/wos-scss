@@ -39,6 +39,10 @@ const props = withDefaults(
 		storageKey?: string;
 		searchQuery?: string;
 		loading?: boolean;
+		serverPagination?: boolean;
+		pageIndex?: number;
+		totalItems?: number;
+		rowsPerPage?: number;
 	}>(),
 	{
 		emptyMessage: "No data available.",
@@ -53,11 +57,17 @@ const props = withDefaults(
 		storageKey: undefined,
 		searchQuery: undefined,
 		loading: false,
+		serverPagination: false,
+		pageIndex: 0,
+		totalItems: 0,
+		rowsPerPage: 10,
 	},
 );
 
 const emit = defineEmits<{
 	"row-click": [item: any];
+	"update:pageIndex": [value: number];
+	"update:rowsPerPage": [value: number];
 }>();
 
 // --- Internal Headers State (Customization, Order, Width) ---
@@ -387,32 +397,42 @@ const sortedItems = computed(() => {
 });
 
 // --- Pagination ---
-const currentPage = ref(1);
-const rowsPerPage = ref(10);
+const localCurrentPage = ref(1);
+const localRowsPerPage = ref(10);
 
 if (props.rowsPerPageOptions && props.rowsPerPageOptions.length > 0) {
-	rowsPerPage.value = props.rowsPerPageOptions[0];
+	localRowsPerPage.value = props.rowsPerPageOptions[0];
 }
 
-const totalItems = computed(() => sortedItems.value?.length || 0);
+const currentPage = computed(() => props.serverPagination ? props.pageIndex + 1 : localCurrentPage.value);
+const rowsPerPage = computed(() => props.serverPagination ? props.rowsPerPage : localRowsPerPage.value);
+const totalItems = computed(() => props.serverPagination ? props.totalItems : sortedItems.value?.length || 0);
 const totalPages = computed(() => Math.ceil(totalItems.value / rowsPerPage.value) || 1);
 
 const paginatedItems = computed(() => {
 	if (!props.paginate) return sortedItems.value;
+	if (props.serverPagination) return sortedItems.value;
 	const start = (currentPage.value - 1) * rowsPerPage.value;
 	return sortedItems.value.slice(start, start + rowsPerPage.value);
 });
 
 function goToPage(page: number) {
 	if (page >= 1 && page <= totalPages.value) {
-		currentPage.value = page;
+		if (props.serverPagination) emit("update:pageIndex", page - 1);
+		else localCurrentPage.value = page;
 	}
 }
 
 function handleRowsPerPageChange(event: Event) {
 	const target = event.target as HTMLSelectElement;
-	rowsPerPage.value = parseInt(target.value, 10);
-	currentPage.value = 1;
+	const value = parseInt(target.value, 10);
+	if (props.serverPagination) {
+		emit("update:rowsPerPage", value);
+		emit("update:pageIndex", 0);
+	} else {
+		localRowsPerPage.value = value;
+		localCurrentPage.value = 1;
+	}
 }
 
 const paginationText = computed(() => {

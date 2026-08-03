@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getFileIcon } from "@/utils/file";
 import { ref } from "vue";
 import Button from "@/components/Button.vue";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
@@ -139,7 +140,7 @@ const dateFormatStore = useDateFormatStore();
 				@click="emit('preview', inv)"
 			>
 				<div class="doc-icon">
-					<i class="mdi mdi-file-pdf-box text-danger" style="font-size: 32px"></i>
+					<i class="mdi text-danger" :class="getFileIcon(inv.name)" style="font-size: 32px"></i>
 				</div>
 				<div class="doc-info">
 					<h4>{{ inv.name }}</h4>
