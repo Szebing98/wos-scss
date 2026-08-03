@@ -828,7 +828,7 @@ function requestApprovalForNewWorkOrder() {
 		title: "Request For Approval",
 		message: "Submit this work order for approval?",
 		confirmText: "Request For Approval",
-		action: async () => {
+			action: async () => {
 			loading.value = true;
 			try {
 				const { error } = await workOrderApi.submitApproval(woNumber, {
@@ -1565,14 +1565,6 @@ function deleteWorkNote(noteGuid: string) {
 	});
 }
 
-// Generic Confirmation Dialog State
-const isConfirmDialogOpen = ref(false);
-const confirmTitle = ref("");
-const confirmMessage = ref("");
-const confirmAction = ref<(() => void) | null>(null);
-const confirmVariant = ref<"primary" | "secondary" | "outlined" | "danger">("primary");
-const confirmButtonText = ref("");
-
 function triggerConfirmation(options: {
 	title: string;
 	message: string;
@@ -1580,23 +1572,14 @@ function triggerConfirmation(options: {
 	variant?: "primary" | "secondary" | "outlined" | "danger";
 	confirmText?: string;
 }) {
-	confirmTitle.value = options.title;
-	confirmMessage.value = options.message;
-	confirmAction.value = options.action;
-	confirmVariant.value = options.variant || "primary";
-	confirmButtonText.value = options.confirmText || "Confirm";
-	isConfirmDialogOpen.value = true;
+	confirmDialogRef.value?.open({
+		title: options.title,
+		message: options.message,
+		buttonText: options.confirmText || "Confirm",
+		variant: options.variant || "primary",
+		onConfirm: options.action,
+	});
 }
-
-/*
-function handleConfirmDialog() {
-	if (confirmAction.value) {
-		confirmAction.value();
-	}
-	isConfirmDialogOpen.value = false;
-	confirmAction.value = null;
-}
-*/
 
 // File Upload & Deletion handlers
 // File Upload Dialog State
@@ -1655,16 +1638,27 @@ async function confirmFileUpload() {
 	loading.value = true;
 	try {
 		const fd = new FormData();
-		pendingFiles.forEach(({ file, baseName, extension }) => {
-			fd.append("files", file, file.name);
-			fd.append("fileNames", `${baseName.trim()}${extension}`);
-		});
 		fd.append("category", category);
 		if (subcategory) {
 			fd.append("subcategory", subcategory);
 		}
 
-		const response = await workOrderApi.uploadFiles(workOrder.value.guid, fd);
+		let response: Response;
+		if (pendingFiles.length === 1) {
+			const { file, baseName, extension } = pendingFiles[0];
+			fd.append("file", file, file.name);
+			fd.append("fileName", `${baseName.trim()}${extension}`);
+			response = await workOrderApi.uploadFile(workOrder.value.guid, fd);
+		} else {
+			const fileNames: string[] = [];
+			pendingFiles.forEach(({ file, baseName, extension }) => {
+				fd.append("files", file, file.name);
+				fileNames.push(`${baseName.trim()}${extension}`);
+			});
+			// Multipart parsers do not reliably preserve repeated scalar fields as arrays.
+			fd.append("fileNamesJson", JSON.stringify(fileNames));
+			response = await workOrderApi.uploadFiles(workOrder.value.guid, fd);
+		}
 		const resData = await response.json().catch(() => null);
 		if (!response.ok) {
 			const message =
@@ -1861,6 +1855,7 @@ function handleDeleteFile(fileGuid: string) {
 				}
 			} catch (e) {
 				console.error(e);
+				snackbar.error(getApiErrorMessage(e, "Failed to delete file"));
 			} finally {
 				loading.value = false;
 			}
