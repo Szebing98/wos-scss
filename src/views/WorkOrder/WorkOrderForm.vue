@@ -1269,13 +1269,7 @@ async function uploadSelectedSiteInstructions(workOrderGuid: string): Promise<vo
 
 	// Replace the local File marker with the persisted GUID immediately. Without
 	// this sync, approval validation sees neither `file` nor `guid` until refresh.
-	const filesResult = await workOrderApi.getFiles(workOrderGuid);
-	if (filesResult.error) {
-		throw new Error(
-			getApiErrorMessage(filesResult.error, "Files uploaded, but failed to refresh them"),
-		);
-	}
-	const filesData = filesResult.data;
+	const filesData = await response.json().catch(() => null);
 	const persistedFiles = (
 		Array.isArray(filesData)
 			? filesData

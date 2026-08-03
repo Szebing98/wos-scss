@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { workOrderApi } from "@/api/work-order/work-order.api";
+import { dashboardApi } from "@/api/dashboard/dashboard.api";
 import { useThemeStore } from "@/stores/theme.store";
 import { useDateFormatStore } from "@/stores/dateFormat.store";
 import WorkOrderList from "@/views/WorkOrder/WorkOrderList.vue";
@@ -169,14 +169,6 @@ function getNumberStyle(item: any) {
 	return { color: "white" };
 }
 
-function getTotalCount(responseData: any) {
-	if (typeof responseData?.total === "number") return responseData.total;
-	if (typeof responseData?.totalCount === "number") return responseData.totalCount;
-	if (typeof responseData?.count === "number") return responseData.count;
-	if (Array.isArray(responseData?.data)) return responseData.data.length;
-	return 0;
-}
-
 function updateLastUpdatedTime() {
 	lastUpdatedTime.value = dateFormatStore.formatDateTime(new Date());
 }
@@ -184,18 +176,16 @@ function updateLastUpdatedTime() {
 async function fetchCardCounts() {
 	loadingCounts.value = true;
 	try {
-		const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-		const results = await Promise.all(
-			cardList.value.map(async (card) => {
-				const { data } = await workOrderApi.getWorkOrders({
-					pageIndex: 0,
-					pageSize: 1,
-					timezone,
-					...(card.countQuery ?? card.query),
-				} as any);
-				return getTotalCount(data);
-			}),
+		const { data, error } = await dashboardApi.getWorkOrderCounts();
+		if (error) throw error;
+		const rows = Array.isArray(data) ? data : [];
+		const counts = new Map(
+			rows.map((row) => [`${row.orderStatus}:${Boolean(row.isDraft)}`, Number(row.count)]),
 		);
+		const results = cardList.value.map((card) => {
+			const query = card.countQuery ?? card.query;
+			return counts.get(`${query.orderStatus}:${query.isDraft === "true"}`) ?? 0;
+		});
 
 		cardList.value = cardList.value.map((card, index) => ({
 			...card,
@@ -244,7 +234,7 @@ function refreshData() {
 
 function goToWorkOrderList(item: any) {
 	router.push({
-		name: "Work Orders",
+		name: "Work Order List",
 		query: item.query,
 	});
 }
