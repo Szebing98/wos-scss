@@ -9,12 +9,14 @@ import type {
 	SubmitWorkOrderApprovalBody,
 } from "./work-order.types";
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3707/api").replace(/\/api\/?$/, "");
+
 function multipartRequest(path: string, body: FormData) {
 	const token = localStorage.getItem("authToken");
 	const headers = new Headers();
 	if (token) headers.set("Authorization", `Bearer ${token}`);
 
-	return fetch(path, {
+	return fetch(`${API_BASE_URL}${path}`, {
 		method: "POST",
 		body,
 		headers,

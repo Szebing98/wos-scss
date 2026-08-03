@@ -55,17 +55,17 @@ function updateBreadcrumbs() {
 	if (isReadOnly.value) {
 		breadcrumbStore.setItems([
 			{ label: "Work Order List", to: "/work-order" },
-			{ label: workOrderCode.value ? `View ${workOrderCode.value}` : "View Work Order" }
+			{ label: workOrderCode.value ? `View ${workOrderCode.value}` : "View Work Order" },
 		]);
 	} else if (isEditMode.value) {
 		breadcrumbStore.setItems([
 			{ label: "Work Order List", to: "/work-order" },
-			{ label: workOrderCode.value ? `Edit ${workOrderCode.value}` : "Edit Work Order" }
+			{ label: workOrderCode.value ? `Edit ${workOrderCode.value}` : "Edit Work Order" },
 		]);
 	} else {
 		breadcrumbStore.setItems([
 			{ label: "Work Order List", to: "/work-order" },
-			{ label: "Create Work Order" }
+			{ label: "Create Work Order" },
 		]);
 	}
 }
@@ -160,7 +160,7 @@ const canEditForCurrentAssignment = computed(() => {
 	if (isNewStatus.value) {
 		// New: creator, users in form, admin
 		if (workOrderOwnerCode.value === userCode) return true;
-		
+
 		// Check if user is Admin (assuming Admin has 'manage' or 'update_new' globally)
 		if (authStore.can("update_new", "WorkOrder")) return true;
 
@@ -171,7 +171,7 @@ const canEditForCurrentAssignment = computed(() => {
 			formData.value.leaderCode === userCode ||
 			formData.value.leaderIICode === userCode ||
 			(formData.value.technicianCodes || []).includes(userCode);
-		
+
 		return inForm;
 	}
 
@@ -458,26 +458,41 @@ watch(
 async function loadOptions() {
 	try {
 		const [custRes, userRes, wtRes, siteRes] = await Promise.all([
-			customerApi.getCustomers({
-				pageIndex: 0,
-				pageSize: 100,
-				timezone: "Asia/Kuala_Lumpur",
-				isActive: true,
-			}).catch((e: any) => { console.error(e); return null; }),
-			userApi.getUsers({
-				pageIndex: 0,
-				pageSize: 1000,
-				timezone: "Asia/Kuala_Lumpur",
-			}).catch((e: any) => { console.error(e); return null; }),
-			workTypeApi.getWorkTypes({
-				pageIndex: 0,
-				pageSize: 100,
-				timezone: "Asia/Kuala_Lumpur",
-			}).catch((e: any) => { console.error(e); return null; }),
+			customerApi
+				.getCustomers({
+					pageIndex: 0,
+					pageSize: 100,
+					timezone: "Asia/Kuala_Lumpur",
+					isActive: true,
+				})
+				.catch((e: any) => {
+					console.error(e);
+					return null;
+				}),
+			userApi
+				.getUsers({
+					pageIndex: 0,
+					pageSize: 1000,
+					timezone: "Asia/Kuala_Lumpur",
+				})
+				.catch((e: any) => {
+					console.error(e);
+					return null;
+				}),
+			workTypeApi
+				.getWorkTypes({
+					pageIndex: 0,
+					pageSize: 100,
+					timezone: "Asia/Kuala_Lumpur",
+				})
+				.catch((e: any) => {
+					console.error(e);
+					return null;
+				}),
 			http.get("/site", { params: { pageSize: 100 } }).catch((e: any) => {
 				console.error("Failed to load site list from Maintenance site API:", e);
 				return null;
-			})
+			}),
 		]);
 
 		if (custRes && custRes.data && custRes.data.data) {
@@ -555,7 +570,7 @@ onMounted(async () => {
 			loading.value = true;
 			const [_, detailRes] = await Promise.all([
 				loadOptions(),
-				workOrderApi.getWorkOrderByGuid(id)
+				workOrderApi.getWorkOrderByGuid(id),
 			]);
 			const w = (detailRes?.data?.data || detailRes?.data) as any;
 			if (w && (w.guid || w.code)) {
@@ -957,7 +972,6 @@ function validateDraftForm(): boolean {
 		isValid = false;
 	}
 
-
 	if (!isValid) snackbar.warning("Please fill in all compulsory fields (*).");
 	return isValid;
 }
@@ -1239,7 +1253,7 @@ async function submitDraft() {
 			}
 			snackbar.success("Work order draft created successfully!");
 		}
-        formData.value.status = "Draft";
+		formData.value.status = "Draft";
 		if (savedWorkOrderGuid) goToWorkOrderEdit(savedWorkOrderGuid);
 	} catch (e) {
 		console.error(e);
@@ -1264,9 +1278,7 @@ async function submitNew() {
 			if (isDraftStatus.value) {
 				const updateRes = await workOrderApi.updateDraft(id, body);
 				if (updateRes.error) {
-					snackbar.error(
-						getApiErrorMessage(updateRes.error, "Failed to update draft"),
-					);
+					snackbar.error(getApiErrorMessage(updateRes.error, "Failed to update draft"));
 					return;
 				}
 				await uploadSelectedSiteInstructions(id);
@@ -1274,17 +1286,13 @@ async function submitNew() {
 					estimatedEndDate: body.estimatedEndDate,
 				} as any);
 				if (error) {
-					snackbar.error(
-						getApiErrorMessage(error, "Failed to submit work order"),
-					);
+					snackbar.error(getApiErrorMessage(error, "Failed to submit work order"));
 					return;
 				}
 			} else {
 				const { error } = await workOrderApi.updateNew(id, body);
 				if (error) {
-					snackbar.error(
-						getApiErrorMessage(error, "Failed to update work order"),
-					);
+					snackbar.error(getApiErrorMessage(error, "Failed to update work order"));
 					return;
 				}
 				await uploadSelectedSiteInstructions(id);
@@ -1294,9 +1302,7 @@ async function submitNew() {
 			const result = await workOrderApi.createNew(body as any);
 			const { error } = result;
 			if (error) {
-				snackbar.error(
-					getApiErrorMessage(error, "Failed to submit work order"),
-				);
+				snackbar.error(getApiErrorMessage(error, "Failed to submit work order"));
 				return;
 			}
 			const workOrderGuid = extractWorkOrderGuid(result);
@@ -1336,9 +1342,7 @@ async function submitAndRequestApproval() {
 			if (isDraftStatus.value) {
 				const updateRes = await workOrderApi.updateDraft(id, body);
 				if (updateRes.error) {
-					snackbar.error(
-						getApiErrorMessage(updateRes.error, "Failed to update draft"),
-					);
+					snackbar.error(getApiErrorMessage(updateRes.error, "Failed to update draft"));
 					return;
 				}
 				await uploadSelectedSiteInstructions(id);
@@ -1346,9 +1350,7 @@ async function submitAndRequestApproval() {
 					estimatedEndDate: body.estimatedEndDate,
 				} as any);
 				if (error) {
-					snackbar.error(
-						getApiErrorMessage(error, "Failed to request approval"),
-					);
+					snackbar.error(getApiErrorMessage(error, "Failed to request approval"));
 					return;
 				}
 			} else if (isNewStatus.value) {
@@ -1364,17 +1366,13 @@ async function submitAndRequestApproval() {
 					estimatedEndDate: body.estimatedEndDate,
 				} as any);
 				if (error) {
-					snackbar.error(
-						getApiErrorMessage(error, "Failed to request approval"),
-					);
+					snackbar.error(getApiErrorMessage(error, "Failed to request approval"));
 					return;
 				}
 			} else {
 				const { error } = await workOrderApi.updatePending(id, body);
 				if (error) {
-					snackbar.error(
-						getApiErrorMessage(error, "Failed to request approval"),
-					);
+					snackbar.error(getApiErrorMessage(error, "Failed to request approval"));
 					return;
 				}
 			}
@@ -1383,9 +1381,7 @@ async function submitAndRequestApproval() {
 			const pendingResult = await workOrderApi.createPending(body as any);
 			const { error } = pendingResult;
 			if (error) {
-				snackbar.error(
-					getApiErrorMessage(error, "Failed to request approval"),
-				);
+				snackbar.error(getApiErrorMessage(error, "Failed to request approval"));
 				return;
 			}
 			const workOrderGuid = extractWorkOrderGuid(pendingResult);
@@ -1422,9 +1418,7 @@ async function saveNew() {
 		if (id && typeof id === "string") {
 			const { error } = await workOrderApi.updateNew(id, buildBody());
 			if (error) {
-				snackbar.error(
-					getApiErrorMessage(error, "Failed to save work order"),
-				);
+				snackbar.error(getApiErrorMessage(error, "Failed to save work order"));
 				return;
 			}
 			await uploadSelectedSiteInstructions(id);
@@ -1451,9 +1445,7 @@ async function updatePending(options: { stayInEdit?: boolean; silent?: boolean }
 		if (id && typeof id === "string") {
 			const { error } = await workOrderApi.updatePending(id, buildPendingBody());
 			if (error) {
-				alert(
-					getApiErrorMessage(error, "Failed to update pending approval work order"),
-				);
+				alert(getApiErrorMessage(error, "Failed to update pending approval work order"));
 				return false;
 			}
 			if (!options.silent)
@@ -1602,15 +1594,19 @@ const statusColors: Record<string, string> = {
 	<div class="workorder-form-view">
 		<div class="page-header">
 			<div class="title-area">
-				<div style="display: flex; gap: 12px; align-items: center;">
+				<div style="display: flex; gap: 12px; align-items: center">
 					<h1>{{ pageTitle }}</h1>
 					<Badge
 						v-if="isReadOnly || isEditMode"
 						class="status-badge"
-						:type="statusColors[effectiveStatus] as any || 'primary'"
+						:type="(statusColors[effectiveStatus] as any) || 'primary'"
 						size="lg"
 					>
-						{{ effectiveStatus === 'PendingApproval' ? 'Pending Approval' : effectiveStatus }}
+						{{
+							effectiveStatus === "PendingApproval"
+								? "Pending Approval"
+								: effectiveStatus
+						}}
 					</Badge>
 				</div>
 				<p>Set the work order details, assign the right schedule and resources.</p>
@@ -1658,7 +1654,9 @@ const statusColors: Record<string, string> = {
 					</template>
 				</template>
 				<template
-					v-else-if="(!isEditMode || canEditReadOnlyWorkOrder) && (!isEditMode || isDraftStatus)"
+					v-else-if="
+						(!isEditMode || canEditReadOnlyWorkOrder) && (!isEditMode || isDraftStatus)
+					"
 				>
 					<Button variant="outlined" :loading="loading" @click="submitDraft">
 						<i class="mdi mdi-content-save-outline"></i> Save as Draft
@@ -1770,7 +1768,11 @@ const statusColors: Record<string, string> = {
 						<div class="grid-row">
 							<!-- Row 1: Job Priority + Work Type Item -->
 							<div class="col-6">
-								<Select v-model="formData.jobPriority" label="Job Priority" :disabled="isFieldDisabled('jobPriority')">
+								<Select
+									v-model="formData.jobPriority"
+									label="Job Priority"
+									:disabled="isFieldDisabled('jobPriority')"
+								>
 									<option value="">Select Priority</option>
 									<option
 										v-for="p in JOB_PRIORITIES"
