@@ -1600,12 +1600,17 @@ function handleConfirmDialog() {
 
 // File Upload & Deletion handlers
 // File Upload Dialog State
-const uploadTargetFile = ref<File | null>(null);
+interface PendingUploadFile {
+	file: File;
+	baseName: string;
+	extension: string;
+	previewUrl: string;
+}
+
+const uploadTargetFiles = ref<PendingUploadFile[]>([]);
 const uploadTargetCategory = ref("");
 const uploadTargetSubcategory = ref("");
 const uploadTargetEvent = ref<Event | null>(null);
-const uploadCustomFileName = ref("");
-const uploadPreviewUrl = ref("");
 
 // Image Preview & Rename Dialog State
 const isPreviewDialogOpen = ref(false);
@@ -1616,44 +1621,50 @@ const filePreviewError = ref("");
 const previewObjectUrl = ref("");
 
 function cancelFileUpload() {
-	if (uploadPreviewUrl.value) {
-		URL.revokeObjectURL(uploadPreviewUrl.value);
-		uploadPreviewUrl.value = "";
-	}
+	uploadTargetFiles.value.forEach(({ previewUrl }) => previewUrl && URL.revokeObjectURL(previewUrl));
 	if (uploadTargetEvent.value) {
 		const target = uploadTargetEvent.value.target as HTMLInputElement;
 		target.value = ""; // Reset file input
 	}
-	uploadTargetFile.value = null;
+	uploadTargetFiles.value = [];
 	uploadTargetEvent.value = null;
+}
+
+function renamePendingUpload(index: number, value: string) {
+	const item = uploadTargetFiles.value[index];
+	if (item) item.baseName = value;
+}
+
+function removePendingUpload(index: number) {
+	const [removed] = uploadTargetFiles.value.splice(index, 1);
+	if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+	if (uploadTargetFiles.value.length === 0) {
+		uploadConfirmDialogRef.value?.close();
+		cancelFileUpload();
+	}
 }
 
 // @ts-ignore
 async function confirmFileUpload() {
-	if (!uploadTargetFile.value) return;
-	const file = uploadTargetFile.value;
+	if (uploadTargetFiles.value.length === 0) return;
+	const pendingFiles = [...uploadTargetFiles.value];
 	const category = uploadTargetCategory.value;
 	const subcategory = uploadTargetSubcategory.value;
 	const event = uploadTargetEvent.value;
 
-	// Construct the final filename with extension
-	const lastDot = file.name.lastIndexOf(".");
-	const extension = lastDot !== -1 ? file.name.substring(lastDot) : "";
-	const finalName = uploadCustomFileName.value.trim() + extension;
-
-	// Create renamed File object
-	const renamedFile = new File([file], finalName, { type: file.type });
-
 	loading.value = true;
 	try {
 		const fd = new FormData();
-		fd.append("file", renamedFile);
+		pendingFiles.forEach(({ file, baseName, extension }) => {
+			fd.append("files", file, file.name);
+			fd.append("fileNames", `${baseName.trim()}${extension}`);
+		});
 		fd.append("category", category);
 		if (subcategory) {
 			fd.append("subcategory", subcategory);
 		}
 
-		const response = await workOrderApi.uploadFile(workOrder.value.guid, fd);
+		const response = await workOrderApi.uploadFiles(workOrder.value.guid, fd);
 		const resData = await response.json().catch(() => null);
 		if (!response.ok) {
 			const message =
@@ -1673,7 +1684,7 @@ async function confirmFileUpload() {
 				snackbar.error(`Upload failed: ${errMsg}`);
 			}
 		} else {
-			snackbar.success("File uploaded successfully!");
+			snackbar.success(`${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} uploaded successfully!`);
 			await fetchWorkOrderFiles();
 			await fetchWorkOrderDetails();
 		}
@@ -1686,11 +1697,8 @@ async function confirmFileUpload() {
 			const target = event.target as HTMLInputElement;
 			target.value = ""; // Reset file input
 		}
-		if (uploadPreviewUrl.value) {
-			URL.revokeObjectURL(uploadPreviewUrl.value);
-			uploadPreviewUrl.value = "";
-		}
-		uploadTargetFile.value = null;
+		pendingFiles.forEach(({ previewUrl }) => previewUrl && URL.revokeObjectURL(previewUrl));
+		uploadTargetFiles.value = [];
 		uploadTargetEvent.value = null;
 	}
 }
@@ -1772,49 +1780,63 @@ async function savePreviewFileRename() {
 async function handleFileUpload(event: Event, category: string, subcategory?: string) {
 	const target = event.target as HTMLInputElement;
 	if (!target.files || target.files.length === 0) return;
-	const file = target.files[0];
+	const files = Array.from(target.files);
 
 	// Validate file type
 	// Keep this list aligned with the server-side FileValidationUtil.
 	const imageExtensions = /\.(jpg|jpeg|png|gif|webp)$/i;
 	const pdfExtensions = /\.(pdf)$/i;
-	const fileName = file.name;
+	const invalidFile = files.find((file) => {
+		if (category === "PartInfo" || category === "Image") return !imageExtensions.test(file.name);
+		if (["SupplierInvoice", "Quotation", "Invoice", "Payment"].includes(category)) {
+			return !imageExtensions.test(file.name) && !pdfExtensions.test(file.name);
+		}
+		return false;
+	});
 
-	if (category === "PartInfo" || category === "Image") {
-		if (!imageExtensions.test(fileName)) {
+	if (invalidFile) {
+		if (category === "PartInfo" || category === "Image") {
 			snackbar.error("Invalid File Type. Only JPG, JPEG, PNG, GIF, and WebP are allowed.");
-			target.value = "";
-			return;
-		}
-	} else if (
-		category === "SupplierInvoice" ||
-		category === "Quotation" ||
-		category === "Invoice" ||
-		category === "Payment"
-	) {
-		const isImg = imageExtensions.test(fileName);
-		const isPdf = pdfExtensions.test(fileName);
-		if (!isImg && !isPdf) {
+		} else {
 			snackbar.error("Invalid File Type. Only PDF, JPG, JPEG, PNG, GIF, and WebP are allowed.");
-			target.value = "";
-			return;
 		}
+		target.value = "";
+		return;
+	}
+	const oversizedFile = files.find((file) => file.size > 10 * 1024 * 1024);
+	if (oversizedFile) {
+		snackbar.error(`${oversizedFile.name} exceeds the 10 MB file size limit.`);
+		target.value = "";
+		return;
 	}
 
-	uploadTargetFile.value = file;
+	const existingCount =
+		category === "PartInfo"
+			? partInfoPhotos.value.length
+			: category === "SupplierInvoice"
+				? supplierInvoicePhotos.value.length
+				: category === "Image"
+					? images.value.filter((image: any) => image.category === subcategory).length
+					: 0;
+	const maxFiles = category === "Image" ? 4 : ["PartInfo", "SupplierInvoice"].includes(category) ? 12 : Infinity;
+	if (existingCount + files.length > maxFiles) {
+		snackbar.error(`You can only add ${Math.max(0, maxFiles - existingCount)} more file(s) to this section.`);
+		target.value = "";
+		return;
+	}
+
 	uploadTargetCategory.value = category;
 	uploadTargetSubcategory.value = subcategory || "";
 	uploadTargetEvent.value = event;
-
-	const lastDot = file.name.lastIndexOf(".");
-	const baseName = lastDot !== -1 ? file.name.substring(0, lastDot) : file.name;
-	uploadCustomFileName.value = baseName;
-
-	if (isImageFile(file.name, file.type)) {
-		uploadPreviewUrl.value = URL.createObjectURL(file);
-	} else {
-		uploadPreviewUrl.value = "";
-	}
+	uploadTargetFiles.value = files.map((file) => {
+		const lastDot = file.name.lastIndexOf(".");
+		return {
+			file,
+			baseName: lastDot !== -1 ? file.name.substring(0, lastDot) : file.name,
+			extension: lastDot !== -1 ? file.name.substring(lastDot) : "",
+			previewUrl: isImageFile(file.name, file.type) ? URL.createObjectURL(file) : "",
+		};
+	});
 
 	await nextTick();
 	uploadConfirmDialogRef.value?.open();
@@ -2404,8 +2426,10 @@ onUnmounted(() => {
 
 		<UploadConfirmDialog
 			ref="uploadConfirmDialogRef"
-			v-model:fileName="uploadCustomFileName"
-			:preview-url="uploadPreviewUrl"
+			:files="uploadTargetFiles"
+			:category="uploadTargetSubcategory || uploadTargetCategory"
+			@rename="renamePendingUpload"
+			@remove="removePendingUpload"
 			@confirm="confirmFileUpload"
 			@cancel="cancelFileUpload"
 		/>

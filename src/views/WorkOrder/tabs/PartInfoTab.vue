@@ -37,6 +37,7 @@ const partInfoCameraInput = ref<HTMLInputElement | null>(null);
 			style="display: none"
 			@change="emit('upload', $event)"
 			accept="image/*"
+			multiple
 		/>
 		<input
 			type="file"

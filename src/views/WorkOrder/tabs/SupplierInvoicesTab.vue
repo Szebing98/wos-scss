@@ -36,6 +36,7 @@ const supplierInvoiceInput = ref<HTMLInputElement | null>(null);
 			style="display: none"
 			@change="emit('upload', $event)"
 			accept="image/*,application/pdf"
+			multiple
 		/>
 
 		<Button

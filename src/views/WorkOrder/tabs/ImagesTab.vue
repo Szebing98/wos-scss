@@ -42,6 +42,7 @@ function handleFileChange(event: Event) {
 		style="display: none"
 		@change="handleFileChange"
 		accept="image/*"
+		multiple
 	/>
 	<input
 		type="file"
