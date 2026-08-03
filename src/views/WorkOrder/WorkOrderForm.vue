@@ -568,21 +568,50 @@ async function loadOptions() {
 	}
 }
 
-const autocompleteLoading = ref({ users: false, customers: false, sites: false, workTypeItems: false });
+const autocompleteLoading = ref({
+	users: false,
+	customers: false,
+	sites: false,
+	workTypeItems: false,
+});
 
 const searchUsers = debounce(async (q: string) => {
 	autocompleteLoading.value.users = true;
 	try {
-		const { data } = await userApi.getUsers({ pageIndex: 0, pageSize: 5, q, timezone: "Asia/Kuala_Lumpur" });
+		const { data } = await userApi.getUsers({
+			pageIndex: 0,
+			pageSize: 5,
+			q,
+			timezone: "Asia/Kuala_Lumpur",
+		});
 		const results = (data?.data || []).map((u: any) => ({
 			code: u.code || u.guid,
 			displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
 			name: u.displayName || u.profile?.displayName || u.name || "Unknown",
-			role: (u.groups?.[0]?.name || u.groups?.[0]?.code || u.userGroupCode || u.role || u.userGroup || u.description || "").toLowerCase(),
+			role: (
+				u.groups?.[0]?.name ||
+				u.groups?.[0]?.code ||
+				u.userGroupCode ||
+				u.role ||
+				u.userGroup ||
+				u.description ||
+				""
+			).toLowerCase(),
 		}));
-		const selectedCodes = new Set([formData.value.salesAgentCode, formData.value.personInChargeCode, formData.value.leaderCode, formData.value.leaderIICode, ...formData.value.technicianCodes]);
-		users.value = [...users.value.filter((u: any) => selectedCodes.has(u.code)), ...results]
-			.filter((u: any, index: number, all: any[]) => all.findIndex((item) => item.code === u.code) === index);
+		const selectedCodes = new Set([
+			formData.value.salesAgentCode,
+			formData.value.personInChargeCode,
+			formData.value.leaderCode,
+			formData.value.leaderIICode,
+			...formData.value.technicianCodes,
+		]);
+		users.value = [
+			...users.value.filter((u: any) => selectedCodes.has(u.code)),
+			...results,
+		].filter(
+			(u: any, index: number, all: any[]) =>
+				all.findIndex((item) => item.code === u.code) === index,
+		);
 	} finally {
 		autocompleteLoading.value.users = false;
 	}
@@ -591,10 +620,25 @@ const searchUsers = debounce(async (q: string) => {
 const searchCustomers = debounce(async (q: string) => {
 	autocompleteLoading.value.customers = true;
 	try {
-		const { data } = await customerApi.getCustomers({ pageIndex: 0, pageSize: 5, q, timezone: "Asia/Kuala_Lumpur", isActive: true });
-		const results = (data?.data || []).map((c: any) => ({ code: c.code, name: c.name, contracts: c.contracts || [] }));
-		customers.value = [...customers.value.filter((c: any) => c.code === formData.value.customerCode), ...results]
-			.filter((c: any, index: number, all: any[]) => all.findIndex((item) => item.code === c.code) === index);
+		const { data } = await customerApi.getCustomers({
+			pageIndex: 0,
+			pageSize: 5,
+			q,
+			timezone: "Asia/Kuala_Lumpur",
+			isActive: true,
+		});
+		const results = (data?.data || []).map((c: any) => ({
+			code: c.code,
+			name: c.name,
+			contracts: c.contracts || [],
+		}));
+		customers.value = [
+			...customers.value.filter((c: any) => c.code === formData.value.customerCode),
+			...results,
+		].filter(
+			(c: any, index: number, all: any[]) =>
+				all.findIndex((item) => item.code === c.code) === index,
+		);
 	} finally {
 		autocompleteLoading.value.customers = false;
 	}
@@ -605,9 +649,18 @@ const searchSites = debounce(async (q: string) => {
 	try {
 		const res = await http.get("/site", { params: { pageIndex: 0, pageSize: 5, q } });
 		const raw = res?.data?.data || res?.data?.items || res?.data || [];
-		const results = Array.isArray(raw) ? raw.filter((s: any) => s.isActive !== false).map((s: any) => ({ code: s.code, name: s.name, guid: s.guid })) : [];
-		sites.value = [...sites.value.filter((s: any) => s.code === formData.value.siteCode), ...results]
-			.filter((s: any, index: number, all: any[]) => all.findIndex((item) => item.code === s.code) === index);
+		const results = Array.isArray(raw)
+			? raw
+					.filter((s: any) => s.isActive !== false)
+					.map((s: any) => ({ code: s.code, name: s.name, guid: s.guid }))
+			: [];
+		sites.value = [
+			...sites.value.filter((s: any) => s.code === formData.value.siteCode),
+			...results,
+		].filter(
+			(s: any, index: number, all: any[]) =>
+				all.findIndex((item) => item.code === s.code) === index,
+		);
 	} finally {
 		autocompleteLoading.value.sites = false;
 	}
@@ -617,10 +670,23 @@ const searchWorkTypeItems = debounce(async (q: string) => {
 	if (!formData.value.workTypeGuid) return;
 	autocompleteLoading.value.workTypeItems = true;
 	try {
-		const { data } = await workTypeApi.getWorkTypeItems(formData.value.workTypeGuid, { pageIndex: 0, pageSize: 5, q, timezone: "Asia/Kuala_Lumpur" } as any);
-		const results = (data?.data || []).map((item: any) => ({ code: item.code, name: item.name }));
-		workTypeItems.value = [...workTypeItems.value.filter((item) => item.code === formData.value.orderTypeItemCode), ...results]
-			.filter((item, index, all) => all.findIndex((candidate) => candidate.code === item.code) === index);
+		const { data } = await workTypeApi.getWorkTypeItems(formData.value.workTypeGuid, {
+			pageIndex: 0,
+			pageSize: 5,
+			q,
+			timezone: "Asia/Kuala_Lumpur",
+		} as any);
+		const results = (data?.data || []).map((item: any) => ({
+			code: item.code,
+			name: item.name,
+		}));
+		workTypeItems.value = [
+			...workTypeItems.value.filter((item) => item.code === formData.value.orderTypeItemCode),
+			...results,
+		].filter(
+			(item, index, all) =>
+				all.findIndex((candidate) => candidate.code === item.code) === index,
+		);
 	} finally {
 		autocompleteLoading.value.workTypeItems = false;
 	}
@@ -2108,7 +2174,10 @@ const statusColors: Record<string, string> = {
 											class="file-item__thumb"
 										/>
 										<div v-else class="file-item__doc-icon">
-											<i class="mdi" :class="getFileIcon(file.name, file.type)"></i>
+											<i
+												class="mdi"
+												:class="getFileIcon(file.name, file.type)"
+											></i>
 										</div>
 									</div>
 									<div class="file-item__info">
@@ -2359,7 +2428,13 @@ const statusColors: Record<string, string> = {
 								<Autocomplete
 									v-model="formData.customerCode"
 									:disabled="isFieldDisabled('customerCode')"
-									:options="customers.map((cust) => ({ id: cust.code, name: cust.name, code: cust.code }))"
+									:options="
+										customers.map((cust) => ({
+											id: cust.code,
+											name: cust.name,
+											code: cust.code,
+										}))
+									"
 									label="Customer *"
 									:error="formErrors.customerCode"
 									placeholder="Search or select Customer..."

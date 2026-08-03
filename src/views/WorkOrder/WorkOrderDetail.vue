@@ -194,7 +194,7 @@ function updateStepFromStatus(statusStr: string) {
 function updateBreadcrumbs() {
 	breadcrumbStore.setItems([
 		{ label: "Work Order List", to: "/work-order" },
-		{ label: workOrder.value.woNumber ? `${workOrder.value.woNumber}` : "Work Order Detail" }
+		{ label: workOrder.value.woNumber ? `${workOrder.value.woNumber}` : "Work Order Detail" },
 	]);
 }
 
@@ -569,16 +569,32 @@ const userSearchLoading = ref(false);
 const searchUsers = debounce(async (q: string) => {
 	userSearchLoading.value = true;
 	try {
-		const { data } = await userApi.getUsers({ pageIndex: 0, pageSize: 5, q, timezone: "Asia/Kuala_Lumpur" });
+		const { data } = await userApi.getUsers({
+			pageIndex: 0,
+			pageSize: 5,
+			q,
+			timezone: "Asia/Kuala_Lumpur",
+		});
 		const results = (data?.data || []).map((u: any) => ({
 			code: u.code || u.guid,
 			displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
 			name: u.displayName || u.profile?.displayName || u.name || "Unknown",
 			role: (u.role || u.userGroup || u.description || "").toLowerCase(),
 		}));
-		const selectedCodes = new Set([workOrder.value?.salesAgent, workOrder.value?.projectPersonInCharge, workOrder.value?.leaderCode, workOrder.value?.leaderIICode, ...(workOrder.value?.technicianCodes || [])]);
-		users.value = [...users.value.filter((u: any) => selectedCodes.has(u.code)), ...results]
-			.filter((u: any, index: number, all: any[]) => all.findIndex((item) => item.code === u.code) === index);
+		const selectedCodes = new Set([
+			workOrder.value?.salesAgent,
+			workOrder.value?.projectPersonInCharge,
+			workOrder.value?.leaderCode,
+			workOrder.value?.leaderIICode,
+			...(workOrder.value?.technicianCodes || []),
+		]);
+		users.value = [
+			...users.value.filter((u: any) => selectedCodes.has(u.code)),
+			...results,
+		].filter(
+			(u: any, index: number, all: any[]) =>
+				all.findIndex((item) => item.code === u.code) === index,
+		);
 	} finally {
 		userSearchLoading.value = false;
 	}
@@ -649,7 +665,9 @@ const extendForm = ref({ newEstimatedEndDate: "", extensionReason: "" });
 const isExtending = ref(false);
 
 // @ts-ignore
-function openExtendDialog() { extendDialogRef.value?.open(); }
+function openExtendDialog() {
+	extendDialogRef.value?.open();
+}
 
 /*
 async function submitExtend() {
@@ -817,9 +835,7 @@ function requestApprovalForNewWorkOrder() {
 					estimatedEndDate: workOrder.value.estimatedEndDate,
 				} as any);
 				if (error) {
-					snackbar.error(
-						getApiErrorMessage(error, "Failed to request approval"),
-					);
+					snackbar.error(getApiErrorMessage(error, "Failed to request approval"));
 					return;
 				}
 				snackbar.success("Work order submitted for approval!");
@@ -888,7 +904,9 @@ const quotationForm = ref({ refNo: "", date: "", amount: 0, name: "" });
 const editingQuotationGuid = ref("");
 
 // @ts-ignore
-function openEditQuotation(guid: string) { quotationDialogRef.value?.open(guid); }
+function openEditQuotation(guid: string) {
+	quotationDialogRef.value?.open(guid);
+}
 
 /*
 async function saveEditQuotation() {
@@ -960,7 +978,9 @@ const canMarkAsClosed = computed(() => {
 const editingInvoiceGuid = ref("");
 
 // @ts-ignore
-function openEditInvoice(guid: string) { invoiceDialogRef.value?.open(guid); }
+function openEditInvoice(guid: string) {
+	invoiceDialogRef.value?.open(guid);
+}
 
 /*
 async function saveEditInvoice() {
@@ -997,7 +1017,9 @@ async function saveEditInvoice() {
 const editingPaymentGuid = ref("");
 
 // @ts-ignore
-function openEditPayment(guid: string) { paymentDialogRef.value?.open(guid); }
+function openEditPayment(guid: string) {
+	paymentDialogRef.value?.open(guid);
+}
 
 /*
 async function saveEditPayment() {
@@ -1058,9 +1080,7 @@ function markAsClosed() {
 			try {
 				const { error } = await workOrderApi.close(woNumber);
 				if (error) {
-					snackbar.error(
-						getApiErrorMessage(error, "Failed to close work order"),
-					);
+					snackbar.error(getApiErrorMessage(error, "Failed to close work order"));
 					return;
 				}
 				snackbar.success("Work order closed successfully!");
@@ -1394,9 +1414,7 @@ function approvePendingWorkOrder() {
 			try {
 				const { error } = await workOrderApi.approve(woNumber);
 				if (error) {
-					snackbar.error(
-						getApiErrorMessage(error, "Failed to approve work order"),
-					);
+					snackbar.error(getApiErrorMessage(error, "Failed to approve work order"));
 					return;
 				}
 				snackbar.success("Work order approved successfully!");
@@ -1420,7 +1438,9 @@ const rejectForm = ref({
 });
 
 // @ts-ignore
-function openRejectDoneDialog() { rejectDialogRef.value?.open(); }
+function openRejectDoneDialog() {
+	rejectDialogRef.value?.open();
+}
 
 /*
 function closeRejectDialog() {
@@ -1470,10 +1490,14 @@ const noteForm = ref({
 });
 
 // @ts-ignore
-function openAddNoteDialog() { noteDialogRef.value?.openAdd(); }
+function openAddNoteDialog() {
+	noteDialogRef.value?.openAdd();
+}
 
 // @ts-ignore
-function openEditNoteDialog(note: any) { noteDialogRef.value?.openEdit(note); }
+function openEditNoteDialog(note: any) {
+	noteDialogRef.value?.openEdit(note);
+}
 
 /*
 function closeNoteDialog() {
@@ -1851,7 +1875,8 @@ onMounted(async () => {
 				if (userRes.data && userRes.data.data) {
 					users.value = userRes.data.data.map((u: any) => ({
 						code: u.code || u.guid,
-						displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
+						displayCode:
+							u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
 						name: u.displayName || u.profile?.displayName || u.name || "Unknown",
 						role: (u.role || u.userGroup || u.description || "").toLowerCase(),
 					}));
@@ -1876,7 +1901,7 @@ onMounted(async () => {
 			} catch (e) {
 				console.error("Failed to load work types in details onMounted:", e);
 			}
-		})()
+		})(),
 	]);
 });
 
@@ -1929,7 +1954,9 @@ onUnmounted(() => {
 			</div>
 			<div class="page-header__actions">
 				<Button variant="outlined" @click="router.back()">
-					<i class="mdi mdi-chevron-left" style="margin-right: 4px"></i> <span class="btn-text">Back</span> </Button>
+					<i class="mdi mdi-chevron-left" style="margin-right: 4px"></i>
+					<span class="btn-text">Back</span>
+				</Button>
 				<Button
 					v-if="
 						(isDraftOrNew &&
@@ -1949,7 +1976,9 @@ onUnmounted(() => {
 						})
 					"
 				>
-					<i class="mdi mdi-note-edit-outline" style="margin-right: 4px"></i> <span class="btn-text">Edit</span> </Button>
+					<i class="mdi mdi-note-edit-outline" style="margin-right: 4px"></i>
+					<span class="btn-text">Edit</span>
+				</Button>
 				<Button
 					v-if="
 						normalizedWorkOrderStatus === 'new' &&
@@ -1960,7 +1989,8 @@ onUnmounted(() => {
 					:disabled="loading"
 					@click="requestApprovalForNewWorkOrder"
 				>
-					<i class="mdi mdi-check"></i> <span class="btn-text">Request For Approval</span> </Button>
+					<i class="mdi mdi-check"></i> <span class="btn-text">Request For Approval</span>
+				</Button>
 				<template
 					v-if="
 						isPendingApproval &&
@@ -1974,14 +2004,18 @@ onUnmounted(() => {
 						variant="primary"
 						@click="approvePendingWorkOrder"
 					>
-						<i class="mdi mdi-check-circle-outline" style="margin-right: 4px"></i> <span class="btn-text">Approve</span> </Button>
+						<i class="mdi mdi-check-circle-outline" style="margin-right: 4px"></i>
+						<span class="btn-text">Approve</span>
+					</Button>
 					<Button
 						v-if="authStore.can('reject', 'WorkOrder')"
 						variant="outlined"
 						style="color: var(--colors-error); border-color: var(--colors-error)"
 						@click="openRejectDoneDialog"
 					>
-						<i class="mdi mdi-close-circle-outline" style="margin-right: 4px"></i> <span class="btn-text">Reject</span> </Button>
+						<i class="mdi mdi-close-circle-outline" style="margin-right: 4px"></i>
+						<span class="btn-text">Reject</span>
+					</Button>
 				</template>
 
 				<!-- Repeat & Transfer Work Order (Commented out) -->
@@ -2005,14 +2039,15 @@ onUnmounted(() => {
 				</Button>
 				<Button
 					v-if="
-						normalizedWorkOrderStatus === 'done' &&
-						authStore.can('reopen', 'WorkOrder')
+						normalizedWorkOrderStatus === 'done' && authStore.can('reopen', 'WorkOrder')
 					"
 					variant="primary"
 					:loading="loading"
 					@click="reopenWorkOrder"
 				>
-					<i class="mdi mdi-lock-open-variant-outline"></i> <span class="btn-text">Reopen</span> </Button>
+					<i class="mdi mdi-lock-open-variant-outline"></i>
+					<span class="btn-text">Reopen</span>
+				</Button>
 				<Button
 					v-slot:default
 					v-if="
@@ -2030,7 +2065,8 @@ onUnmounted(() => {
 					@click="markAsClaimed"
 					style="display: flex; align-items: center; gap: 6px"
 				>
-					<i class="mdi mdi-cash-check"></i> <span class="btn-text">Mark as Claimed</span> </Button>
+					<i class="mdi mdi-cash-check"></i> <span class="btn-text">Mark as Claimed</span>
+				</Button>
 				<Button
 					v-if="
 						workOrder?.status === 'Claimed' &&
@@ -2046,7 +2082,9 @@ onUnmounted(() => {
 					@click="markAsClosed"
 					style="display: flex; align-items: center; gap: 6px"
 				>
-					<i class="mdi mdi-check-decagram-outline"></i> <span class="btn-text">Mark as Closed</span> </Button>
+					<i class="mdi mdi-check-decagram-outline"></i>
+					<span class="btn-text">Mark as Closed</span>
+				</Button>
 			</div>
 		</div>
 
@@ -2303,27 +2341,73 @@ onUnmounted(() => {
 			</div>
 		</div>
 
-		<QuotationDialog ref="quotationDialogRef" :items="quotations" @refresh="fetchWorkOrderFiles(); fetchWorkOrderDetails()" />
+		<QuotationDialog
+			ref="quotationDialogRef"
+			:items="quotations"
+			@refresh="
+				fetchWorkOrderFiles();
+				fetchWorkOrderDetails();
+			"
+		/>
 
-		<InvoiceDialog ref="invoiceDialogRef" :items="invoices" @refresh="fetchWorkOrderFiles(); fetchWorkOrderDetails()" />
+		<InvoiceDialog
+			ref="invoiceDialogRef"
+			:items="invoices"
+			@refresh="
+				fetchWorkOrderFiles();
+				fetchWorkOrderDetails();
+			"
+		/>
 
-		<PaymentDialog ref="paymentDialogRef" :items="payments" @refresh="fetchWorkOrderFiles(); fetchWorkOrderDetails()" />
+		<PaymentDialog
+			ref="paymentDialogRef"
+			:items="payments"
+			@refresh="
+				fetchWorkOrderFiles();
+				fetchWorkOrderDetails();
+			"
+		/>
 
-		<RepeatDialog ref="repeatDialogRef" :wo-number="woNumber" :work-order="workOrder" @refresh="fetchWorkOrderDetails" @navigate="(id) => $router.push(`/work-order/${id}`)" />
+		<RepeatDialog
+			ref="repeatDialogRef"
+			:wo-number="woNumber"
+			:work-order="workOrder"
+			@refresh="fetchWorkOrderDetails"
+			@navigate="(id) => $router.push(`/work-order/${id}`)"
+		/>
 
-		<TransferDialog ref="transferDialogRef" :wo-number="woNumber" :work-order="workOrder" @refresh="fetchWorkOrderDetails" @navigate="(id) => $router.push(`/work-order/${id}`)" />
+		<TransferDialog
+			ref="transferDialogRef"
+			:wo-number="woNumber"
+			:work-order="workOrder"
+			@refresh="fetchWorkOrderDetails"
+			@navigate="(id) => $router.push(`/work-order/${id}`)"
+		/>
 
-		<RejectDialog ref="rejectDialogRef" :wo-number="woNumber" @refresh="fetchWorkOrderDetails" />
+		<RejectDialog
+			ref="rejectDialogRef"
+			:wo-number="woNumber"
+			@refresh="fetchWorkOrderDetails"
+		/>
 
-		<ExtendDialog ref="extendDialogRef" :wo-number="woNumber" :work-order="workOrder" @refresh="fetchWorkOrderDetails" />
+		<ExtendDialog
+			ref="extendDialogRef"
+			:wo-number="woNumber"
+			:work-order="workOrder"
+			@refresh="fetchWorkOrderDetails"
+		/>
 
-		<LocationMapDialog ref="locationMapDialogRef" :wo-number="woNumber" :work-order="workOrder" />
+		<LocationMapDialog
+			ref="locationMapDialogRef"
+			:wo-number="woNumber"
+			:work-order="workOrder"
+		/>
 
 		<NoteDialog ref="noteDialogRef" :wo-number="woNumber" @refresh="fetchWorkOrderDetails" />
 
-		<UploadConfirmDialog ref="uploadConfirmDialogRef"  />
+		<UploadConfirmDialog ref="uploadConfirmDialogRef" />
 
-		<FilePreviewDialog ref="filePreviewDialogRef"  />
+		<FilePreviewDialog ref="filePreviewDialogRef" />
 
 		<ConfirmDialog ref="confirmDialogRef" />
 	</div>
