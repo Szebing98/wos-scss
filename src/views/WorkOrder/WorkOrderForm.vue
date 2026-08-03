@@ -464,7 +464,7 @@ watch(
 
 async function loadOptions() {
 	try {
-		const [custRes, userRes, wtRes, siteRes] = await Promise.all([
+		const [custRes, userRes, engineerRes, wtRes, siteRes] = await Promise.all([
 			customerApi
 				.getCustomers({
 					pageIndex: 0,
@@ -480,6 +480,17 @@ async function loadOptions() {
 				.getUsers({
 					pageIndex: 0,
 					pageSize: 5,
+					timezone: "Asia/Kuala_Lumpur",
+				})
+				.catch((e: any) => {
+					console.error(e);
+					return null;
+				}),
+			userApi
+				.getUsers({
+					pageIndex: 0,
+					pageSize: 5,
+					userGroupCode: "ENG",
 					timezone: "Asia/Kuala_Lumpur",
 				})
 				.catch((e: any) => {
@@ -525,6 +536,19 @@ async function loadOptions() {
 					""
 				).toLowerCase(),
 			}));
+		}
+
+		if (engineerRes?.data?.data) {
+			const engineers = engineerRes.data.data.map((u: any) => ({
+				code: u.code || u.guid,
+				displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
+				name: u.displayName || u.profile?.displayName || u.name || "Unknown",
+				role: "engineer",
+			}));
+			users.value = [...users.value, ...engineers].filter(
+				(u: any, index: number, all: any[]) =>
+					all.findIndex((item) => item.code === u.code) === index,
+			);
 		}
 
 		if (wtRes && wtRes.data && wtRes.data.data) {
@@ -597,6 +621,41 @@ const searchUsers = debounce(async (q: string) => {
 				u.description ||
 				""
 			).toLowerCase(),
+		}));
+		const selectedCodes = new Set([
+			formData.value.salesAgentCode,
+			formData.value.personInChargeCode,
+			formData.value.leaderCode,
+			formData.value.leaderIICode,
+			...formData.value.technicianCodes,
+		]);
+		users.value = [
+			...users.value.filter((u: any) => selectedCodes.has(u.code)),
+			...results,
+		].filter(
+			(u: any, index: number, all: any[]) =>
+				all.findIndex((item) => item.code === u.code) === index,
+		);
+	} finally {
+		autocompleteLoading.value.users = false;
+	}
+}, 300);
+
+const searchEngineerUsers = debounce(async (q: string) => {
+	autocompleteLoading.value.users = true;
+	try {
+		const { data } = await userApi.getUsers({
+			pageIndex: 0,
+			pageSize: 5,
+			q,
+			userGroupCode: "ENG",
+			timezone: "Asia/Kuala_Lumpur",
+		});
+		const results = (data?.data || []).map((u: any) => ({
+			code: u.code || u.guid,
+			displayCode: u.displayCode || u.code || u.guid.substring(0, 8).toUpperCase(),
+			name: u.displayName || u.profile?.displayName || u.name || "Unknown",
+			role: "engineer",
 		}));
 		const selectedCodes = new Set([
 			formData.value.salesAgentCode,
@@ -1366,20 +1425,8 @@ function buildPendingBody(): Record<string, any> {
 	};
 }
 
-function goToWorkOrderReadOnly(workOrderGuid: string) {
-	router.replace({
-		name: "Work Order Form",
-		params: { id: workOrderGuid },
-		query: { mode: "view" },
-	});
-}
-
-function goToWorkOrderEdit(workOrderGuid: string) {
-	router.replace({
-		name: "Work Order Form",
-		params: { id: workOrderGuid },
-		query: { mode: "edit" },
-	});
+function goToWorkOrderList() {
+	return router.push({ name: "Work Order List" });
 }
 
 async function submitDraft() {
@@ -1420,7 +1467,7 @@ async function submitDraft() {
 			snackbar.success("Work order draft created successfully!");
 		}
 		formData.value.status = "Draft";
-		if (savedWorkOrderGuid) goToWorkOrderEdit(savedWorkOrderGuid);
+		if (savedWorkOrderGuid) await goToWorkOrderList();
 	} catch (e) {
 		console.error(e);
 		snackbar.error(e instanceof Error ? e.message : "Failed to save work order draft");
@@ -1482,7 +1529,7 @@ async function submitNew() {
 			snackbar.success("Work order submitted successfully!");
 		}
 		formData.value.status = "New";
-		if (savedWorkOrderGuid) goToWorkOrderEdit(savedWorkOrderGuid);
+		if (savedWorkOrderGuid) await goToWorkOrderList();
 	} catch (e) {
 		console.error(e);
 		snackbar.error(e instanceof Error ? e.message : "Failed to submit work order");
@@ -1561,7 +1608,7 @@ async function submitAndRequestApproval() {
 			snackbar.success("Work order submitted for approval!");
 		}
 		formData.value.status = "PendingApproval";
-		if (savedWorkOrderGuid) goToWorkOrderReadOnly(savedWorkOrderGuid);
+		if (savedWorkOrderGuid) await goToWorkOrderList();
 	} catch (e) {
 		console.error(e);
 		snackbar.error(
@@ -1589,7 +1636,7 @@ async function saveNew() {
 			}
 			await uploadSelectedSiteInstructions(id);
 			snackbar.success("Work order saved successfully (Status: New)!");
-			goToWorkOrderEdit(id);
+			await goToWorkOrderList();
 		}
 	} catch (e) {
 		console.error(e);
@@ -1616,7 +1663,7 @@ async function updatePending(options: { stayInEdit?: boolean; silent?: boolean }
 			}
 			if (!options.silent)
 				snackbar.success("Pending Approval work order updated successfully!");
-			if (!options.stayInEdit) goToWorkOrderEdit(id);
+			if (!options.stayInEdit) await goToWorkOrderList();
 			return true;
 		}
 		return false;
@@ -1643,8 +1690,7 @@ async function approvePendingFromEdit() {
 	}
 	snackbar.success("Work order approved successfully!");
 	showApproveDialog.value = false;
-	await router.replace({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
-	window.location.reload();
+	await goToWorkOrderList();
 }
 
 async function submitChanges() {
@@ -1673,7 +1719,7 @@ async function submitChanges() {
 			}
 			snackbar.success("Work order updated successfully!");
 		}
-		router.back();
+		await goToWorkOrderList();
 	} catch (e) {
 		console.error(e);
 	} finally {
@@ -1682,12 +1728,7 @@ async function submitChanges() {
 }
 
 function cancel() {
-	const id = route.params.id;
-	if (!isReadOnly.value && typeof id === "string") {
-		goToWorkOrderReadOnly(id);
-		return;
-	}
-	router.back();
+	void goToWorkOrderList();
 }
 
 async function approvePendingReadOnly() {
@@ -1700,8 +1741,7 @@ async function approvePendingReadOnly() {
 	}
 	snackbar.success("Work order approved successfully!");
 	showApproveDialog.value = false;
-	await router.replace({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
-	window.location.reload();
+	await goToWorkOrderList();
 }
 
 async function rejectPendingReadOnly() {
@@ -1718,8 +1758,7 @@ async function rejectPendingReadOnly() {
 	snackbar.success("Work order rejected successfully!");
 	showRejectDialog.value = false;
 	rejectReason.value = "";
-	await router.replace({ name: "Work Order Form", params: { id }, query: { mode: "view" } });
-	window.location.reload();
+	await goToWorkOrderList();
 }
 
 function openApproveConfirmation() {
@@ -2058,7 +2097,7 @@ const statusColors: Record<string, string> = {
 									:error="formErrors.leaderCode"
 									server-search
 									:loading="autocompleteLoading.users"
-									@search="searchUsers"
+									@search="searchEngineerUsers"
 									:showCode="false"
 								/>
 							</div>
@@ -2078,7 +2117,7 @@ const statusColors: Record<string, string> = {
 									:showCode="false"
 									server-search
 									:loading="autocompleteLoading.users"
-									@search="searchUsers"
+									@search="searchEngineerUsers"
 								/>
 							</div>
 
@@ -2093,7 +2132,7 @@ const statusColors: Record<string, string> = {
 									:showCode="false"
 									server-search
 									:loading="autocompleteLoading.users"
-									@search="searchUsers"
+									@search="searchEngineerUsers"
 								/>
 							</div>
 
