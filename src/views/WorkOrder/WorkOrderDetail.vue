@@ -1794,7 +1794,7 @@ async function handleFileUpload(event: Event, category: string, subcategory?: st
 
 	// Validate file type
 	// Keep this list aligned with the server-side FileValidationUtil.
-	const imageExtensions = /\.(jpg|jpeg|png|gif|webp)$/i;
+	const imageExtensions = /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i;
 	const pdfExtensions = /\.(pdf)$/i;
 	const invalidFile = files.find((file) => {
 		if (category === "PartInfo" || category === "Image") return !imageExtensions.test(file.name);

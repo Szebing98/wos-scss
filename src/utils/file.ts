@@ -1,6 +1,16 @@
 export type FileKind = "image" | "pdf" | "word" | "file";
 
-const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic"]);
+const IMAGE_EXTENSIONS = new Set([
+	"jpg",
+	"jpeg",
+	"png",
+	"gif",
+	"webp",
+	"bmp",
+	"svg",
+	"heic",
+	"heif",
+]);
 const WORD_EXTENSIONS = new Set(["doc", "docx"]);
 
 function getExtension(fileName?: string | null): string {

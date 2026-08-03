@@ -427,7 +427,7 @@ function onFileChange(event: Event) {
 	if (!file) return;
 
 	// Validate file type
-	const imageExtensions = /\.(jpg|jpeg|png|gif|webp|heic)$/i;
+	const imageExtensions = /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i;
 	if (!imageExtensions.test(file.name) && !file.type.startsWith("image/")) {
 		snackbar.error("Invalid File Type. Only image files are allowed.");
 		target.value = "";
