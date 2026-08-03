@@ -967,11 +967,15 @@ const totalPaymentReceived = computed(() =>
 	payments.value.reduce((sum, pay) => sum + pay.amount, 0),
 );
 const balanceRemaining = computed(() => totalInvoiceIssued.value - totalPaymentReceived.value);
-const isFullyPaid = computed(() => invoices.value.length > 0 && balanceRemaining.value <= 0);
+const isFullyPaid = computed(() => {
+	const invoiceCents = Math.round(totalInvoiceIssued.value * 100);
+	const paymentCents = Math.round(totalPaymentReceived.value * 100);
+	return invoices.value.length > 0 && paymentCents === invoiceCents;
+});
 const canMarkAsClosed = computed(() => {
 	const invoiceCents = Math.round(totalInvoiceIssued.value * 100);
 	const paymentCents = Math.round(totalPaymentReceived.value * 100);
-	return paymentCents >= invoiceCents;
+	return paymentCents === invoiceCents;
 });
 
 // @ts-ignore
