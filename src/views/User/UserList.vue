@@ -26,6 +26,7 @@ interface UserModel {
 	email: string;
 	role: string;
 	isActive: boolean;
+	isVerified: boolean;
 }
 
 const router = useRouter();
@@ -37,6 +38,7 @@ const filterStatus = ref("all");
 const headers = computed<TableHeader[]>(() => {
 	const cols: TableHeader[] = [
 		{ key: "status", label: "Status" },
+		{ key: "verified", label: "Verified" },
 		{ key: "employee", label: "Employee" },
 		{ key: "code", label: "Code" },
 		{ key: "role", label: "Assigned Role" },
@@ -97,6 +99,7 @@ async function fetchUsers() {
 						? u.groups[0].name || u.groups[0].code
 						: u.userGroupCode || u.role || "Unassigned",
 				isActive: u.isActive,
+				isVerified: u.isVerified,
 				profileImage:
 					u.profileImage || u.profile?.profileImage || u.avatarUrl || u.avatar || null,
 			}));
@@ -222,6 +225,7 @@ async function handleExport(format: "CSV" | "PDF") {
 		const rawRows = (data?.data || []) as any[];
 		const rows = rawRows.map((u) => ({
 			status: u.isActive ? "Active" : "Inactive",
+			verified: u.isVerified ? "Verified" : "Pending",
 			employee: u.displayName || u.profile?.displayName || u.name || "Unknown",
 			code: u.displayCode || (u.guid ? u.guid.substring(0, 8).toUpperCase() : ""),
 			role:
@@ -484,6 +488,11 @@ function getRandomAvatarBg(name: string) {
 				<template #item-status="{ item }">
 					<Badge :type="item.isActive ? 'success' : 'error'">
 						{{ item.isActive ? "Active" : "Inactive" }}
+					</Badge>
+				</template>
+				<template #item-verified="{ item }">
+					<Badge :type="item.isVerified ? 'success' : 'warning'">
+						{{ item.isVerified ? "Verified" : "Pending" }}
 					</Badge>
 				</template>
 				<template #item-actions="{ item: user }" v-if="authStore.can('edit', 'User')">

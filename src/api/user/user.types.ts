@@ -1,6 +1,8 @@
 import type { operations } from "../schema";
 
-export type GetUsersQuery = operations["getApiUser"]["parameters"]["query"];
+export type GetUsersQuery = operations["getApiUser"]["parameters"]["query"] & {
+	isVerified?: "true" | "false";
+};
 
 export type GetUserByGuidQuery = operations["getApiUserByGuid"]["parameters"]["query"];
 
@@ -15,4 +17,3 @@ export type ReassignUserGroupBody = NonNullable<operations["patchApiUserByGuidGr
 export type UpdatePasswordBody = NonNullable<operations["patchApiUserByGuidPassword"]["requestBody"]>["content"]["application/json"];
 
 export type UpdateProfileImageBody = NonNullable<operations["putApiUserMeProfile-image"]["requestBody"]>["content"]["multipart/form-data"];
-

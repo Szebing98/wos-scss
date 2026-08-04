@@ -573,6 +573,8 @@ const searchUsers = debounce(async (q: string) => {
 			pageIndex: 0,
 			pageSize: 5,
 			q,
+			isActive: "true",
+			isVerified: "true",
 			timezone: "Asia/Kuala_Lumpur",
 		});
 		const results = (data?.data || []).map((u: any) => ({
@@ -1904,6 +1906,8 @@ onMounted(async () => {
 				const userRes = await userApi.getUsers({
 					pageIndex: 0,
 					pageSize: 5,
+					isActive: "true",
+					isVerified: "true",
 					timezone: "Asia/Kuala_Lumpur",
 				});
 				if (userRes.data && userRes.data.data) {

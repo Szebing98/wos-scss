@@ -480,6 +480,8 @@ async function loadOptions() {
 				.getUsers({
 					pageIndex: 0,
 					pageSize: 5,
+					isActive: "true",
+					isVerified: "true",
 					timezone: "Asia/Kuala_Lumpur",
 				})
 				.catch((e: any) => {
@@ -491,6 +493,8 @@ async function loadOptions() {
 					pageIndex: 0,
 					pageSize: 5,
 					userGroupCode: "ENG",
+					isActive: "true",
+					isVerified: "true",
 					timezone: "Asia/Kuala_Lumpur",
 				})
 				.catch((e: any) => {
@@ -606,6 +610,8 @@ const searchUsers = debounce(async (q: string) => {
 			pageIndex: 0,
 			pageSize: 5,
 			q,
+			isActive: "true",
+			isVerified: "true",
 			timezone: "Asia/Kuala_Lumpur",
 		});
 		const results = (data?.data || []).map((u: any) => ({
@@ -649,6 +655,8 @@ const searchEngineerUsers = debounce(async (q: string) => {
 			pageSize: 5,
 			q,
 			userGroupCode: "ENG",
+			isActive: "true",
+			isVerified: "true",
 			timezone: "Asia/Kuala_Lumpur",
 		});
 		const results = (data?.data || []).map((u: any) => ({
