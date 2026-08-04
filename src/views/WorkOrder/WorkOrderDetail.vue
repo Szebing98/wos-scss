@@ -2116,7 +2116,7 @@ onUnmounted(() => {
 				-->
 				<Button
 					v-if="
-						normalizedWorkOrderStatus === 'progress' &&
+						['progress', 'inprogress'].includes(normalizedWorkOrderStatus) &&
 						authStore.can('cancel', 'WorkOrder')
 					"
 					variant="outlined"
