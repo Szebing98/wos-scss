@@ -58,7 +58,7 @@ function updateBreadcrumbs() {
 	const name = customer.value?.name || customer.value?.metadata?.name || "Customer Profile";
 	breadcrumbStore.setItems([
 		{ label: "Customer List", to: "/customer/list" },
-		{ label: customer.value?.code ? `${name} (${customer.value.code})` : name }
+		{ label: customer.value?.code ? `${name} (${customer.value.code})` : name },
 	]);
 }
 
@@ -228,7 +228,9 @@ function formatDate(iso: string) {
 			</div>
 			<div class="page-header__actions">
 				<button class="btn btn--primary" @click="handleEditCustomer">
-					<i class="mdi mdi-pencil-outline"></i> <span class="btn-text">Edit Profile</span> </button>
+					<i class="mdi mdi-pencil-outline"></i>
+					<span class="btn-text">Edit Profile</span>
+				</button>
 			</div>
 		</div>
 
@@ -311,7 +313,9 @@ function formatDate(iso: string) {
 								Customer Contracts
 							</h2>
 							<button class="btn btn--sm btn--primary" @click="openAddContractModal">
-								<i class="mdi mdi-plus"></i> <span class="btn-text">New Contract</span> </button>
+								<i class="mdi mdi-plus"></i>
+								<span class="btn-text">New Contract</span>
+							</button>
 						</div>
 
 						<div v-if="contracts.length > 0" class="contracts-list">
@@ -393,20 +397,26 @@ function formatDate(iso: string) {
 										title="Edit Contract Details"
 										@click="openEditContractModal(c)"
 									>
-										<i class="mdi mdi-pencil-outline"></i> <span class="btn-text">Edit</span> </button>
+										<i class="mdi mdi-pencil-outline"></i>
+										<span class="btn-text">Edit</span>
+									</button>
 
 									<button
 										v-if="c.status === 'ExpiringSoon' || c.status === 'Expired'"
 										class="btn btn--sm btn--warning"
 										@click="openRenewModal(c)"
 									>
-										<i class="mdi mdi-autorenew"></i> <span class="btn-text">Renew</span> </button>
+										<i class="mdi mdi-autorenew"></i>
+										<span class="btn-text">Renew</span>
+									</button>
 									<button
 										v-else
 										class="btn btn--sm btn--secondary"
 										@click="openRenewModal(c)"
 									>
-										<i class="mdi mdi-calendar-plus"></i> <span class="btn-text">Extend</span> </button>
+										<i class="mdi mdi-calendar-plus"></i>
+										<span class="btn-text">Extend</span>
+									</button>
 								</div>
 							</div>
 						</div>
