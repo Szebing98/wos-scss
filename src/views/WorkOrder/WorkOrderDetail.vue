@@ -823,6 +823,31 @@ async function markAsDone() {
 	}
 }
 
+function cancelWorkOrder() {
+	triggerConfirmation({
+		title: "Mark as Cancelled",
+		message: "Are you sure you want to cancel this work order? This action cannot be undone.",
+		confirmText: "Mark as Cancelled",
+		action: async () => {
+			loading.value = true;
+			try {
+				const { error } = await workOrderApi.cancel(woNumber);
+				if (error) {
+					snackbar.error(getApiErrorMessage(error, "Failed to cancel work order"));
+					return;
+				}
+				snackbar.success("Work order cancelled successfully!");
+				await fetchWorkOrderDetails();
+				await fetchActivityLogs();
+			} catch (e) {
+				console.error(e);
+			} finally {
+				loading.value = false;
+			}
+		},
+	});
+}
+
 function requestApprovalForNewWorkOrder() {
 	if (siteInstructionsFiles.value.length < 2) {
 		snackbar.error(
@@ -2089,6 +2114,19 @@ onUnmounted(() => {
 				<Button variant="outlined" @click="transferDialogRef?.open()" title="Transfer to a new work order">
 					<i class="mdi mdi-transfer" style="margin-right: 4px"></i> <span class="btn-text">Transfer</span> </Button>
 				-->
+				<Button
+					v-if="
+						normalizedWorkOrderStatus === 'progress' &&
+						authStore.can('cancel', 'WorkOrder')
+					"
+					variant="outlined"
+					:loading="loading"
+					style="color: var(--colors-error); border-color: var(--colors-error)"
+					@click="cancelWorkOrder"
+				>
+					<i class="mdi mdi-cancel" style="margin-right: 4px"></i>
+					<span class="btn-text">Mark as Cancelled</span>
+				</Button>
 				<Button
 					v-if="
 						isEditing &&
