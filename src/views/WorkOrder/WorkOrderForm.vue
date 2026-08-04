@@ -902,7 +902,10 @@ onMounted(async () => {
 						if (isImage && url) {
 							url = url.replace(/\/download$/, "/preview");
 							try {
-								const response = await http.get(url, { responseType: "blob" });
+								const urlPath = url.startsWith(API_BASE_URL)
+									? url.slice(API_BASE_URL.length)
+									: url;
+								const response = await http.get(urlPath, { responseType: "blob" });
 								url = URL.createObjectURL(response.data);
 							} catch (error) {
 								console.error("Failed to load Site Instruction preview:", error);
