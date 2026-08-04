@@ -216,6 +216,7 @@ function isFieldDisabled(fieldName: string): boolean {
 			"estimatedEndDate",
 			"leaderCode",
 			"leaderIICode",
+			"technicianCodes",
 			"description",
 			"location",
 			"latitude",
@@ -2187,14 +2188,11 @@ const statusColors: Record<string, string> = {
 										class="file-item__preview"
 										:style="{
 											cursor:
-												isReadOnly &&
-												file.type.startsWith('image/') &&
-												file.url
+												file.type.startsWith('image/') && file.url
 													? 'pointer'
 													: 'default',
 										}"
 										@click="
-											isReadOnly &&
 											file.type.startsWith('image/') &&
 											file.url &&
 											openImageModal(file.url)
@@ -2215,11 +2213,7 @@ const statusColors: Record<string, string> = {
 									</div>
 									<div class="file-item__info">
 										<a
-											v-if="
-												isReadOnly &&
-												file.type.startsWith('image/') &&
-												file.url
-											"
+											v-if="file.type.startsWith('image/') && file.url"
 											href="javascript:void(0)"
 											@click="openImageModal(file.url)"
 											class="file-item__name-link"

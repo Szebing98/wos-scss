@@ -1,8 +1,12 @@
 {
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+	"rewrites": [
+		{
+			"source": "/backend/:path*",
+			"destination": "http://45.127.7.176/wos-api/:path*"
+		},
+		{
+			"source": "/(.*)",
+			"destination": "/index.html"
+		}
+	]
 }
