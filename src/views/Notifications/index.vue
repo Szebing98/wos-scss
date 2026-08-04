@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { notificationApi } from "@/api/notification/notification.api";
 import type { NotificationItem } from "@/api/notification/notification.types";
@@ -17,6 +17,8 @@ const errorMessage = ref("");
 const updatingCode = ref("");
 const page = ref(1);
 const pageSize = 10;
+let notificationPollTimer: ReturnType<typeof window.setInterval> | null = null;
+let isFetchingNotifications = false;
 
 const filteredNotifications = computed(() => {
 	if (activeFilter.value === "unread") {
@@ -46,9 +48,13 @@ function setFilter(filter: Filter) {
 	page.value = 1;
 }
 
-async function loadNotifications() {
-	isLoading.value = true;
-	errorMessage.value = "";
+async function loadNotifications(silent = false) {
+	if (isFetchingNotifications) return;
+	isFetchingNotifications = true;
+	if (!silent) {
+		isLoading.value = true;
+		errorMessage.value = "";
+	}
 
 	try {
 		const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kuala_Lumpur";
@@ -65,11 +71,18 @@ async function loadNotifications() {
 
 		notifications.value = response.data?.data || [];
 	} catch (error) {
-		errorMessage.value =
-			error instanceof Error ? error.message : "Unable to load notifications.";
+		if (!silent) {
+			errorMessage.value =
+				error instanceof Error ? error.message : "Unable to load notifications.";
+		}
 	} finally {
-		isLoading.value = false;
+		isFetchingNotifications = false;
+		if (!silent) isLoading.value = false;
 	}
+}
+
+function refreshNotificationsWhenActive() {
+	if (document.visibilityState === "visible") void loadNotifications(true);
 }
 
 async function toggleRead(notification: NotificationItem) {
@@ -183,7 +196,18 @@ function formatDate(value?: string) {
 	}).format(new Date(value));
 }
 
-onMounted(loadNotifications);
+onMounted(() => {
+	void loadNotifications();
+	document.addEventListener("visibilitychange", refreshNotificationsWhenActive);
+	window.addEventListener("focus", refreshNotificationsWhenActive);
+	notificationPollTimer = window.setInterval(() => void loadNotifications(true), 30_000);
+});
+
+onUnmounted(() => {
+	document.removeEventListener("visibilitychange", refreshNotificationsWhenActive);
+	window.removeEventListener("focus", refreshNotificationsWhenActive);
+	if (notificationPollTimer !== null) window.clearInterval(notificationPollTimer);
+});
 </script>
 
 <template>
@@ -226,7 +250,7 @@ onMounted(loadNotifications);
 					<strong>Something went wrong</strong>
 					<p>{{ errorMessage }}</p>
 				</div>
-				<button type="button" @click="loadNotifications">Try again</button>
+				<button type="button" @click="loadNotifications()">Try again</button>
 			</div>
 
 			<div v-else-if="isLoading" class="notifications-state">

@@ -24,7 +24,12 @@ import PaymentDialog from "./dialogs/PaymentDialog.vue";
 import LocationMapDialog from "./dialogs/LocationMapDialog.vue";
 import UploadConfirmDialog from "./dialogs/UploadConfirmDialog.vue";
 import FilePreviewDialog from "./dialogs/FilePreviewDialog.vue";
-import { compressImageForUpload, isImageFile, isPdfFile, normalizeFileMimeType } from "@/utils/file";
+import {
+	compressImageForUpload,
+	isImageFile,
+	isPdfFile,
+	normalizeFileMimeType,
+} from "@/utils/file";
 import GeneralTab from "./tabs/GeneralTab.vue";
 import PartInfoTab from "./tabs/PartInfoTab.vue";
 import SupplierInvoicesTab from "./tabs/SupplierInvoicesTab.vue";
@@ -830,7 +835,7 @@ function requestApprovalForNewWorkOrder() {
 		title: "Request For Approval",
 		message: "Submit this work order for approval?",
 		confirmText: "Request For Approval",
-			action: async () => {
+		action: async () => {
 			loading.value = true;
 			try {
 				const { error } = await workOrderApi.submitApproval(woNumber, {
@@ -1617,7 +1622,9 @@ const filePreviewError = ref("");
 const previewObjectUrl = ref("");
 
 function cancelFileUpload() {
-	uploadTargetFiles.value.forEach(({ previewUrl }) => previewUrl && URL.revokeObjectURL(previewUrl));
+	uploadTargetFiles.value.forEach(
+		({ previewUrl }) => previewUrl && URL.revokeObjectURL(previewUrl),
+	);
 	if (uploadTargetEvent.value) {
 		const target = uploadTargetEvent.value.target as HTMLInputElement;
 		target.value = ""; // Reset file input
@@ -1674,6 +1681,13 @@ async function confirmFileUpload() {
 		}
 		const resData = await response.json().catch(() => null);
 		if (!response.ok) {
+			if (response.status === 413) {
+				const message =
+					"Content too large. Compress your file, for bulk uploads, select fewer files at a time.";
+				console.error(`File upload failed: ${JSON.stringify({ status: 413, message })}`);
+				snackbar.error(message);
+				return;
+			}
 			const message =
 				resData?.error?.message || resData?.message || `Upload failed (${response.status})`;
 			console.error(
@@ -1691,7 +1705,9 @@ async function confirmFileUpload() {
 				snackbar.error(`Upload failed: ${errMsg}`);
 			}
 		} else {
-			snackbar.success(`${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} uploaded successfully!`);
+			snackbar.success(
+				`${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} uploaded successfully!`,
+			);
 			await fetchWorkOrderFiles();
 			await Promise.all([
 				!["Image", "PartInfo", "SupplierInvoice"].includes(category)
@@ -1799,7 +1815,8 @@ async function handleFileUpload(event: Event, category: string, subcategory?: st
 	const imageExtensions = /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i;
 	const pdfExtensions = /\.(pdf)$/i;
 	const invalidFile = files.find((file) => {
-		if (category === "PartInfo" || category === "Image") return !imageExtensions.test(file.name);
+		if (category === "PartInfo" || category === "Image")
+			return !imageExtensions.test(file.name);
 		if (["SupplierInvoice", "Quotation", "Invoice", "Payment"].includes(category)) {
 			return !imageExtensions.test(file.name) && !pdfExtensions.test(file.name);
 		}
@@ -1810,7 +1827,9 @@ async function handleFileUpload(event: Event, category: string, subcategory?: st
 		if (category === "PartInfo" || category === "Image") {
 			snackbar.error("Invalid File Type. Only JPG, JPEG, PNG, GIF, and WebP are allowed.");
 		} else {
-			snackbar.error("Invalid File Type. Only PDF, JPG, JPEG, PNG, GIF, and WebP are allowed.");
+			snackbar.error(
+				"Invalid File Type. Only PDF, JPG, JPEG, PNG, GIF, and WebP are allowed.",
+			);
 		}
 		target.value = "";
 		return;
@@ -1834,9 +1853,16 @@ async function handleFileUpload(event: Event, category: string, subcategory?: st
 				: category === "Image"
 					? images.value.filter((image: any) => image.category === subcategory).length
 					: 0;
-	const maxFiles = category === "Image" ? 4 : ["PartInfo", "SupplierInvoice"].includes(category) ? 12 : Infinity;
+	const maxFiles =
+		category === "Image"
+			? 4
+			: ["PartInfo", "SupplierInvoice"].includes(category)
+				? 12
+				: Infinity;
 	if (existingCount + files.length > maxFiles) {
-		snackbar.error(`You can only add ${Math.max(0, maxFiles - existingCount)} more file(s) to this section.`);
+		snackbar.error(
+			`You can only add ${Math.max(0, maxFiles - existingCount)} more file(s) to this section.`,
+		);
 		target.value = "";
 		return;
 	}

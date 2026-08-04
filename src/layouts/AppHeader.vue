@@ -24,6 +24,8 @@ const notifications = ref<NotificationItem[]>([]);
 const unreadTotal = ref(0);
 const isLoadingNotifications = ref(false);
 const notificationError = ref("");
+let notificationPollTimer: ReturnType<typeof window.setInterval> | null = null;
+let isFetchingNotifications = false;
 
 const unreadLabel = computed(() => {
 	if (!unreadTotal.value) return "";
@@ -64,9 +66,13 @@ function toggleAccount() {
 	isAccountOpenMobile.value = !isAccountOpenMobile.value;
 }
 
-async function fetchUnreadNotifications() {
-	isLoadingNotifications.value = true;
-	notificationError.value = "";
+async function fetchUnreadNotifications(silent = false) {
+	if (isFetchingNotifications) return;
+	isFetchingNotifications = true;
+	if (!silent) {
+		isLoadingNotifications.value = true;
+		notificationError.value = "";
+	}
 
 	try {
 		const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kuala_Lumpur";
@@ -84,11 +90,18 @@ async function fetchUnreadNotifications() {
 		notifications.value = response.data?.data || [];
 		unreadTotal.value = response.data?.total || 0;
 	} catch (error) {
-		notificationError.value =
-			error instanceof Error ? error.message : "Unable to load notifications.";
+		if (!silent) {
+			notificationError.value =
+				error instanceof Error ? error.message : "Unable to load notifications.";
+		}
 	} finally {
-		isLoadingNotifications.value = false;
+		isFetchingNotifications = false;
+		if (!silent) isLoadingNotifications.value = false;
 	}
+}
+
+function refreshNotificationsWhenActive() {
+	if (document.visibilityState === "visible") void fetchUnreadNotifications(true);
 }
 
 async function markAllNotificationsRead() {
@@ -227,11 +240,20 @@ function formatNotificationTime(value?: string) {
 
 onMounted(() => {
 	document.addEventListener("click", handleDocumentClick);
-	fetchUnreadNotifications();
+	document.addEventListener("visibilitychange", refreshNotificationsWhenActive);
+	window.addEventListener("focus", refreshNotificationsWhenActive);
+	void fetchUnreadNotifications();
+	notificationPollTimer = window.setInterval(
+		() => void fetchUnreadNotifications(true),
+		30_000,
+	);
 });
 
 onUnmounted(() => {
 	document.removeEventListener("click", handleDocumentClick);
+	document.removeEventListener("visibilitychange", refreshNotificationsWhenActive);
+	window.removeEventListener("focus", refreshNotificationsWhenActive);
+	if (notificationPollTimer !== null) window.clearInterval(notificationPollTimer);
 });
 </script>
 
