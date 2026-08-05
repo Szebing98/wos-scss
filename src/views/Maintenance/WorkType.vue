@@ -236,7 +236,10 @@ async function saveTypeModal() {
 
 function addNewItem() {
 	if (!selectedType.value) return;
-	const prefix = (selectedType.value.code || "ITEM").toUpperCase();
+	const prefix = (selectedType.value.code || "ITEM")
+		.replace(/\s+/g, "_")
+		.replace(/[^a-zA-Z0-9_-]/g, "")
+		.toUpperCase();
 	const existingCount = items.value.length;
 	const nextSeq = String(existingCount + 1).padStart(4, "0");
 	const autoCode = `${prefix}-${nextSeq}`;
