@@ -10,6 +10,7 @@ const props = defineProps<{
 	error?: string;
 	hint?: string;
 	hideFooter?: boolean;
+	maxlength?: number | string;
 }>();
 
 const emit = defineEmits<{
@@ -66,6 +67,7 @@ function togglePassword() {
 				:type="inputType"
 				:placeholder="placeholder"
 				:disabled="disabled"
+				:maxlength="maxlength"
 				class="textbox__control"
 				@input="onInput"
 			/>

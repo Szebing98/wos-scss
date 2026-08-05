@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import PageHeader from "@/components/PageHeader.vue";
 import FormLoader from "@/components/FormLoader.vue";
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import Card from "@/components/Card.vue";
 import Badge from "@/components/Badge.vue";
 import Dialog from "@/components/Dialog.vue";
@@ -55,6 +55,19 @@ const workTypeFormData = ref<Partial<WorkType>>({
 	withEquipmentForm: false,
 	isActive: true,
 });
+
+const codeError = ref("");
+
+watch(
+	() => workTypeFormData.value.code,
+	(val) => {
+		if (isNewRecord.value && val && val.length > 20) {
+			codeError.value = "Work Type Code cannot exceed 20 characters";
+		} else {
+			codeError.value = "";
+		}
+	},
+);
 
 const itemHeaders = computed<TableHeader[]>(() => {
 	const baseHeaders: TableHeader[] = [
@@ -187,6 +200,7 @@ function openCreateTypeModal() {
 		withEquipmentForm: false,
 		isActive: true,
 	};
+	codeError.value = "";
 	isTypeDialogOpen.value = true;
 }
 
@@ -194,12 +208,20 @@ function openEditTypeModal(type: WorkType) {
 	isNewRecord.value = false;
 	selectedType.value = type;
 	workTypeFormData.value = { ...type };
+	codeError.value = "";
 	isTypeDialogOpen.value = true;
 }
 
 async function saveTypeModal() {
+	if (isNewRecord.value && codeError.value) {
+		return;
+	}
 	if (!workTypeFormData.value.code?.trim() || !workTypeFormData.value.name?.trim()) {
 		snackbar.error("Work Type Code and Name are required.");
+		return;
+	}
+	if (isNewRecord.value && workTypeFormData.value.code && workTypeFormData.value.code.length > 20) {
+		codeError.value = "Work Type Code cannot exceed 20 characters";
 		return;
 	}
 
@@ -665,6 +687,7 @@ onMounted(() => {
 						v-model="workTypeFormData.code"
 						:disabled="!isNewRecord"
 						placeholder="e.g. WT-ELEC, WT-HVAC"
+						:error="codeError"
 						class="u-font-mono"
 					/>
 				</div>
@@ -708,7 +731,7 @@ onMounted(() => {
 
 			<template #footer>
 				<button class="btn btn--secondary" @click="isTypeDialogOpen = false">Cancel</button>
-				<button class="btn btn--primary" :disabled="isSavingType" @click="saveTypeModal">
+				<button class="btn btn--primary" :disabled="isSavingType || (isNewRecord && !!codeError)" @click="saveTypeModal">
 					<i v-if="isSavingType" class="mdi mdi-loading mdi-spin"></i>
 					{{ isSavingType ? "Saving..." : "Save Work Type" }}
 				</button>
