@@ -189,10 +189,7 @@ const managerCount = computed(
 );
 
 onMounted(async () => {
-	await Promise.all([
-		fetchRoleList().then(r => roleList.value = r),
-		fetchUsers()
-	]);
+	await Promise.all([fetchRoleList().then((r) => (roleList.value = r)), fetchUsers()]);
 });
 
 function resetFilters() {
@@ -301,7 +298,9 @@ function getRandomAvatarBg(name: string) {
 	<div class="maintenance-view">
 		<PageHeader title="Employee Directory">
 			<template #subtitle>
-				<p class="page-header__subtitle">Manage internal technicians, support staff, and system administrative roles</p>
+				<p class="page-header__subtitle">
+					Manage internal technicians, support staff, and system administrative roles
+				</p>
 			</template>
 			<template #actions>
 				<button
@@ -310,7 +309,8 @@ function getRandomAvatarBg(name: string) {
 					:disabled="exporting"
 					@click="handleExport('CSV')"
 				>
-					<i class="mdi mdi-file-delimited-outline"></i> <span class="btn-text">Export CSV</span>
+					<i class="mdi mdi-file-delimited-outline"></i>
+					<span class="btn-text">Export CSV</span>
 				</button>
 				<button
 					v-if="authStore.can('export', 'Report')"
