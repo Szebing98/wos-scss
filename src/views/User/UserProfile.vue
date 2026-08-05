@@ -70,7 +70,11 @@ const isOwnProfile = computed(() => {
 	if (isNewMode.value || route.query.mode === "new" || route.path.endsWith("/form")) return false;
 	if (!route.query.code) return true;
 	const currentGuid = authStore.currentUser?.guid || authStore.user?.guid;
-	const currentCode = authStore.currentUser?.code || authStore.currentUser?.displayCode || authStore.user?.code || authStore.user?.displayCode;
+	const currentCode =
+		authStore.currentUser?.code ||
+		authStore.currentUser?.displayCode ||
+		authStore.user?.code ||
+		authStore.user?.displayCode;
 	const target = route.query.code as string;
 	if (currentGuid && target === currentGuid) return true;
 	if (currentCode && target === currentCode) return true;
@@ -135,7 +139,10 @@ async function loadProfile() {
 				const userProfile = u.profile || {};
 				const roleInfo = resolveLoadedRole(u, "ENG");
 				profileData.value = {
-					code: u.displayCode || u.code || (u.guid ? u.guid.substring(0, 8).toUpperCase() : ""),
+					code:
+						u.displayCode ||
+						u.code ||
+						(u.guid ? u.guid.substring(0, 8).toUpperCase() : ""),
 					name: u.displayName || userProfile.displayName || u.name || "Employee Profile",
 					email: u.email || "",
 					role: roleInfo.code,
@@ -180,23 +187,46 @@ function normalizeRoleCode(rawRole: string): string {
 	if (!rawRole) return roleList.value[0]?.code || "ADM";
 	const lower = rawRole.toLowerCase().trim();
 
-	const directMatch = roleList.value.find(r => r.code.toLowerCase() === lower || r.name.toLowerCase() === lower);
+	const directMatch = roleList.value.find(
+		(r) => r.code.toLowerCase() === lower || r.name.toLowerCase() === lower,
+	);
 	if (directMatch) return directMatch.code;
 
 	if (rawRole === "SA" || lower === "superadmin") {
-		return roleList.value.find(r => r.code === "SA" || r.name === "Superadmin")?.code || "SA";
+		return roleList.value.find((r) => r.code === "SA" || r.name === "Superadmin")?.code || "SA";
 	}
 	if (rawRole === "ADM" || lower === "adm" || lower.startsWith("admin")) {
-		return roleList.value.find(r => r.code === "ADM" || r.code === "Administrator" || r.name === "Administrator")?.code || "ADM";
+		return (
+			roleList.value.find(
+				(r) => r.code === "ADM" || r.code === "Administrator" || r.name === "Administrator",
+			)?.code || "ADM"
+		);
 	}
 	if (rawRole === "MGR" || lower === "mgr" || lower.startsWith("manag")) {
-		return roleList.value.find(r => r.code === "MGR" || r.code === "Manager" || r.name.startsWith("Manag"))?.code || "MGR";
+		return (
+			roleList.value.find(
+				(r) => r.code === "MGR" || r.code === "Manager" || r.name.startsWith("Manag"),
+			)?.code || "MGR"
+		);
 	}
-	if (rawRole === "ENG" || lower === "eng" || lower.startsWith("engin") || lower.startsWith("tech")) {
-		return roleList.value.find(r => r.code === "ENG" || r.code === "Engineer" || r.name.startsWith("Engin"))?.code || "ENG";
+	if (
+		rawRole === "ENG" ||
+		lower === "eng" ||
+		lower.startsWith("engin") ||
+		lower.startsWith("tech")
+	) {
+		return (
+			roleList.value.find(
+				(r) => r.code === "ENG" || r.code === "Engineer" || r.name.startsWith("Engin"),
+			)?.code || "ENG"
+		);
 	}
 	if (lower.startsWith("sale")) {
-		return roleList.value.find(r => r.code === "Sales" || r.code === "SAL" || r.name.startsWith("Sale"))?.code || "Sales";
+		return (
+			roleList.value.find(
+				(r) => r.code === "Sales" || r.code === "SAL" || r.name.startsWith("Sale"),
+			)?.code || "Sales"
+		);
 	}
 
 	return rawRole;
@@ -219,7 +249,10 @@ function resolveLoadedRole(user: any, fallbackRole: string) {
 function getRoleDisplayName(roleCode: string): string {
 	if (!roleCode) return "Unassigned";
 	const found = roleList.value.find(
-		r => r.code === roleCode || r.name === roleCode || r.code.toLowerCase() === roleCode.toLowerCase()
+		(r) =>
+			r.code === roleCode ||
+			r.name === roleCode ||
+			r.code.toLowerCase() === roleCode.toLowerCase(),
 	);
 	if (found) return found.name;
 	if (roleCode === "SA" || roleCode === "Superadmin") return "Superadmin";
@@ -238,7 +271,7 @@ function updateBreadcrumbs() {
 	if (isNewMode.value) {
 		breadcrumbStore.setItems([
 			{ label: "Employee List", to: "/user/list" },
-			{ label: "Create New Profile" }
+			{ label: "Create New Profile" },
 		]);
 	} else if (!isOwnProfile.value) {
 		const formattedName = profileData.value.name
@@ -246,12 +279,10 @@ function updateBreadcrumbs() {
 			: "Employee Profile";
 		breadcrumbStore.setItems([
 			{ label: "Employee List", to: "/user/list" },
-			{ label: formattedName }
+			{ label: formattedName },
 		]);
 	} else {
-		breadcrumbStore.setItems([
-			{ label: "My Profile" }
-		]);
+		breadcrumbStore.setItems([{ label: "My Profile" }]);
 	}
 }
 
@@ -260,7 +291,7 @@ import { fetchRoleList, type RoleModel } from "@/utils/Settings/role";
 const roleList = ref<RoleModel[]>([]);
 
 const assignableRoles = computed(() => {
-	return roleList.value.filter(r => r.code !== "SA" && r.name !== "Superadmin");
+	return roleList.value.filter((r) => r.code !== "SA" && r.name !== "Superadmin");
 });
 
 const profileRoleOptions = computed<SelectOption[]>(() => {
@@ -295,7 +326,7 @@ watch(
 	() => [route.query.code, route.query.mode, route.path],
 	async () => {
 		await loadProfile();
-	}
+	},
 );
 
 async function handleSaveProfile() {
@@ -369,13 +400,18 @@ async function executeSaveProfile() {
 				if (profileData.value.isActive) {
 					const { error: actErr } = await userApi.activateUser(guid);
 					if (actErr) {
-						snackbar.error((actErr as any)?.error?.message || "Failed to activate user account.");
+						snackbar.error(
+							(actErr as any)?.error?.message || "Failed to activate user account.",
+						);
 						return;
 					}
 				} else {
 					const { error: deactErr } = await userApi.deactivateUser(guid);
 					if (deactErr) {
-						snackbar.error((deactErr as any)?.error?.message || "Failed to deactivate user account.");
+						snackbar.error(
+							(deactErr as any)?.error?.message ||
+								"Failed to deactivate user account.",
+						);
 						return;
 					}
 				}
@@ -387,7 +423,9 @@ async function executeSaveProfile() {
 					userGroupCode: profileData.value.role,
 				} as any);
 				if (roleErr) {
-					snackbar.error((roleErr as any)?.error?.message || "Failed to update user role.");
+					snackbar.error(
+						(roleErr as any)?.error?.message || "Failed to update user role.",
+					);
 					return;
 				}
 			}
@@ -405,7 +443,8 @@ async function executeSaveProfile() {
 }
 
 function goToOverrides() {
-	const userCode = (route.query.code as string) || (authStore.currentUser && authStore.currentUser.guid);
+	const userCode =
+		(route.query.code as string) || (authStore.currentUser && authStore.currentUser.guid);
 	if (userCode) {
 		router.push(`/maintenance/user-permission?user=${userCode}`);
 	} else {
@@ -461,7 +500,7 @@ async function handleReinviteUser() {
 			snackbar.error((error as any)?.error?.message || "Failed to resend invitation.");
 			return;
 		}
-		snackbar.success(`Invitation email sent to ${profileData.value.email || 'user'}.`);
+		snackbar.success(`Invitation email sent to ${profileData.value.email || "user"}.`);
 	} catch (e) {
 		console.error(e);
 		snackbar.error("Failed to send invitation email.");
@@ -478,7 +517,7 @@ async function confirmAvatarUpload() {
 
 	avatarLoading.value = true;
 	try {
-		const res = await userApi.updateProfileImage(formData as any) as any;
+		const res = (await userApi.updateProfileImage(formData as any)) as any;
 		if (res?.error) {
 			snackbar.error(res.error?.error?.message || "Failed to upload photo.");
 			return;
@@ -510,22 +549,42 @@ async function confirmAvatarUpload() {
 <template>
 	<div class="maintenance-view">
 		<PageHeader mobile-icon-only>
-        <template #title>
-            
-                <h1>
-					{{ isNewMode ? "Create New Profile" : isOwnProfile ? "My Profile" : "Employee Profile" }}
+			<template #title>
+				<h1>
+					{{
+						isNewMode
+							? "Create New Profile"
+							: isOwnProfile
+								? "My Profile"
+								: "Employee Profile"
+					}}
 				</h1>
-                
-            </template>
-        
-        <template #actions>
-			<button v-if="isEditMode" class="btn btn--primary" :disabled="isSavingProfile || isLoadingProfile" @click="handleSaveProfile">
-					<i :class="isSavingProfile ? 'mdi mdi-loading mdi-spin' : 'mdi mdi-content-save-outline'"></i>
-					<span class="btn-text">{{ isSavingProfile ? "Saving..." : "Save Changes" }}</span> </button>
+			</template>
+
+			<template #actions>
+				<button
+					v-if="isEditMode"
+					class="btn btn--primary"
+					:disabled="isSavingProfile || isLoadingProfile"
+					@click="handleSaveProfile"
+				>
+					<i
+						:class="
+							isSavingProfile
+								? 'mdi mdi-loading mdi-spin'
+								: 'mdi mdi-content-save-outline'
+						"
+					></i>
+					<span class="btn-text">{{
+						isSavingProfile ? "Saving..." : "Save Changes"
+					}}</span>
+				</button>
 				<button v-else class="btn btn--primary" @click="isEditMode = true">
-					<i class="mdi mdi-pencil-outline"></i> <span class="btn-text">Edit Profile</span> </button>
-        </template>
-    </PageHeader>
+					<i class="mdi mdi-pencil-outline"></i>
+					<span class="btn-text">Edit Profile</span>
+				</button>
+			</template>
+		</PageHeader>
 
 		<FormLoader v-if="isLoadingProfile" :sections="2" :fields-per-section="4" />
 		<div v-else class="profile-grid">
@@ -535,23 +594,49 @@ async function confirmAvatarUpload() {
 					<div class="user-meta-card__avatar-wrapper">
 						<div
 							class="user-meta-card__avatar"
-							:class="profileData.isActive ? 'user-meta-card__avatar--active' : 'user-meta-card__avatar--inactive'"
+							:class="
+								profileData.isActive
+									? 'user-meta-card__avatar--active'
+									: 'user-meta-card__avatar--inactive'
+							"
 						>
-							<img v-if="profileData.profileImage" :src="getAvatarUrl(profileData.profileImage)" class="user-meta-card__avatar-img" alt="Avatar" />
-							<span v-else>{{ profileData.name ? profileData.name[0].toUpperCase() : "U" }}</span>
+							<img
+								v-if="profileData.profileImage"
+								:src="getAvatarUrl(profileData.profileImage)"
+								class="user-meta-card__avatar-img"
+								alt="Avatar"
+							/>
+							<span v-else>{{
+								profileData.name ? profileData.name[0].toUpperCase() : "U"
+							}}</span>
 						</div>
 						<!-- Profile picture edit button — visible only when viewing own profile -->
-						<button v-if="isOwnProfile && !isNewMode" class="avatar-edit-btn" @click="triggerAvatarUpload" title="Change Photo">
+						<button
+							v-if="isOwnProfile && !isNewMode"
+							class="avatar-edit-btn"
+							@click="triggerAvatarUpload"
+							title="Change Photo"
+						>
 							<i class="mdi mdi-pencil"></i>
 						</button>
-						<input type="file" ref="fileInput" accept="image/*" style="display: none" @change="onFileChange" />
+						<input
+							type="file"
+							ref="fileInput"
+							accept="image/*"
+							style="display: none"
+							@change="onFileChange"
+						/>
 					</div>
 					<h2 class="user-meta-card__name">{{ profileData.name || "New Employee" }}</h2>
-					<span class="user-meta-card__email">{{ profileData.email || "no-email@gstech.com" }}</span>
+					<span class="user-meta-card__email">{{
+						profileData.email || "no-email@gstech.com"
+					}}</span>
 
 					<div class="user-meta-card__badges mt-sm">
 						<Badge type="info" icon="mdi-shield-account">
-							{{ profileData.roleDisplayName || getRoleDisplayName(profileData.role) }}
+							{{
+								profileData.roleDisplayName || getRoleDisplayName(profileData.role)
+							}}
 						</Badge>
 						<Badge :type="profileData.isActive ? 'success' : 'error'">
 							{{ profileData.isActive ? "Active" : "Inactive" }}
@@ -567,34 +652,62 @@ async function confirmAvatarUpload() {
 						</div>
 						<div>
 							<h2 class="security-card__title">Security & Credentials</h2>
-							<p class="security-card__subtitle">Manage password and security settings</p>
+							<p class="security-card__subtitle">
+								Manage password and security settings
+							</p>
 						</div>
 					</div>
 					<div class="quick-nav-box">
 						<div v-if="!isOwnProfile" class="security-action-item">
 							<p class="security-card__desc">
-								As an Administrator, you can reset this user's password directly or resend account activation link.
+								As an Administrator, you can reset this user's password directly or
+								resend account activation link.
 							</p>
-							<button class="btn btn--outlined security-card__btn mb-sm" @click="openPasswordDialog">
-								<i class="mdi mdi-lock-reset"></i> <span class="btn-text">Reset User Password</span> </button>
-							<button class="btn btn--outlined security-card__btn" @click="handleReinviteUser" :disabled="reinviteLoading">
+							<button
+								class="btn btn--outlined security-card__btn mb-sm"
+								@click="openPasswordDialog"
+							>
+								<i class="mdi mdi-lock-reset"></i>
+								<span class="btn-text">Reset User Password</span>
+							</button>
+							<button
+								class="btn btn--outlined security-card__btn"
+								@click="handleReinviteUser"
+								:disabled="reinviteLoading"
+							>
 								<i v-if="reinviteLoading" class="mdi mdi-loading mdi-spin"></i>
-								<i v-else class="mdi mdi-email-send-outline"></i> <span class="btn-text">{{ reinviteLoading ? "Sending..." : "Resend Invitation Link" }}</span> </button>
+								<i v-else class="mdi mdi-email-send-outline"></i>
+								<span class="btn-text">{{
+									reinviteLoading ? "Sending..." : "Resend Invitation Link"
+								}}</span>
+							</button>
 						</div>
 						<div v-else class="security-action-item">
 							<p class="security-card__desc">
-								To update your own password and security credentials, please visit Settings.
+								To update your own password and security credentials, please visit
+								Settings.
 							</p>
-							<button class="btn btn--outlined security-card__btn" @click="router.push('/settings')">
-								<i class="mdi mdi-cog-outline"></i> <span class="btn-text">Go to Settings</span> </button>
+							<button
+								class="btn btn--outlined security-card__btn"
+								@click="router.push('/settings')"
+							>
+								<i class="mdi mdi-cog-outline"></i>
+								<span class="btn-text">Go to Settings</span>
+							</button>
 						</div>
 
 						<div v-if="!isOwnProfile" class="security-card__override-box">
 							<p class="security-card__desc">
-								Need custom overrides? You can adjust independent security matrix rules for this user.
+								Need custom overrides? You can adjust independent security matrix
+								rules for this user.
 							</p>
-							<button class="btn btn--outlined security-card__btn" @click="goToOverrides">
-								<i class="mdi mdi-shield-key-outline"></i> <span class="btn-text">Edit Individual Overrides</span> </button>
+							<button
+								class="btn btn--outlined security-card__btn"
+								@click="goToOverrides"
+							>
+								<i class="mdi mdi-shield-key-outline"></i>
+								<span class="btn-text">Edit Individual Overrides</span>
+							</button>
 						</div>
 					</div>
 				</div>
@@ -606,17 +719,35 @@ async function confirmAvatarUpload() {
 					<h2 class="panel-card__title mb-lg">Account Configuration</h2>
 
 					<div class="form-grid">
-						<Textbox label="Employee Code" :model-value="profileData.code || '(Auto-generated by system)'" disabled placeholder="(Auto-generated by system)" />
+						<Textbox
+							label="Employee Code"
+							:model-value="profileData.code || '(Auto-generated by system)'"
+							disabled
+							placeholder="(Auto-generated by system)"
+						/>
 
-						<Textbox label="Full Name *" v-model="profileData.name" :disabled="!isEditMode" placeholder="Enter first and last name" />
+						<Textbox
+							label="Full Name *"
+							v-model="profileData.name"
+							:disabled="!isEditMode"
+							placeholder="Enter first and last name"
+						/>
 
-						<Textbox label="Email Address *" v-model="profileData.email" type="email" :disabled="!isEditMode || (!isNewMode && !isSuperadmin)" placeholder="username@gstech.com" />
+						<Textbox
+							label="Email Address *"
+							v-model="profileData.email"
+							type="email"
+							:disabled="!isEditMode || (!isNewMode && !isSuperadmin)"
+							placeholder="username@gstech.com"
+						/>
 
-						<Select label="Role" v-model="profileData.role"
-								:options="profileRoleOptions"
-								:disabled="!isEditMode || (isOwnProfile && !isNewMode)"
-								@change="handleRoleChange"
-							/>
+						<Select
+							label="Role"
+							v-model="profileData.role"
+							:options="profileRoleOptions"
+							:disabled="!isEditMode || (isOwnProfile && !isNewMode)"
+							@change="handleRoleChange"
+						/>
 
 						<!-- Account Status Card -->
 						<div class="form-group form-group--checkbox-row">
@@ -624,17 +755,26 @@ async function confirmAvatarUpload() {
 								<div class="toggle-card__info">
 									<span class="toggle-card__title">Account Status</span>
 									<span class="toggle-card__desc">
-										{{ profileData.isActive ? 'Account is active and permitted to authenticate.' : 'Account is suspended and access is blocked.' }}
+										{{
+											profileData.isActive
+												? "Account is active and permitted to authenticate."
+												: "Account is suspended and access is blocked."
+										}}
 									</span>
 								</div>
-								<label class="switch-toggle" :class="{ 'is-disabled': !isEditMode || isOwnProfile }">
-									<input type="checkbox" v-model="profileData.isActive" :disabled="!isEditMode || isOwnProfile" />
+								<label
+									class="switch-toggle"
+									:class="{ 'is-disabled': !isEditMode || isOwnProfile }"
+								>
+									<input
+										type="checkbox"
+										v-model="profileData.isActive"
+										:disabled="!isEditMode || isOwnProfile"
+									/>
 									<span class="switch-toggle__slider"></span>
 								</label>
 							</div>
 						</div>
-
-
 					</div>
 				</div>
 			</div>
@@ -643,7 +783,11 @@ async function confirmAvatarUpload() {
 
 	<!-- Avatar Preview Overlay (FB-style) -->
 	<Teleport to="body">
-		<div v-if="showAvatarPreview" class="avatar-preview-overlay" @click.self="cancelAvatarPreview">
+		<div
+			v-if="showAvatarPreview"
+			class="avatar-preview-overlay"
+			@click.self="cancelAvatarPreview"
+		>
 			<div class="avatar-preview-modal">
 				<div class="avatar-preview-modal__header">
 					<span>Preview Photo</span>
@@ -658,12 +802,24 @@ async function confirmAvatarUpload() {
 					<p class="avatar-preview-modal__hint">This is how your photo will appear.</p>
 				</div>
 				<div class="avatar-preview-modal__footer">
-					<button class="btn btn--outlined" @click="cancelAvatarPreview" :disabled="avatarLoading">
+					<button
+						class="btn btn--outlined"
+						@click="cancelAvatarPreview"
+						:disabled="avatarLoading"
+					>
 						Cancel
 					</button>
-					<button class="btn btn--primary" @click="confirmAvatarUpload" :disabled="avatarLoading">
+					<button
+						class="btn btn--primary"
+						@click="confirmAvatarUpload"
+						:disabled="avatarLoading"
+					>
 						<i v-if="avatarLoading" class="mdi mdi-loading mdi-spin"></i>
-						<i v-else class="mdi mdi-check"></i> <span class="btn-text">{{ avatarLoading ? "Uploading..." : "Save as Photo" }}</span> </button>
+						<i v-else class="mdi mdi-check"></i>
+						<span class="btn-text">{{
+							avatarLoading ? "Uploading..." : "Save as Photo"
+						}}</span>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -671,37 +827,91 @@ async function confirmAvatarUpload() {
 
 	<!-- Password Reset Confirmation Dialog -->
 	<Dialog v-model="showPasswordModal" title="Reset User Password" maxWidth="440px">
-		<div style="padding: 8px 0;">
-			<p style="margin: 0 0 12px 0; color: var(--colors-text-primary); font-size: 14px; line-height: 1.5;">
-				Are you sure you want to send a password reset link to <strong>{{ profileData.email || 'this user' }}</strong>?
+		<div style="padding: 8px 0">
+			<p
+				style="
+					margin: 0 0 12px 0;
+					color: var(--colors-text-primary);
+					font-size: 14px;
+					line-height: 1.5;
+				"
+			>
+				Are you sure you want to send a password reset link to
+				<strong>{{ profileData.email || "this user" }}</strong
+				>?
 			</p>
-			<p style="margin: 0; color: var(--colors-text-muted); font-size: 13px; line-height: 1.4;">
-				An email containing instructions to reset the password will be sent to the user's email address.
+			<p
+				style="
+					margin: 0;
+					color: var(--colors-text-muted);
+					font-size: 13px;
+					line-height: 1.4;
+				"
+			>
+				An email containing instructions to reset the password will be sent to the user's
+				email address.
 			</p>
 		</div>
 		<template #footer>
-			<Button variant="outlined" @click="showPasswordModal = false" :disabled="passwordLoading">Cancel</Button>
-			<Button variant="primary" @click="handleConfirmResetPassword" :loading="passwordLoading">
-				<i v-if="!passwordLoading" class="mdi mdi-email-send-outline"></i> <span class="btn-text">Send Reset Link</span> </Button>
+			<Button
+				variant="outlined"
+				@click="showPasswordModal = false"
+				:disabled="passwordLoading"
+				>Cancel</Button
+			>
+			<Button
+				variant="primary"
+				@click="handleConfirmResetPassword"
+				:loading="passwordLoading"
+			>
+				<i v-if="!passwordLoading" class="mdi mdi-email-send-outline"></i>
+				<span class="btn-text">Send Reset Link</span>
+			</Button>
 		</template>
 	</Dialog>
 
 	<!-- Save Changes Confirmation Dialog -->
 	<Dialog v-model="showSaveConfirmModal" title="Confirm Account Updates" maxWidth="460px">
-		<p style="margin: 0 0 12px 0; color: var(--colors-text-primary); font-size: 14px;">
+		<p style="margin: 0 0 12px 0; color: var(--colors-text-primary); font-size: 14px">
 			Are you sure you want to apply the following updates to this account?
 		</p>
-		<div style="background: var(--colors-surface-background); border: 1px solid var(--colors-surface-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;">
-			<ul style="margin: 0; padding-left: 18px; color: var(--colors-text-primary); font-size: 13px;">
-				<li v-for="(change, idx) in saveConfirmChanges" :key="idx" style="margin-bottom: 4px;">
+		<div
+			style="
+				background: var(--colors-surface-background);
+				border: 1px solid var(--colors-surface-border);
+				border-radius: 8px;
+				padding: 12px 16px;
+				margin-bottom: 8px;
+			"
+		>
+			<ul
+				style="
+					margin: 0;
+					padding-left: 18px;
+					color: var(--colors-text-primary);
+					font-size: 13px;
+				"
+			>
+				<li
+					v-for="(change, idx) in saveConfirmChanges"
+					:key="idx"
+					style="margin-bottom: 4px"
+				>
 					{{ change }}
 				</li>
 			</ul>
 		</div>
 		<template #footer>
-			<Button variant="outlined" @click="showSaveConfirmModal = false" :disabled="isSavingProfile">Cancel</Button>
+			<Button
+				variant="outlined"
+				@click="showSaveConfirmModal = false"
+				:disabled="isSavingProfile"
+				>Cancel</Button
+			>
 			<Button variant="primary" @click="executeSaveProfile" :loading="isSavingProfile">
-				<i v-if="!isSavingProfile" class="mdi mdi-check"></i> <span class="btn-text">Confirm & Save</span> </Button>
+				<i v-if="!isSavingProfile" class="mdi mdi-check"></i>
+				<span class="btn-text">Confirm & Save</span>
+			</Button>
 		</template>
 	</Dialog>
 </template>
