@@ -505,18 +505,42 @@ const filteredWorkOrders = computed(() => {
 		if (searchQuery.value) {
 			const q = searchQuery.value.trim().toLowerCase();
 			const match =
-				String(w.woNumber || "").toLowerCase().includes(q) ||
-				String(w.title || "").toLowerCase().includes(q) ||
-				String(w.customer?.name || "").toLowerCase().includes(q) ||
-				String(w.customer?.email || "").toLowerCase().includes(q) ||
-				String(w.customer?.phone || "").toLowerCase().includes(q) ||
-				String(w.leader || "").toLowerCase().includes(q) ||
-				String(w.leaderII || "").toLowerCase().includes(q) ||
-				String(w.salesAgent || "").toLowerCase().includes(q) ||
-				String(w.workType || "").toLowerCase().includes(q) ||
-				String(w.site || "").toLowerCase().includes(q) ||
-				String(w.status || "").toLowerCase().includes(q) ||
-				String(w.jobPriority || "").toLowerCase().includes(q);
+				String(w.woNumber || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.title || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.customer?.name || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.customer?.email || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.customer?.phone || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.leader || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.leaderII || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.salesAgent || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.workType || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.site || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.status || "")
+					.toLowerCase()
+					.includes(q) ||
+				String(w.jobPriority || "")
+					.toLowerCase()
+					.includes(q);
 			if (!match) return false;
 		}
 
@@ -1012,7 +1036,8 @@ async function handleExport(format: "CSV" | "PDF") {
 			status: formatStatusLabel(
 				w.isDraft ? "New" : normalizeStatusForUi(w.orderStatus || w.status || "new"),
 			),
-			woNumber: w.docNo || w.code || (w.guid ? String(w.guid).slice(0, 8).toUpperCase() : "—"),
+			woNumber:
+				w.docNo || w.code || (w.guid ? String(w.guid).slice(0, 8).toUpperCase() : "—"),
 			title: w.title || "—",
 			customer: w.customerName || "—",
 			workType: w.workType || "—",
@@ -1304,17 +1329,32 @@ async function fetchWorkTypes() {
 const searchWorkTypes = debounce(async (q: string) => {
 	searchingWorkTypes.value = true;
 	try {
-		const wtRes = await workTypeApi.getWorkTypes({ pageIndex: 0, pageSize: 5, q, timezone: "UTC" });
-		const results = (wtRes.data?.data || []).filter((wt: any) => wt.isActive !== false).map((wt: any) => ({
-			guid: wt.guid,
-			code: wt.code,
-			name: wt.name,
-			description: wt.description || "",
-			withEquipmentForm: !!wt.withEquipmentForm,
-			isActive: wt.isActive,
-		}));
-		availableWorkTypes.value = [...availableWorkTypes.value.filter((wt) => (wt.guid || wt.code) === selectedWorkTypeGuid.value), ...results]
-			.filter((wt, index, all) => all.findIndex((item) => (item.guid || item.code) === (wt.guid || wt.code)) === index);
+		const wtRes = await workTypeApi.getWorkTypes({
+			pageIndex: 0,
+			pageSize: 5,
+			q,
+			timezone: "UTC",
+		});
+		const results = (wtRes.data?.data || [])
+			.filter((wt: any) => wt.isActive !== false)
+			.map((wt: any) => ({
+				guid: wt.guid,
+				code: wt.code,
+				name: wt.name,
+				description: wt.description || "",
+				withEquipmentForm: !!wt.withEquipmentForm,
+				isActive: wt.isActive,
+			}));
+		availableWorkTypes.value = [
+			...availableWorkTypes.value.filter(
+				(wt) => (wt.guid || wt.code) === selectedWorkTypeGuid.value,
+			),
+			...results,
+		].filter(
+			(wt, index, all) =>
+				all.findIndex((item) => (item.guid || item.code) === (wt.guid || wt.code)) ===
+				index,
+		);
 	} finally {
 		searchingWorkTypes.value = false;
 	}
@@ -1476,7 +1516,8 @@ defineExpose({
 					:disabled="exporting"
 					@click="handleExport('CSV')"
 				>
-					<i class="mdi mdi-file-delimited-outline"></i> <span class="btn-text">Export CSV</span>
+					<i class="mdi mdi-file-delimited-outline"></i>
+					<span class="btn-text">Export CSV</span>
 				</button>
 				<button
 					v-if="authStore.can('export', 'Report')"
@@ -1564,7 +1605,6 @@ defineExpose({
 						/>
 					</div>
 				</FilterPanel>
-
 			</div>
 		</Card>
 
@@ -1789,7 +1829,9 @@ defineExpose({
 			<p style="margin: 0">{{ confirmMsg }}</p>
 			<template #footer>
 				<Button variant="secondary" @click="isConfirm = false">Cancel</Button>
-				<Button variant="primary" :loading="actionLoading" @click="executeAction">Confirm</Button>
+				<Button variant="primary" :loading="actionLoading" @click="executeAction"
+					>Confirm</Button
+				>
 			</template>
 		</Dialog>
 
@@ -1819,7 +1861,11 @@ defineExpose({
 			/>
 			<template #footer>
 				<Button variant="secondary" @click="isReject = false">Cancel</Button>
-				<Button variant="danger" :loading="rejectLoading" :disabled="!rejectReason" @click="executeReject"
+				<Button
+					variant="danger"
+					:loading="rejectLoading"
+					:disabled="!rejectReason"
+					@click="executeReject"
 					>Reject</Button
 				>
 			</template>
