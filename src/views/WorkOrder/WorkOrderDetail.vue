@@ -415,10 +415,13 @@ function formatUserDisplay(name?: string | null, code?: string | null) {
 }
 
 async function fetchWorkOrderDetails() {
-	if (!woNumber) return;
+	if (!woNumber) return false;
 	loading.value = true;
 	try {
-		const { data } = await workOrderApi.getWorkOrderByGuid(woNumber);
+		const { data, error } = await workOrderApi.getWorkOrderByGuid(woNumber);
+		if (error) {
+			throw new Error(getApiErrorMessage(error, "Work Order not found"));
+		}
 		const w = data?.data || data;
 		if (w && (w.guid || w.code)) {
 			workOrder.value = {
@@ -540,14 +543,17 @@ async function fetchWorkOrderDetails() {
 				closedDate: w.closedDate || "",
 				createdAt: w.createdAt || "",
 			};
+			return true;
 		} else {
 			snackbar.error("Work Order not found");
-			router.push("/work-order");
+			await router.replace("/work-order");
+			return false;
 		}
 	} catch (e) {
 		console.error("Failed to fetch work order details:", e);
-		snackbar.error("Error loading work order details");
-		router.push("/work-order");
+		snackbar.error(getApiErrorMessage(e, "Error loading work order details"));
+		await router.replace("/work-order");
+		return false;
 	} finally {
 		if (workOrder.value?.status) {
 			updateStepFromStatus(workOrder.value.status);
@@ -1947,7 +1953,8 @@ onMounted(async () => {
 		tabsWrapperRef.value.addEventListener("scroll", updateTabArrows);
 	}
 	// Prioritize the core record so the detail view can render before secondary tab data.
-	await fetchWorkOrderDetails();
+	const workOrderFound = await fetchWorkOrderDetails();
+	if (!workOrderFound) return;
 	void Promise.all([
 		fetchActivityLogs(),
 		fetchWorkOrderFiles(),
